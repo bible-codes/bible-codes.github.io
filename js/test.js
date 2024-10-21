@@ -1,20 +1,33 @@
-// Function to handle the button click
+// Function to handle the search button click
 document.querySelector('.btn').addEventListener('click', function() {
     // Get the input value
-    const searchTerm = document.getElementById('st1').value;
+    const searchTerm = document.getElementById('st1').value.trim();
 
     // Check if the input is not empty
-    if (searchTerm.trim() === '') {
+    if (searchTerm === '') {
         alert('Please enter a search term.');
         return;
     }
 
-    // Perform a mock search operation (You can replace this with actual search logic)
-    const resultDiv = document.getElementById('test');
-    resultDiv.innerHTML = `You searched for: <strong>${searchTerm}</strong>`;
-    
-    // Here you could add functionality to search through the content of the iframe
-    // For example, fetching the text from torahNoSpaces.txt and searching it
+    // Fetch the content of the text file
+    fetch('data/torahNoSpaces.txt')
+        .then(response => response.text())
+        .then(data => {
+            // Perform the search
+            const regex = new RegExp(searchTerm, 'gi'); // Create a case-insensitive regex
+            const matches = data.match(regex);
+
+            // Display search results
+            const resultDiv = document.getElementById('test');
+            if (matches) {
+                resultDiv.innerHTML = `Found ${matches.length} occurrences of <strong>${searchTerm}</strong>`;
+            } else {
+                resultDiv.innerHTML = `No occurrences of <strong>${searchTerm}</strong> found.`;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading the text file:', error);
+        });
 
     // Clear the input field after the search
     document.getElementById('st1').value = '';

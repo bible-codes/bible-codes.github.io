@@ -31,20 +31,8 @@
       cursor: pointer;
     }
 
-    /* Darker background on mouse-over */
     .btn:hover {
       background-color: LightGrey;
-    }
-
-    /* Ensure the container holds floated elements */
-    #list {
-      overflow: auto;
-      padding: 10px;
-    }
-
-    iframe {
-      width: 100%;
-      height: 400px;
     }
   </style>
 </head>
@@ -57,18 +45,19 @@
   </div>
   <div id="list">
     <div>
-      <p>
-        <iframe src="data/torahNoSpaces.txt" frameborder="3"></iframe>
-      </p>
-      <button class="btn"><i class="fas fa-plus fa-xs"></i></button>
+      <button class="btn"><i class="fas fa-search fa-xs"></i> Search</button>
       <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="First Search Term">
       <span class="st">First Search Term</span>
     </div>
-    
+    <div>
+      <input type="number" min="-10000" max="10000" step="1" />
+    </div>
+    <div id="test"></div>
   </div>
-  
+
   <script src="js/test.js"></script>
   <script>
+    // Service Worker registration for PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('sw.js').then(function(registration) {
