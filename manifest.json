@@ -1,0 +1,16 @@
+{
+    "name": "Bible Code App",
+    "short_name": "BibleCode",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4CAF50",
+    "icons": [
+      {
+        "src": "img/favicon.png",
+        "sizes": "64x64 32x32 24x24 16x16",
+        "type": "image/png"
+      }
+    ]
+  }
+  

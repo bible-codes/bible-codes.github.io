@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <title>Bible Code App</title>
+
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    img {
+      float: left;
+    }
+
+    .st {
+      float: right;
+      margin-right: 15px;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      float: right;
+      background-color: white;
+      border: none;
+      color: black;
+      padding: 15px 15px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* Darker background on mouse-over */
+    .btn:hover {
+      background-color: LightGrey;
+    }
+
+    /* Ensure the container holds floated elements */
+    #list {
+      overflow: auto;
+      padding: 10px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 400px;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <img src="img/favicon.png" alt="logo" style="width:80px;height:80px;margin-right:15px;margin-bottom:15px">
+    <h1>Bible Code</h1>
+    <p>Bible Codes and Data Science</p>
+  </div>
+  <div id="list">
+    <div>
+      <p>
+        <iframe src="data/torahNoSpaces.txt" frameborder="3"></iframe>
+      </p>
+      <button class="btn"><i class="fas fa-plus fa-xs"></i></button>
+      <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="First Search Term">
+      <span class="st">First Search Term</span>
+    </div>
+    <div>
+      <input type="number" min="-10000" max="10000" step="1" />
+    </div>
+    <div id="test">bk</div>
+  </div>
+  
+  <script src="js/test.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').then(function(registration) {
+          console.log('Service Worker registered with scope:', registration.scope);
+        }, function(err) {
+          console.log('Service Worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+
+</html>
