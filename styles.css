@@ -1,0 +1,30 @@
+img {
+    float: left;
+  }
+  
+  .st {
+    float: right;
+    margin-right: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .btn {
+    float: right;
+    background-color: white;
+    border: none;
+    color: black;
+    padding: 15px 15px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  .btn:hover {
+    background-color: LightGrey;
+  }
+  
+  /* Ensure the container holds floated elements */
+  #list {
+    overflow: auto;
+    padding: 10px;
+  }
+  

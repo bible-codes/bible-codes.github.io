@@ -11,7 +11,12 @@ document.querySelector('.btn').addEventListener('click', function() {
 
     // Fetch the content of the text file
     fetch('data/torahNoSpaces.txt')
-        .then(response => response.text())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
         .then(data => {
             // Perform the search
             const regex = new RegExp(searchTerm, 'gi'); // Create a case-insensitive regex
@@ -27,6 +32,8 @@ document.querySelector('.btn').addEventListener('click', function() {
         })
         .catch(error => {
             console.error('Error loading the text file:', error);
+            const resultDiv = document.getElementById('test');
+            resultDiv.innerHTML = 'Error loading the text file.';
         });
 
     // Clear the input field after the search
