@@ -25,14 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   
       resultContainer.textContent = `Searching for "${searchTerm}" within range ${minSkip} to ${maxSkip}...`;
+      resultContainer.style.color = "blue"; // Optional: Change color to indicate process
+      const loadingMessage = document.createElement('p');
+      loadingMessage.textContent = "Processing, please wait...";
+      resultContainer.appendChild(loadingMessage);
   
-      const results = performELSSearchWithOptimization(searchTerm, minSkip, maxSkip);
-      displayResults(results);
+      // Simulate a delay to mimic a real search process (replace this with actual searching)
+      setTimeout(() => {
+        const results = performELSSearchWithOptimization(searchTerm, minSkip, maxSkip);
+        loadingMessage.remove(); // Remove loading message after search
+        displayResults(results);
+      }, 1000); // Simulated delay (1 second)
     });
   
     function performELSSearchWithOptimization(term, min, max) {
       // Mock text for demonstration, replace with the actual text data source.
-      const text = "mocktextfromtorah";
+      const text = "mocktextfromtorah"; // Replace this with your text
       const results = [];
   
       // Preprocess common substrings for faster lookup.
@@ -132,9 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
     function displayResults(results) {
       if (results.length === 0) {
-        resultContainer.textContent = "No results found.";
+        resultContainer.innerHTML += "<br>No results found.";
       } else {
-        resultContainer.innerHTML = results.join('<br>');
+        resultContainer.innerHTML += "<br>" + results.join('<br>');
       }
     }
   });
