@@ -9,7 +9,7 @@
   <title>Bible Codes App</title>
 
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css"> <!-- Ensure this line is present -->
+  <link rel="stylesheet" href="styles.css">
 
 </head>
 
@@ -21,12 +21,15 @@
   </div>
   <div id="list">
     <div>
-      <button class="btn"><i class="fas fa-search fa-xs"></i> Search</button>
+      <button class="btn" id="searchBtn"><i class="fas fa-search fa-xs"></i> Search</button>
       <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="First Search Term">
       <span class="st">First Search Term</span>
     </div>
     <div>
-      <input type="number" min="-10000" max="10000" step="1" />
+      <label for="minRange">Min:</label>
+      <input type="number" id="minRange" name="minRange" min="-10000" max="10000" step="1" />
+      <label for="maxRange">Max:</label>
+      <input type="number" id="maxRange" name="maxRange" min="-10000" max="10000" step="1" />
     </div>
     <div id="test"></div>
   </div>

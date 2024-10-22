@@ -1,41 +1,18 @@
-// Function to handle the search button click
-document.querySelector('.btn').addEventListener('click', function() {
-    // Get the input value
-    const searchTerm = document.getElementById('st1').value.trim();
-
-    // Check if the input is not empty
-    if (searchTerm === '') {
-        alert('Please enter a search term.');
-        return;
+document.getElementById('searchBtn').addEventListener('click', function() {
+    const searchTerm = document.getElementById('st1').value;
+    const minRange = parseInt(document.getElementById('minRange').value, 10);
+    const maxRange = parseInt(document.getElementById('maxRange').value, 10);
+  
+    if (searchTerm.trim() === "") {
+      alert("Please enter a search term.");
+      return;
     }
-
-    // Fetch the content of the text file
-    fetch('data/torahNoSpaces.txt')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.text();
-        })
-        .then(data => {
-            // Perform the search
-            const regex = new RegExp(searchTerm, 'gi'); // Create a case-insensitive regex
-            const matches = data.match(regex);
-
-            // Display search results
-            const resultDiv = document.getElementById('test');
-            if (matches) {
-                resultDiv.innerHTML = `Found ${matches.length} occurrences of <strong>${searchTerm}</strong>`;
-            } else {
-                resultDiv.innerHTML = `No occurrences of <strong>${searchTerm}</strong> found.`;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading the text file:', error);
-            const resultDiv = document.getElementById('test');
-            resultDiv.innerHTML = 'Error loading the text file.';
-        });
-
-    // Clear the input field after the search
-    document.getElementById('st1').value = '';
-});
+  
+    // Perform search functionality (this is where you will implement your search logic)
+    // This is just a placeholder for demonstration purposes
+    document.getElementById('test').innerText = `Searching for "${searchTerm}" within range ${minRange} to ${maxRange}...`;
+  
+    // Here you would implement the logic to handle searching through your data
+    // For example, you could fetch data from an API or search a local array
+  });
+  
