@@ -1,6 +1,8 @@
 Bible Codes App 📜 
 
-    bible-codes.github.io
+## Project Link
+You can visit the app at [bible-codes.github.io](https://bible-codes.github.io/).
+
 
 Welcome to the Bible Codes App – an innovative, browser-based tool for exploring Equidistant Letter Sequences (ELS) in the Hebrew Bible. Designed to deliver fast and accessible ELS searches, this app allows users to search for hidden patterns and sequences in the text, inspired by the groundbreaking work on Bible codes.
 🔍 Project Overview
