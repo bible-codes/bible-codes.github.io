@@ -6,34 +6,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-  <title>Bible Codes</title>
-
-  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <title>Bible Codes</title>
+  <link rel="manifest" href="manifest.json">
 </head>
 
 <body>
-  <div>
-    <img src="img/favicon.png" alt="logo" style="width:80px;height:80px;margin-right:15px;margin-bottom:15px">
+  <div class="header">
+    <img src="img/favicon.png" alt="logo" class="logo">
     <h1>Bible Codes</h1>
     <p>Bible Codes and Data Science</p>
   </div>
   <div id="list">
-    <div>
-      <button class="btn"><i class="fas fa-search fa-xs"></i> Search</button>
+    <div class="input-container">
+      <button class="btn" id="search-btn"><i class="fa fa-search"></i> Search</button>
       <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="First Search Term">
-      <span class="st">First Search Term</span>
+      <span class="st-label">First Search Term</span>
     </div>
-    <div>
+    <div class="range-container">
       <label for="min-range">Min:</label>
-      <input type="number" id="min-range" value="-100" />
+      <input type="number" id="min-range" value="-100">
       <label for="max-range">Max:</label>
-      <input type="number" id="max-range" value="100" />
+      <input type="number" id="max-range" value="100">
     </div>
     <div id="test"></div>
   </div>
 
-  <script src="js/test.js"></script>
+  <script src="js/test.js" defer></script>
   <script>
     // Service Worker registration for PWA
     if ('serviceWorker' in navigator) {
