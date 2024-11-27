@@ -9,40 +9,41 @@
   <link rel="stylesheet" href="styles.css">
   <title>Bible Codes</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Ensure the CSS is loaded before any script runs -->
 </head>
 
 <body>
   <div class="header">
-    <!-- The image is wrapped in an anchor tag with target="_blank" to open the link in a new tab -->
+    <!-- Image link that opens GitHub repo in a new tab -->
     <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
       <img src="img/favicon.png" alt="logo" class="logo" style="width:80px;height:80px;margin-right:15px;margin-bottom:15px;">
     </a>
     <h1>Bible Codes</h1>
     <p>Bible Codes and Data Science</p>
   </div>
-  
+
   <div id="list">
     <div class="input-container">
       <button class="btn" id="search-btn"><i class="fa fa-search"></i> Search</button>
       <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="First Search Term">
       <span class="st-label">First Search Term</span>
     </div>
-    
+
     <div class="range-container">
       <label for="min-range">Min:</label>
       <input type="number" id="min-range" value="-100">
       <label for="max-range">Max:</label>
       <input type="number" id="max-range" value="100">
     </div>
-    
+
     <div id="test"></div>
   </div>
 
-  <!-- Defer the loading of JS to ensure DOM is ready before execution -->
+  <!-- Defer JS until after the document has loaded -->
   <script src="js/test.js" defer></script>
 
   <script>
-    // Wait for the DOM to be fully loaded before executing any scripts
+    // Wait for the DOM content to be fully loaded
     document.addEventListener('DOMContentLoaded', function () {
       // Service Worker registration for PWA
       if ('serviceWorker' in navigator) {
@@ -55,12 +56,18 @@
         });
       }
 
-      // Ensure the 'minSkipInput' error is resolved by using the correct ID names
+      // Correct the element IDs and handle minSkipInput being null
       const searchButton = document.querySelector('.btn');
       const searchTermInput = document.getElementById('st1');
-      const minSkipInput = document.getElementById('min-range'); // Correct ID reference
-      const maxSkipInput = document.getElementById('max-range'); // Correct ID reference
+      const minSkipInput = document.getElementById('min-range');
+      const maxSkipInput = document.getElementById('max-range');
       const resultContainer = document.getElementById('test');
+
+      // Check if elements are found before adding event listeners
+      if (!minSkipInput || !maxSkipInput) {
+        console.error('Input elements not found');
+        return;
+      }
 
       searchButton.addEventListener('click', () => {
         const searchTerm = searchTermInput.value.trim();
