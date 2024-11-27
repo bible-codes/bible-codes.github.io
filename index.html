@@ -13,7 +13,7 @@
 
 <body>
   <div class="header">
-    <!-- Corrected the image link by wrapping it with an anchor tag -->
+    <!-- The image is wrapped in an anchor tag with target="_blank" to open the link in a new tab -->
     <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
       <img src="img/favicon.png" alt="logo" class="logo" style="width:80px;height:80px;margin-right:15px;margin-bottom:15px;">
     </a>
@@ -38,30 +38,30 @@
     <div id="test"></div>
   </div>
 
-  <!-- Added defer to ensure scripts load after HTML -->
+  <!-- Defer the loading of JS to ensure DOM is ready before execution -->
   <script src="js/test.js" defer></script>
 
   <script>
-    // Ensure DOM is fully loaded before initializing service worker and search functionality
-    document.addEventListener('DOMContentLoaded', function() {
+    // Wait for the DOM to be fully loaded before executing any scripts
+    document.addEventListener('DOMContentLoaded', function () {
       // Service Worker registration for PWA
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('sw.js').then(function(registration) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').then(function (registration) {
             console.log('Service Worker registered with scope:', registration.scope);
-          }, function(err) {
+          }, function (err) {
             console.log('Service Worker registration failed:', err);
           });
         });
       }
 
-      // Fixing the 'minSkipInput is null' error
+      // Ensure the 'minSkipInput' error is resolved by using the correct ID names
       const searchButton = document.querySelector('.btn');
       const searchTermInput = document.getElementById('st1');
-      const minSkipInput = document.getElementById('min-range'); // Fix: ID should match the input field
-      const maxSkipInput = document.getElementById('max-range'); // Fix: ID should match the input field
+      const minSkipInput = document.getElementById('min-range'); // Correct ID reference
+      const maxSkipInput = document.getElementById('max-range'); // Correct ID reference
       const resultContainer = document.getElementById('test');
-      
+
       searchButton.addEventListener('click', () => {
         const searchTerm = searchTermInput.value.trim();
         let minSkip = parseInt(minSkipInput.value);
@@ -124,7 +124,7 @@
       function kmpSearch(text, pattern, skip) {
         const results = [];
         const lps = computeLPSArray(pattern);
-        let i = 0; 
+        let i = 0;
         let j = 0;
 
         while (i < text.length) {
