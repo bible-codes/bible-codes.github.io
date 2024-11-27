@@ -7,14 +7,13 @@
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <title>Bible Codes</title>
-
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
   <div>
-    <!-- Wrapped the image inside an anchor tag -->
+    <!-- Logo wrapped in an anchor tag for navigation -->
     <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
       <img src="img/favicon.png" alt="logo" style="width:80px;height:80px;margin-right:15px;margin-bottom:15px">
     </a>
@@ -23,7 +22,7 @@
   </div>
   <div id="list">
     <div>
-      <button class="btn"><i class="fas fa-search fa-xs"></i> Search</button>
+      <button class="btn"><i class="fa fa-search fa-xs"></i> Search</button>
       <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="First Search Term">
       <span class="st">First Search Term</span>
     </div>
@@ -36,16 +35,77 @@
     <div id="test"></div>
   </div>
 
-  <script src="js/test.js"></script>
   <script>
-    // Service Worker registration for PWA
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchButton = document.querySelector('.btn');
+      const searchTermInput = document.getElementById('st1');
+      const minRangeInput = document.getElementById('min-range');
+      const maxRangeInput = document.getElementById('max-range');
+      const resultContainer = document.getElementById('test');
+
+      // Ensure all elements are available
+      if (!searchButton || !searchTermInput || !minRangeInput || !maxRangeInput || !resultContainer) {
+        console.error('One or more elements are missing in the DOM.');
+        return;
+      }
+
+      // Search button event listener
+      searchButton.addEventListener('click', () => {
+        const searchTerm = searchTermInput.value.trim();
+        const minRange = parseInt(minRangeInput.value, 10);
+        const maxRange = parseInt(maxRangeInput.value, 10);
+
+        // Validation
+        if (isNaN(minRange) || isNaN(maxRange) || minRange > maxRange) {
+          alert('Minimum value must be less than or equal to Maximum value.');
+          return;
+        }
+
+        if (searchTerm === '') {
+          alert('Please enter a search term.');
+          return;
+        }
+
+        // Indicate search progress
+        resultContainer.innerHTML = `<p>Searching for "${searchTerm}" within range ${minRange} to ${maxRange}...</p>`;
+
+        // Simulate search operation
+        setTimeout(() => {
+          const results = performSearch(searchTerm, minRange, maxRange);
+          displayResults(results, resultContainer);
+        }, 1000);
+      });
+
+      // Mock search function
+      function performSearch(term, min, max) {
+        // Replace this with actual search logic
+        const dummyText = 'Example Bible text to perform searches on.';
+        const results = [];
+        for (let i = 0; i < dummyText.length; i++) {
+          if (dummyText.substr(i, term.length) === term) {
+            results.push(`Found "${term}" at position ${i}`);
+          }
+        }
+        return results;
+      }
+
+      // Display results
+      function displayResults(results, container) {
+        if (results.length === 0) {
+          container.innerHTML += '<p>No results found.</p>';
+        } else {
+          container.innerHTML += `<p>${results.join('<br>')}</p>`;
+        }
+      }
+    });
+
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('sw.js').then(function(registration) {
-          console.log('Service Worker registered with scope:', registration.scope);
-        }, function(err) {
-          console.log('Service Worker registration failed:', err);
-        });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('sw.js')
+          .then((registration) => console.log('Service Worker registered with scope:', registration.scope))
+          .catch((err) => console.error('Service Worker registration failed:', err));
       });
     }
   </script>
