@@ -1,15 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
   const searchButton = document.querySelector('.btn');
   const searchTermInput = document.getElementById('st1');
-  const minSkipInput = document.getElementById('minSkip');
-  const maxSkipInput = document.getElementById('maxSkip');
+  const minSkipInput = document.getElementById('min-range');
+  const maxSkipInput = document.getElementById('max-range');
   const resultContainer = document.getElementById('test');
+
+  // Check if elements exist before adding event listeners
+  if (!searchButton || !searchTermInput || !minSkipInput || !maxSkipInput || !resultContainer) {
+    console.error('Missing required elements');
+    return;
+  }
 
   searchButton.addEventListener('click', () => {
     const searchTerm = searchTermInput.value.trim();
     let minSkip = parseInt(minSkipInput.value);
     let maxSkip = parseInt(maxSkipInput.value);
 
+    // Check if the minSkip and maxSkip values are valid
     if (isNaN(minSkip) || isNaN(maxSkip) || minSkip > maxSkip) {
       alert("Minimum value must be less than or equal to Maximum value.");
       minSkipInput.value = -100;
@@ -41,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function performELSSearchWithOptimization(term, min, max) {
     const text = "mocktextfromtorah"; // Replace this with your text
     const results = [];
+
     const prehashTable = prehashFrequentTerms(text, term.length);
 
     for (let skip = min; skip <= max; skip++) {
@@ -115,10 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const direction = skip > 0 ? 'right' : 'left';
 
     for (let i = 0; i < text.length; i++) {
+      let candidate = '';
+
       if (prehashTable[term] && prehashTable[term].includes(i)) {
         results.push(`Found "${term}" directly from prehash with skip ${skip} starting at index ${i}`);
       } else {
-        let candidate = '';
         for (let j = i; j < text.length && candidate.length < term.length; j += adjustedSkip) {
           candidate += text[j];
         }
