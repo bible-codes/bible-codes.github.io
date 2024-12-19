@@ -51,6 +51,16 @@
       });
     }
   </script>
+
+  <!-- force reload ignoring cache?-->
+  <script defer>
+    window.addEventListener('load', function() {
+      if (performance.navigation.type === 1) {
+        location.reload(true);
+      }
+    });
+  </script>
+  
 </body>
 
 </html>
