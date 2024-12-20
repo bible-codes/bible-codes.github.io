@@ -1,37 +1,108 @@
+    /* Body Styles */
 body {
-    /* background-color: #d9ff87;  Sky blue */
-    /* Use a custom shade between skyblue and the blue thread */
-    background-color: #3F8EBA;  /* Custom blue color */
-    /* background-color: #A4A702; */
+  background-color: #A4A702; /* Custom greenish AHARON color */
+  /* background-color: #d9ff87;  Sky blue */
+  /* Use a custom shade between skyblue and the blue thread */
+  /* background-color: #3F8EBA;  Custom blue color */
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Image Styling */
+img {
+  float: left;
+  margin-right: 15px;
+  margin-bottom: 15px;
+}
+
+/* Search Term Input Styling */
+.st {
+  float: right;
+  margin-right: 15px;
+  margin-bottom: 15px;
+}
+
+/* Button Styling */
+.btn {
+  float: right;
+  background-color: white;
+  border: none;
+  color: black;
+  padding: 15px 15px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Button Hover Effect */
+.btn:hover {
+  background-color: LightGrey;
+}
+
+/* Ensure the container holds floated elements */
+#list {
+  overflow: auto;
+  padding: 10px;
+}
+
+/* Torah Box Styling */
+.resizable-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 50%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  resize: both;
+  overflow: auto;
+}
+
+.resizable-box h2 {
+  margin: 0;
+  cursor: move;
+  text-align: center;
+}
+
+/* Scrollable Torah Text Box */
+.scrollable-container {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 50%;
+  height: 50%;
+  overflow-y: scroll;
+  border: 2px solid #ccc;
+  background-color: #f9f9f9;
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.scrollable-container h3 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+/* Responsive Design for Smaller Screens */
+@media (max-width: 600px) {
+  .resizable-box {
+    width: 90%;
+    height: 40%;
   }
-  
-  img {
-    float: left;
+
+  .scrollable-container {
+    width: 100%;
+    height: 40%;
   }
-  
-  .st {
-    float: right;
-    margin-right: 15px;
-    margin-bottom: 15px;
+
+  /* Adjust search input and button layout for smaller screens */
+  .input-container,
+  .range-container {
+    text-align: center;
   }
-  
-  .btn {
-    float: right;
-    background-color: white;
-    border: none;
-    color: black;
-    padding: 15px 15px;
-    font-size: 16px;
-    cursor: pointer;
-  }
-  
-  .btn:hover {
-    background-color: LightGrey;
-  }
-  
-  /* Ensure the container holds floated elements */
-  #list {
-    overflow: auto;
-    padding: 10px;
-  }
-  
+}

@@ -9,38 +9,17 @@
   <link rel="stylesheet" href="styles.css">
   <title>Bible Codes</title>
   <link rel="manifest" href="manifest.json">
-  <style>
-    .scrollable-container {
-      position: fixed;
-      bottom: 0;
-      right: 0;
-      width: 50%; /* Half the screen width */
-      height: 50%; /* Half the screen height */
-      overflow-y: scroll;
-      border: 2px solid #ccc;
-      background-color: #f9f9f9;
-      padding: 10px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      border-radius: 8px;
-    }
-    .scrollable-container h3 {
-      margin-top: 0;
-      text-align: center;
-      font-size: 1.2em;
-      font-weight: bold;
-    }
-  </style>
 </head>
 
 <body>
   <div class="header">
     <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
-      <img src="img/favicon.png" alt="logo" class="logo" style="width:80px;height:80px;margin-right:15px;margin-bottom:15px;">
+      <img src="img/favicon.png" alt="Bible Codes logo" class="logo">
     </a>
     <h1>Bible Codes</h1>
-    <p>🚧 UNDER CONSTRUCTION 🏗️ 🚧<p>
-    <p>Bible Codes and Data Science</<p>
-    <p>This application allows users to search for patterns in biblical texts using Equidistant Letter Sequencing (ELS). 
+    <p>🚧 UNDER CONSTRUCTION 🏗️ 🚧</p>
+    <p>Bible Codes and Data Science</p>
+    <p>This application allows users to search for patterns in biblical texts using Equidistant Letter Sequencing (ELS).
        Enter a search term, set the minimum and maximum skip values, and click "Search" to find matches within the specified range.
     </p>
   </div>
@@ -66,20 +45,15 @@
     <div id="test"></div>
   </div>
 
-  <div class="scrollable-container" id="scrollable-container">
-    <h3>Biblical Text</h3>
-    <pre id="torah-text">Loading text...</pre>
+  <div id="torah-box" class="resizable-box">
+    <h2>Torah Text</h2>
+    <pre id="torah-text"></pre>
   </div>
 
   <script src="js/test.js" defer></script>
 
-  <div id="torah-box" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 50%; overflow: auto; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; resize: both; overflow: auto;">
-    <h4 style="margin: 0; cursor: move;">Torah Text</h4>
-    <pre id="torah-text" style="white-space: pre-wrap; word-wrap: break-word;"></pre>
-  </div>
-  
+  <!-- Fetch and display the Torah text -->
   <script>
-    // Fetch and display the Torah text
     fetch('data/torahNoSpaces.txt')
       .then(response => {
         if (!response.ok) {
@@ -93,10 +67,10 @@
       .catch(error => {
         console.error('Error fetching Torah text:', error);
       });
-  
+
     // Enable drag functionality for the Torah box
     const torahBox = document.getElementById('torah-box');
-    const header = torahBox.querySelector('h4');
+    const header = torahBox.querySelector('h2');
     
     let isDragging = false;
     let offsetX, offsetY;
@@ -130,13 +104,6 @@
         });
       });
     }
- 
-    // window.addEventListener('load', function () {
-    //   if (performance.navigation.type === 1) {
-    //     location.reload(true);
-    //   }
-    // });
-
   </script>
 </body>
 
