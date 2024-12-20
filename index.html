@@ -11,38 +11,47 @@
 </head>
 
 <body>
-  <div class="header-container">
-    <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
-      <img src="img/favicon.png" alt="logo" class="logo">
-    </a>
-    <h1 class="bible-codes-heading">Bible Codes</h1>
-  </div>
-
-  <div id="list">
-    <div class="input-container">
-      <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="First Search Term">
-      <span class="st-label">First Search Term</span>
+  <!-- Header Section -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
+        <img src="img/favicon.png" alt="logo" class="logo">
+      </a>
+      <h1 class="bible-codes-heading">Bible Codes</h1>
     </div>
+  </header>
 
-    <div class="range-container">
-      <p>
+  <!-- Main Content Section -->
+  <main class="main-content">
+    <!-- Search Input Section -->
+    <section class="search-section">
+      <div class="input-container">
+        <label for="st1" class="input-label">First Search Term</label>
+        <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="Enter a search term">
+      </div>
+
+      <div class="range-container">
         <label for="min-range">Min:</label>
         <input type="number" id="min-range" value="-100">
-      </p>
-      <p>
         <label for="max-range">Max:</label>
         <input type="number" id="max-range" value="100">
-      </p>
-    </div>
+      </div>
 
-    <!-- Search Button placed below the range inputs -->
-    <button class="btn" id="search-btn"><i class="fa fa-search"></i> Search</button>
+      <button class="btn" id="search-btn">Search</button>
+    </section>
 
-    <div id="torah-box">
-      <h4>Torah Text</h4>
-      <pre id="torah-text"></pre>
-    </div>
-  </div>
+    <!-- Torah Text Section -->
+    <section class="torah-section">
+      <div class="torah-controls">
+        <label for="wrap-length">Row Length:</label>
+        <input type="number" id="wrap-length" placeholder="Enter characters per row">
+        <button id="apply-wrap" class="btn">Apply</button>
+      </div>
+      <div class="torah-box">
+        <pre id="torah-text">Torah text will appear here...</pre>
+      </div>
+    </section>
+  </main>
 
   <script src="js/test.js" defer></script>
 </body>

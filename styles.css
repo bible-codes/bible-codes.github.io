@@ -1,106 +1,125 @@
-/* Overall Body Style */
+/* Base Reset and Styling */
 body {
-  background-color: #3F8EBA; /* Custom blue background color */
+  background-color: #3F8EBA; /* Custom blue */
   margin: 0;
   font-family: Arial, sans-serif;
 }
 
-/* Header Section - Logo and Bible Codes Heading */
-.header-container {
+header {
+  background-color: #2D6A91; /* Slightly darker blue for header */
+  padding: 10px;
   display: flex;
   align-items: center;
-  padding: 10px;
-  position: relative;
-  margin-top: 10px;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
 }
 
 .logo {
-  width: 80px;
-  height: 80px;
-  margin-right: 20px;
+  width: 50px;
+  height: 50px;
+  margin-right: 10px;
 }
 
 .bible-codes-heading {
-  font-size: 32px;
-  font-weight: bold;
   color: white;
+  font-size: 24px;
   margin: 0;
 }
 
-/* Styling for Search Term Input */
+/* Main Content Styling */
+.main-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Search Section */
+.search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: #f1f1f1;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.input-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
 .st {
-  margin-right: 15px;
-  margin-bottom: 15px;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
-/* Styling for Input Fields (Min and Max range) */
 .range-container {
-  margin-top: 10px;
-  text-align: left;
-}
-
-.range-container p {
-  margin: 10px 0;
-}
-
-.range-container input[type="number"] {
-  padding: 5px;
-  font-size: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .range-container label {
-  font-size: 16px;
+  font-size: 14px;
 }
 
-/* Search Button Positioning */
+.range-container input {
+  padding: 5px;
+  font-size: 14px;
+  width: 60px;
+}
+
 .btn {
-  background-color: white;
+  padding: 10px;
+  font-size: 14px;
   border: none;
-  color: black;
-  padding: 15px 15px;
-  font-size: 16px;
+  border-radius: 4px;
+  background-color: #3F8EBA;
+  color: white;
   cursor: pointer;
-  margin-top: 20px;
-  width: 100%; /* Full width button */
-  box-sizing: border-box;
 }
 
 .btn:hover {
-  background-color: LightGrey;
+  background-color: #2D6A91;
 }
 
-/* Ensure the container holds floated elements */
-#list {
-  overflow: auto;
-  padding: 20px;
-  padding-bottom: 150px; /* Add space for the Torah text box */
+/* Torah Section */
+.torah-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-/* Styling for Torah text box (fixed at the bottom of the screen) */
-#torah-box {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%; /* Fill the width of the screen */
-  height: 50%; /* 50% height of the screen */
+.torah-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.torah-box {
   background-color: #f9f9f9;
-  border-top: 2px solid #ccc;
+  border: 1px solid #ccc;
+  border-radius: 8px;
   padding: 10px;
-  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.2);
-  overflow-y: auto;
-  z-index: 10;
+  height: 300px;
+  overflow: auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-#torah-box h4 {
-  margin: 0;
-  text-align: center;
-  font-size: 1.2em;
-}
-
-/* Torah Text Styling */
 #torah-text {
-  white-space: pre-wrap;
-  word-wrap: break-word;
   font-family: "Courier New", Courier, monospace;
-  padding: 10px;
+  white-space: pre-wrap; /* Wrap text */
+  word-wrap: break-word;
 }
