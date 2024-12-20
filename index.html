@@ -9,19 +9,81 @@
   <link rel="stylesheet" href="styles.css">
   <title>Bible Codes</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      background-color: #A4A702;
+    }
+
+    /* Ensure the body content is aligned well */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* For making the Torah text box resizable and draggable */
+    #torah-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50%;  /* 50% width of the screen */
+      height: 50%;  /* 50% height of the screen */
+      background-color: #f9f9f9;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      overflow: auto;
+      resize: both;
+      z-index: 1000; /* Ensures the box stays above other content */
+    }
+
+    /* Styling the header inside the text box */
+    #torah-box h4 {
+      margin: 0;
+      cursor: move;
+      padding: 10px;
+      background-color: #f1f1f1;
+      text-align: center;
+    }
+
+    #torah-text {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      padding: 10px;
+    }
+
+    /* Other styling */
+    .btn {
+      background-color: white;
+      border: none;
+      color: black;
+      padding: 15px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: LightGrey;
+    }
+
+    /* Ensure proper layout for input fields and buttons */
+    #list {
+      overflow: auto;
+      padding: 10px;
+    }
+
+  </style>
 </head>
 
 <body>
   <div class="header">
     <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
-      <img src="img/favicon.png" alt="Bible Codes logo" class="logo">
+      <img src="img/favicon.png" alt="logo" class="logo" style="width:80px;height:80px;margin-right:15px;margin-bottom:15px;">
     </a>
     <h1>Bible Codes</h1>
-    <p>🚧 UNDER CONSTRUCTION 🏗️ 🚧</p>
+    <p>🚧 UNDER CONSTRUCTION 🏗️ 🚧<p>
     <p>Bible Codes and Data Science</p>
-    <p>This application allows users to search for patterns in biblical texts using Equidistant Letter Sequencing (ELS).
-       Enter a search term, set the minimum and maximum skip values, and click "Search" to find matches within the specified range.
-    </p>
+    <p>This application allows users to search for patterns in biblical texts using Equidistant Letter Sequencing (ELS).</p>
   </div>
 
   <div id="list">
@@ -45,15 +107,16 @@
     <div id="test"></div>
   </div>
 
-  <div id="torah-box" class="resizable-box">
-    <h2>Torah Text</h2>
+  <script src="js/test.js" defer></script>
+
+  <!-- Torah Box for displaying Torah text -->
+  <div id="torah-box">
+    <h4>Torah Text</h4>
     <pre id="torah-text"></pre>
   </div>
 
-  <script src="js/test.js" defer></script>
-
-  <!-- Fetch and display the Torah text -->
   <script>
+    // Fetch and display the Torah text
     fetch('data/torahNoSpaces.txt')
       .then(response => {
         if (!response.ok) {
@@ -70,24 +133,23 @@
 
     // Enable drag functionality for the Torah box
     const torahBox = document.getElementById('torah-box');
-    const header = torahBox.querySelector('h2');
-    
+    const header = torahBox.querySelector('h4');
     let isDragging = false;
     let offsetX, offsetY;
-  
+
     header.addEventListener('mousedown', (e) => {
       isDragging = true;
       offsetX = e.clientX - torahBox.offsetLeft;
       offsetY = e.clientY - torahBox.offsetTop;
     });
-  
+
     document.addEventListener('mousemove', (e) => {
       if (isDragging) {
         torahBox.style.left = `${e.clientX - offsetX}px`;
         torahBox.style.top = `${e.clientY - offsetY}px`;
       }
     });
-  
+
     document.addEventListener('mouseup', () => {
       isDragging = false;
     });

@@ -1,29 +1,30 @@
-/* Body Styles */
 body {
-  /* background-color: #d9ff87;  Sky blue */
+  background-color: #d9ff87; /* pastel green */
   /* Use a custom shade between skyblue and the blue thread */
-  background-color: #3F8EBA;  /* Custom blue color */
-  /* background-color: #A4A702;  Custom greenish color */
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 0;
+  /* background-color: #3F8EBA;  Custom blue color */
+  /*background-color: #A4A702;  Custom background color */
 }
 
-/* Image Styling */
+/* Styling for the logo - position it in the top-left corner */
+.logo {
+  position: absolute; /* Position relative to the document */
+  top: 10px; /* Distance from top */
+  left: 10px; /* Distance from left */
+  width: 80px; /* Set width */
+  height: 80px; /* Set height */
+  margin: 0; /* No margin */
+}
+
 img {
-  float: left;
-  margin-right: 15px;
-  margin-bottom: 15px;
+  /* Removed float as it's not needed with absolute positioning for the logo */
 }
 
-/* Search Term Input Styling */
 .st {
   float: right;
   margin-right: 15px;
   margin-bottom: 15px;
 }
 
-/* Button Styling */
 .btn {
   float: right;
   background-color: white;
@@ -34,7 +35,6 @@ img {
   cursor: pointer;
 }
 
-/* Button Hover Effect */
 .btn:hover {
   background-color: LightGrey;
 }
@@ -45,34 +45,13 @@ img {
   padding: 10px;
 }
 
-/* Torah Box Styling */
-.resizable-box {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  height: 50%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  background-color: #f9f9f9;
-  resize: both;
-  overflow: auto;
-}
-
-.resizable-box h2 {
-  margin: 0;
-  cursor: move;
-  text-align: center;
-}
-
-/* Scrollable Torah Text Box */
+/* Styling for the scrollable container for Torah text (fixed and resizable) */
 .scrollable-container {
   position: fixed;
   bottom: 0;
   right: 0;
-  width: 50%;
-  height: 50%;
+  width: 50%; /* Half the screen width */
+  height: 50%; /* Half the screen height */
   overflow-y: scroll;
   border: 2px solid #ccc;
   background-color: #f9f9f9;
@@ -88,21 +67,28 @@ img {
   font-weight: bold;
 }
 
-/* Responsive Design for Smaller Screens */
-@media (max-width: 600px) {
-  .resizable-box {
-    width: 90%;
-    height: 40%;
-  }
+/* Allow resizing of the Torah box */
+#torah-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 50%;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  resize: both;
+  overflow: auto;
+}
 
-  .scrollable-container {
-    width: 100%;
-    height: 40%;
-  }
+#torah-box h4 {
+  margin: 0;
+  cursor: move; /* Make the header draggable */
+}
 
-  /* Adjust search input and button layout for smaller screens */
-  .input-container,
-  .range-container {
-    text-align: center;
-  }
+#torah-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
