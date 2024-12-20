@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const searchButton = document.querySelector('.btn');
   const searchTermInput = document.getElementById('st1');
-  const minSkipInput = document.getElementById('minSkipInput'); // Updated to match HTML
-  const maxSkipInput = document.getElementById('maxSkipInput'); // Updated to match HTML
+  const minSkipInput = document.getElementById('minSkipInput');
+  const maxSkipInput = document.getElementById('maxSkipInput');
   const resultContainer = document.getElementById('test');
 
   // Check if all required elements exist before proceeding
@@ -10,6 +10,22 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Missing required elements. Please check your HTML structure.');
     return;
   }
+
+  // Load the Torah text from the file
+  let torahText = '';
+  fetch('data/torahNoSpaces.txt')
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load text file: ${response.statusText}`);
+      }
+      return response.text();
+    })
+    .then((text) => {
+      torahText = text;
+    })
+    .catch((error) => {
+      console.error('Error loading Torah text:', error);
+    });
 
   // Event listener for the search button
   searchButton.addEventListener('click', () => {
@@ -19,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Validate skip range
     if (isNaN(minSkip) || isNaN(maxSkip) || minSkip > maxSkip) {
-      alert("Minimum value must be less than or equal to Maximum value.");
+      alert('Minimum value must be less than or equal to Maximum value.');
       minSkipInput.value = -100;
       maxSkipInput.value = 100;
       minSkip = -100;
@@ -28,29 +44,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Validate search term
-    if (searchTerm === "") {
-      alert("Please enter a search term.");
+    if (searchTerm === '') {
+      alert('Please enter a search term.');
       return;
     }
 
     // Display search initiation message
     resultContainer.textContent = `Searching for "${searchTerm}" within range ${minSkip} to ${maxSkip}...`;
-    resultContainer.style.color = "blue"; // Optional: Indicate loading with color
+    resultContainer.style.color = 'blue'; // Optional: Indicate loading with color
     const loadingMessage = document.createElement('p');
-    loadingMessage.textContent = "Processing, please wait...";
+    loadingMessage.textContent = 'Processing, please wait...';
     resultContainer.appendChild(loadingMessage);
 
-    // Simulate a delay for demonstration purposes (replace with actual search logic)
     setTimeout(() => {
-      const results = performELSSearchWithOptimization(searchTerm, minSkip, maxSkip);
+      const results = performELSSearchWithOptimization(torahText, searchTerm, minSkip, maxSkip);
       loadingMessage.remove(); // Remove the loading message
       displayResults(results);
     }, 1000); // 1-second simulated delay
   });
 
   // Function to perform the optimized ELS search
-  function performELSSearchWithOptimization(term, min, max) {
-    const text = "mocktextfromtorah"; // Replace this with the actual text
+  function performELSSearchWithOptimization(text, term, min, max) {
     const results = [];
 
     // Prehash frequent terms for optimization
@@ -152,9 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to display search results
   function displayResults(results) {
     if (results.length === 0) {
-      resultContainer.innerHTML += "<br>No results found.";
+      resultContainer.innerHTML += '<br>No results found.';
     } else {
-      resultContainer.innerHTML += "<br>" + results.join('<br>');
+      resultContainer.innerHTML += '<br>' + results.join('<br>');
     }
   }
 });
