@@ -1,38 +1,68 @@
+/* Overall Body Style */
 body {
-  background-color: #d9ff87; /* pastel green */
-  /* Use a custom shade between skyblue and the blue thread */
-  /* background-color: #3F8EBA;  Custom blue color */
-  /*background-color: #A4A702;  Custom background color */
+  background-color: #3F8EBA; /* Custom blue background color */
+  margin: 0;
+  font-family: Arial, sans-serif;
 }
 
-/* Styling for the logo - position it in the top-left corner */
+/* Header Section - Logo and Bible Codes Heading */
+.header-container {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  position: relative;
+  margin-top: 10px;
+}
+
 .logo {
-  position: absolute; /* Position relative to the document */
-  top: 10px; /* Distance from top */
-  left: 10px; /* Distance from left */
-  width: 80px; /* Set width */
-  height: 80px; /* Set height */
-  margin: 0; /* No margin */
+  width: 80px;
+  height: 80px;
+  margin-right: 20px;
 }
 
-img {
-  /* Removed float as it's not needed with absolute positioning for the logo */
+.bible-codes-heading {
+  font-size: 32px;
+  font-weight: bold;
+  color: white;
+  margin: 0;
 }
 
+/* Styling for Search Term Input */
 .st {
-  float: right;
   margin-right: 15px;
   margin-bottom: 15px;
 }
 
+/* Styling for Input Fields (Min and Max range) */
+.range-container {
+  margin-top: 10px;
+  text-align: left;
+}
+
+.range-container p {
+  margin: 10px 0;
+}
+
+.range-container input[type="number"] {
+  padding: 5px;
+  font-size: 16px;
+}
+
+.range-container label {
+  font-size: 16px;
+}
+
+/* Search Button Positioning */
 .btn {
-  float: right;
   background-color: white;
   border: none;
   color: black;
   padding: 15px 15px;
   font-size: 16px;
   cursor: pointer;
+  margin-top: 20px;
+  width: 100%; /* Full width button */
+  box-sizing: border-box;
 }
 
 .btn:hover {
@@ -42,53 +72,35 @@ img {
 /* Ensure the container holds floated elements */
 #list {
   overflow: auto;
-  padding: 10px;
+  padding: 20px;
+  padding-bottom: 150px; /* Add space for the Torah text box */
 }
 
-/* Styling for the scrollable container for Torah text (fixed and resizable) */
-.scrollable-container {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 50%; /* Half the screen width */
-  height: 50%; /* Half the screen height */
-  overflow-y: scroll;
-  border: 2px solid #ccc;
-  background-color: #f9f9f9;
-  padding: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-}
-
-.scrollable-container h3 {
-  margin-top: 0;
-  text-align: center;
-  font-size: 1.2em;
-  font-weight: bold;
-}
-
-/* Allow resizing of the Torah box */
+/* Styling for Torah text box (fixed at the bottom of the screen) */
 #torah-box {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  height: 50%;
-  overflow: auto;
-  padding: 10px;
-  border: 1px solid #ccc;
+  bottom: 0;
+  left: 0;
+  width: 100%; /* Fill the width of the screen */
+  height: 50%; /* 50% height of the screen */
   background-color: #f9f9f9;
-  resize: both;
-  overflow: auto;
+  border-top: 2px solid #ccc;
+  padding: 10px;
+  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  z-index: 10;
 }
 
 #torah-box h4 {
   margin: 0;
-  cursor: move; /* Make the header draggable */
+  text-align: center;
+  font-size: 1.2em;
 }
 
+/* Torah Text Styling */
 #torah-text {
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-family: "Courier New", Courier, monospace;
+  padding: 10px;
 }
