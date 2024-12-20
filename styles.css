@@ -1,9 +1,9 @@
-    /* Body Styles */
+/* Body Styles */
 body {
-  background-color: #A4A702; /* Custom greenish AHARON color */
   /* background-color: #d9ff87;  Sky blue */
   /* Use a custom shade between skyblue and the blue thread */
-  /* background-color: #3F8EBA;  Custom blue color */
+  background-color: #3F8EBA;  /* Custom blue color */
+  /* background-color: #A4A702;  Custom greenish color */
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
