@@ -1,22 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
   const searchButton = document.querySelector('.btn');
   const searchTermInput = document.getElementById('st1');
-  const minSkipInput = document.getElementById('min-range');
-  const maxSkipInput = document.getElementById('max-range');
+  const minSkipInput = document.getElementById('minSkipInput'); // Updated to match HTML
+  const maxSkipInput = document.getElementById('maxSkipInput'); // Updated to match HTML
   const resultContainer = document.getElementById('test');
 
-  // Check if elements exist before adding event listeners
+  // Check if all required elements exist before proceeding
   if (!searchButton || !searchTermInput || !minSkipInput || !maxSkipInput || !resultContainer) {
-    console.error('Missing required elements');
+    console.error('Missing required elements. Please check your HTML structure.');
     return;
   }
 
+  // Event listener for the search button
   searchButton.addEventListener('click', () => {
     const searchTerm = searchTermInput.value.trim();
     let minSkip = parseInt(minSkipInput.value);
     let maxSkip = parseInt(maxSkipInput.value);
 
-    // Check if the minSkip and maxSkip values are valid
+    // Validate skip range
     if (isNaN(minSkip) || isNaN(maxSkip) || minSkip > maxSkip) {
       alert("Minimum value must be less than or equal to Maximum value.");
       minSkipInput.value = -100;
@@ -26,29 +27,33 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Validate search term
     if (searchTerm === "") {
       alert("Please enter a search term.");
       return;
     }
 
+    // Display search initiation message
     resultContainer.textContent = `Searching for "${searchTerm}" within range ${minSkip} to ${maxSkip}...`;
-    resultContainer.style.color = "blue"; // Optional: Change color to indicate process
+    resultContainer.style.color = "blue"; // Optional: Indicate loading with color
     const loadingMessage = document.createElement('p');
     loadingMessage.textContent = "Processing, please wait...";
     resultContainer.appendChild(loadingMessage);
 
-    // Simulate a delay to mimic a real search process (replace this with actual searching)
+    // Simulate a delay for demonstration purposes (replace with actual search logic)
     setTimeout(() => {
       const results = performELSSearchWithOptimization(searchTerm, minSkip, maxSkip);
-      loadingMessage.remove(); // Remove loading message after search
+      loadingMessage.remove(); // Remove the loading message
       displayResults(results);
-    }, 1000); // Simulated delay (1 second)
+    }, 1000); // 1-second simulated delay
   });
 
+  // Function to perform the optimized ELS search
   function performELSSearchWithOptimization(term, min, max) {
-    const text = "mocktextfromtorah"; // Replace this with your text
+    const text = "mocktextfromtorah"; // Replace this with the actual text
     const results = [];
 
+    // Prehash frequent terms for optimization
     const prehashTable = prehashFrequentTerms(text, term.length);
 
     for (let skip = min; skip <= max; skip++) {
@@ -61,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return results;
   }
 
+  // Function to prehash substrings of a specific length
   function prehashFrequentTerms(text, length) {
     const table = {};
     for (let i = 0; i <= text.length - length; i++) {
@@ -71,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return table;
   }
 
+  // KMP search algorithm for exact matches
   function kmpSearch(text, pattern, skip) {
     const results = [];
     const lps = computeLPSArray(pattern);
@@ -96,10 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return results;
   }
 
+  // Compute the LPS array for the KMP algorithm
   function computeLPSArray(pattern) {
     const lps = Array(pattern.length).fill(0);
     let length = 0;
     let i = 1;
+
     while (i < pattern.length) {
       if (pattern[i] === pattern[length]) {
         length++;
@@ -117,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return lps;
   }
 
+  // Optimized search with skip
   function searchWithSkipOptimized(term, text, skip, prehashTable) {
     const results = [];
     const adjustedSkip = Math.abs(skip);
@@ -139,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return results;
   }
 
+  // Function to display search results
   function displayResults(results) {
     if (results.length === 0) {
       resultContainer.innerHTML += "<br>No results found.";

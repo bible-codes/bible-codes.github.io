@@ -9,6 +9,27 @@
   <link rel="stylesheet" href="styles.css">
   <title>Bible Codes</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    .scrollable-container {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      width: 50%; /* Half the screen width */
+      height: 50%; /* Half the screen height */
+      overflow-y: scroll;
+      border: 2px solid #ccc;
+      background-color: #f9f9f9;
+      padding: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    .scrollable-container h3 {
+      margin-top: 0;
+      text-align: center;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+  </style>
 </head>
 
 <body>
@@ -45,10 +66,38 @@
     <div id="test"></div>
   </div>
 
+  <div class="scrollable-container" id="scrollable-container">
+    <h3>Biblical Text</h3>
+    <pre id="torah-text">Loading text...</pre>
+  </div>
+
   <script src="js/test.js" defer></script>
 
+  <div style="position: fixed; bottom: 0; right: 0; width: 50%; height: 50%; overflow-y: scroll; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9;">
+    <h4 style="margin: 0;">Torah Text</h4>
+    <pre id="torah-text" style="white-space: pre-wrap; word-wrap: break-word;"></pre>
+  </div>
+  
   <script>
-    // Service Worker registration for PWA
+    // Fetch and display the Torah text
+    fetch('data/torahNoSpaces.txt')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.text();
+      })
+      .then(text => {
+        document.getElementById('torah-text').textContent = text;
+      })
+      .catch(error => {
+        console.error('Error fetching Torah text:', error);
+      });
+  </script>
+  
+
+  <!-- Service Worker and force reload -->
+  <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('sw.js').then(function (registration) {
@@ -58,17 +107,13 @@
         });
       });
     }
-  </script>
 
-  <!-- force reload ignoring cache?-->
-  <script defer>
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
       if (performance.navigation.type === 1) {
         location.reload(true);
       }
     });
   </script>
-  
 </body>
 
 </html>
