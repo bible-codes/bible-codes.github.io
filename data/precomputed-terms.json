@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2023-07-01",
+    "description": "Precomputed ELS search results for common Hebrew terms"
+  },
+  "terms": {
+    "אברהם": {
+      "label": "Abraham",
+      "results": [
+        {
+          "algorithm": "Precomputed",
+          "pattern": "אברהם",
+          "skip": 50,
+          "startIndex": 12358,
+          "endIndex": 12558,
+          "message": "Found \"אברהם\" with skip 50 right starting at index 12358"
+        },
+        {
+          "algorithm": "Precomputed", 
+          "pattern": "אברהם",
+          "skip": -26,
+          "startIndex": 25469,
+          "endIndex": 25365,
+          "message": "Found \"אברהם\" with skip -26 left starting at index 25469"
+        }
+      ]
+    },
+    "משה": {
+      "label": "Moses",
+      "results": [
+        {
+          "algorithm": "Precomputed",
+          "pattern": "משה",
+          "skip": 50,
+          "startIndex": 8794,
+          "endIndex": 8944,
+          "message": "Found \"משה\" with skip 50 right starting at index 8794"
+        },
+        {
+          "algorithm": "Precomputed",
+          "pattern": "משה",
+          "skip": 26,
+          "startIndex": 10683,
+          "endIndex": 10761,
+          "message": "Found \"משה\" with skip 26 right starting at index 10683"
+        }
+      ]
+    },
+    "ישראל": {
+      "label": "Israel",
+      "results": [
+        {
+          "algorithm": "Precomputed",
+          "pattern": "ישראל",
+          "skip": 7,
+          "startIndex": 53407,
+          "endIndex": 53442,
+          "message": "Found \"ישראל\" with skip 7 right starting at index 53407"
+        },
+        {
+          "algorithm": "Precomputed",
+          "pattern": "ישראל",
+          "skip": -50,
+          "startIndex": 79804,
+          "endIndex": 79554,
+          "message": "Found \"ישראל\" with skip -50 left starting at index 79804"
+        }
+      ]
+    },
+    "תורה": {
+      "label": "Torah",
+      "results": [
+        {
+          "algorithm": "Precomputed",
+          "pattern": "תורה",
+          "skip": 50,
+          "startIndex": 4678,
+          "endIndex": 4828,
+          "message": "Found \"תורה\" with skip 50 right starting at index 4678"
+        }
+      ]
+    }
+  }
+}

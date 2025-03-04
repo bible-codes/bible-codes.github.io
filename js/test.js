@@ -1,13 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const searchButton = document.querySelector('.btn');
+  const searchButton = document.querySelector('#search-btn');
   const searchTermInput = document.getElementById('st1');
-  const minSkipInput = document.getElementById('minSkipInput'); // Updated to match HTML
-  const maxSkipInput = document.getElementById('maxSkipInput'); // Updated to match HTML
-  const resultContainer = document.getElementById('test');
+  const minSkipInput = document.getElementById('min-range');
+  const maxSkipInput = document.getElementById('max-range');
+  const resultContainer = document.getElementById('search-results');
+  const offlineIndicator = document.getElementById('offline-indicator');
   let torahText = ""; // Global variable to hold the Torah text
 
+  // Check online status on load and when it changes
+  function updateOnlineStatus() {
+    if (navigator.onLine) {
+      offlineIndicator.classList.add('hidden');
+    } else {
+      offlineIndicator.classList.remove('hidden');
+    }
+  }
+  
+  // Add event listeners for online/offline events
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  
+  // Initial check
+  updateOnlineStatus();
+
   // Fetch the Torah text file
-  fetch('../data/torahNoSpaces.txt')
+  fetch('data/torahNoSpaces.txt')
     .then((response) => {
       if (!response.ok) {
         throw new Error(`Failed to load text file: ${response.status} - ${response.statusText}`);
@@ -51,127 +68,172 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Display search initiation message
-    resultContainer.textContent = `Searching for "${searchTerm}" within range ${minSkip} to ${maxSkip}...`;
-    resultContainer.style.color = "blue"; // Optional: Indicate loading with color
-    const loadingMessage = document.createElement('p');
-    loadingMessage.textContent = "Processing, please wait...";
-    resultContainer.appendChild(loadingMessage);
+    // Clear previous results
+    resultContainer.innerHTML = '';
 
-    // Simulate a delay for demonstration purposes (replace with actual search logic)
-    setTimeout(() => {
-      const results = performELSSearchWithOptimization(searchTerm, minSkip, maxSkip);
-      loadingMessage.remove(); // Remove the loading message
-      displayResults(results);
-    }, 1000); // 1-second simulated delay
+    // Show loading indicator
+    const loadingElement = document.createElement('div');
+    loadingElement.classList.add('result-item');
+    loadingElement.innerHTML = '<span class="loading-spinner"></span> Searching for "' + searchTerm + 
+                               '" with skips from ' + minSkip + ' to ' + maxSkip + '...';
+    resultContainer.appendChild(loadingElement);
+
+    // Save search to history (useful for offline capabilities)
+    saveSearchToHistory(searchTerm, minSkip, maxSkip);
+
+    // Use Web Worker for non-blocking search (if supported)
+    if (window.Worker) {
+      // In the future, we can implement a worker - for now use setTimeout to avoid blocking UI
+      setTimeout(() => {
+        performSearch(searchTerm, minSkip, maxSkip, torahText, loadingElement);
+      }, 100);
+    } else {
+      // Fallback for browsers that don't support Web Workers
+      performSearch(searchTerm, minSkip, maxSkip, torahText, loadingElement);
+    }
   });
 
-  // Function to perform the optimized ELS search
-  function performELSSearchWithOptimization(term, min, max) {
-    const results = [];
-
-    // Prehash frequent terms for optimization
-    const prehashTable = prehashFrequentTerms(torahText, term.length);
-
-    for (let skip = min; skip <= max; skip++) {
-      if (skip === 0) {
-        results.push(...kmpSearch(torahText, term, 0));
-      } else {
-        results.push(...searchWithSkipOptimized(term, torahText, skip, prehashTable));
+  // Function to save search to history using localStorage
+  function saveSearchToHistory(term, minSkip, maxSkip) {
+    try {
+      const searchHistory = JSON.parse(localStorage.getItem('bibleCodeSearchHistory') || '[]');
+      
+      // Add new search to history
+      searchHistory.push({
+        term,
+        minSkip,
+        maxSkip,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Keep only the latest 20 searches
+      while (searchHistory.length > 20) {
+        searchHistory.shift();
       }
+      
+      // Save back to localStorage
+      localStorage.setItem('bibleCodeSearchHistory', JSON.stringify(searchHistory));
+    } catch (error) {
+      console.error('Failed to save search to history:', error);
     }
-    return results;
   }
 
-  // Function to prehash substrings of a specific length
-  function prehashFrequentTerms(text, length) {
-    const table = {};
-    for (let i = 0; i <= text.length - length; i++) {
-      const substr = text.substring(i, i + length);
-      table[substr] = table[substr] || [];
-      table[substr].push(i);
+  // Function to perform search and display results - updated for async
+  async function performSearch(term, minSkip, maxSkip, text, loadingElement) {
+    try {
+      // Use our external search algorithms module with async support
+      const results = await window.searchAlgorithms.performELSSearch(term, text, minSkip, maxSkip, true);
+      
+      // Remove loading indicator
+      loadingElement.remove();
+      
+      // Display results
+      displayResults(results);
+      
+    } catch (error) {
+      console.error('Search error:', error);
+      loadingElement.innerHTML = `<strong>Error:</strong> ${error.message}`;
     }
-    return table;
   }
 
-  // KMP search algorithm for exact matches
-  function kmpSearch(text, pattern, skip) {
-    const results = [];
-    const lps = computeLPSArray(pattern);
-    let i = 0;
-    let j = 0;
-
-    while (i < text.length) {
-      if (pattern[j] === text[i]) {
-        i++;
-        j++;
-      }
-      if (j === pattern.length) {
-        results.push(`Found "${pattern}" with skip ${skip} at index ${i - j}`);
-        j = lps[j - 1];
-      } else if (i < text.length && pattern[j] !== text[i]) {
-        if (j !== 0) {
-          j = lps[j - 1];
-        } else {
-          i++;
-        }
-      }
-    }
-    return results;
-  }
-
-  // Compute the LPS array for the KMP algorithm
-  function computeLPSArray(pattern) {
-    const lps = Array(pattern.length).fill(0);
-    let length = 0;
-    let i = 1;
-
-    while (i < pattern.length) {
-      if (pattern[i] === pattern[length]) {
-        length++;
-        lps[i] = length;
-        i++;
-      } else {
-        if (length !== 0) {
-          length = lps[length - 1];
-        } else {
-          lps[i] = 0;
-          i++;
-        }
-      }
-    }
-    return lps;
-  }
-
-  // Optimized search with skip
-  function searchWithSkipOptimized(term, text, skip, prehashTable) {
-    const results = [];
-    const adjustedSkip = Math.abs(skip);
-    const direction = skip > 0 ? 'right' : 'left';
-
-    for (let i = 0; i < text.length; i++) {
-      let candidate = '';
-
-      if (prehashTable[term] && prehashTable[term].includes(i)) {
-        results.push(`Found "${term}" directly from prehash with skip ${skip} starting at index ${i}`);
-      } else {
-        for (let j = i; j < text.length && candidate.length < term.length; j += adjustedSkip) {
-          candidate += text[j];
-        }
-        if (candidate === term) {
-          results.push(`Found "${term}" skipping ${skip} ${direction} starting at index ${i}`);
-        }
-      }
-    }
-    return results;
-  }
-
-  // Function to display search results
+  // Function to display search results with enhanced formatting
   function displayResults(results) {
-    if (results.length === 0) {
-      resultContainer.innerHTML += "<br>No results found.";
-    } else {
-      resultContainer.innerHTML += "<br>" + results.join('<br>');
+    const resultHeader = document.createElement('div');
+    resultHeader.style.fontWeight = 'bold';
+    resultHeader.style.marginBottom = '10px';
+    
+    if (!results || results.length === 0) {
+      resultHeader.textContent = 'No results found.';
+      resultContainer.appendChild(resultHeader);
+      return;
     }
+    
+    // Group results by skip value for better organization
+    const resultsBySkip = {};
+    let totalResults = 0;
+    
+    results.forEach(result => {
+      totalResults++;
+      if (!resultsBySkip[result.skip]) {
+        resultsBySkip[result.skip] = [];
+      }
+      resultsBySkip[result.skip].push(result);
+    });
+    
+    resultHeader.textContent = `Found ${totalResults} matches:`;
+    resultContainer.appendChild(resultHeader);
+    
+    // Display results grouped by skip
+    Object.keys(resultsBySkip).sort((a, b) => Number(a) - Number(b)).forEach(skip => {
+      const skipResults = resultsBySkip[skip];
+      
+      // Create a header for this skip value
+      const skipHeader = document.createElement('div');
+      skipHeader.classList.add('result-group-header');
+      skipHeader.textContent = `Skip ${skip} (${skipResults.length} match${skipResults.length !== 1 ? 'es' : ''})`;
+      resultContainer.appendChild(skipHeader);
+      
+      // Display each result
+      skipResults.forEach(result => {
+        const resultItem = document.createElement('div');
+        resultItem.classList.add('result-item');
+        
+        // Create message with details
+        const resultText = document.createElement('div');
+        resultText.innerHTML = `
+          <strong>Found:</strong> "${result.pattern}" 
+          <br><strong>Algorithm:</strong> ${result.algorithm}
+          <br><strong>Starting at:</strong> index ${result.startIndex}
+          <br><strong>Context:</strong> <span dir="rtl" class="context-text">${getTextContext(torahText, result)}</span>
+        `;
+        
+        resultItem.appendChild(resultText);
+        resultContainer.appendChild(resultItem);
+      });
+    });
+    
+    // Scroll to results
+    resultContainer.parentElement.scrollIntoView({ behavior: 'smooth' });
+  }
+  
+  // Function to get text context around a match
+  function getTextContext(text, result) {
+    const contextSize = 10; // Characters to show before and after
+    const absSkip = Math.abs(result.skip);
+    const direction = result.skip > 0 ? 'right' : 'left';
+    let highlightedContext = '';
+    
+    // Handle skip=0 differently (regular text)
+    if (result.skip === 0) {
+      const start = Math.max(0, result.startIndex - contextSize);
+      const end = Math.min(text.length, result.endIndex + contextSize + 1);
+      const prefix = text.substring(start, result.startIndex);
+      const match = text.substring(result.startIndex, result.endIndex + 1);
+      const suffix = text.substring(result.endIndex + 1, end);
+      
+      return `${prefix}<mark>${match}</mark>${suffix}`;
+    }
+    
+    // For non-zero skips, show the pattern with highlighting
+    let matchIndices = [];
+    for (let i = 0; i < result.pattern.length; i++) {
+      const idx = result.startIndex + (i * absSkip);
+      matchIndices.push(idx);
+    }
+    
+    // Extend context before and after
+    const minIdx = Math.max(0, result.startIndex - (contextSize * absSkip));
+    const maxIdx = Math.min(text.length - 1, result.endIndex + (contextSize * absSkip));
+    
+    // Build highlighted text
+    for (let i = minIdx; i <= maxIdx; i += absSkip) {
+      if (matchIndices.includes(i)) {
+        highlightedContext += `<mark>${text[i]}</mark>`;
+      } else {
+        highlightedContext += text[i];
+      }
+    }
+    
+    return highlightedContext;
   }
 });
