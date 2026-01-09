@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  torahbiblecodes:
+    build: .
+    container_name: torahbiblecodes
+    volumes:
+      - ./USER_GENERATED_FILES:/app/USER_GENERATED_FILES
+      - ./texts:/app/texts
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    working_dir: /app
