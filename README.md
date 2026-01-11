@@ -44,10 +44,11 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
 
 ### Technical Excellence
 - **100% Client-Side**: No server required, runs entirely in browser
-- **Offline Capable**: Full PWA support with service worker caching
-- **Character-Level Database**: Future-proof architecture using IndexedDB
-- **Web Workers**: Heavy computations run in background threads
+- **Fully Offline Capable**: PWA architecture enables complete offline functionality - all searches, calculations, and analysis work without internet
+- **Character-Level Database**: Future-proof architecture using IndexedDB (50-100MB storage)
+- **Web Workers**: Heavy computations (ELS, text search) run in background threads for responsive UI
 - **Cross-Platform**: Works on desktop, tablet, and mobile devices
+- **Installable**: Add to home screen and run as standalone app
 
 ### Data Features
 - **Niqqud Aware**: Supports vowel points in searches
@@ -62,9 +63,10 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
 
 ### Frontend
 - **JavaScript (ES6+)**: Core application logic
-- **IndexedDB**: Large dataset storage and querying
-- **Web Workers**: Background processing for searches
+- **IndexedDB**: Large dataset storage and querying (50-100MB practical limit)
+- **Web Workers**: Background processing for heavy searches (ELS, full-text)
 - **Service Worker**: Offline caching and PWA functionality
+- **WebAssembly (WASM)**: Optional high-performance compute for future optimizations
 
 ### Data Architecture
 - **Character-Level Database**: Canonical storage of every Hebrew letter

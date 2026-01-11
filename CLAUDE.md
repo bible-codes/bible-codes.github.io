@@ -213,30 +213,81 @@ Loaded into IndexedDB on first app run.
 
 ## Client-Side Query Engines (JS Modules)
 
+All engines run **100% client-side** with **no network dependency**. Heavy operations use **Web Workers** to prevent UI blocking.
+
 ### Letter Engine
 - Query by base letter
 - Query by niqqud pattern
 - Query by taamim presence/type
+- **Implementation**: Direct IndexedDB queries with indices
+- **Performance**: Fast (indexed lookups, O(log n))
 
-### Numeric Engine
-- Gematria exact/range
+### Numeric Engine (Gematria)
+- Gematria exact/range search
 - Reduced/ordinal modes
 - Verse or word level aggregation
+- **Implementation**: Precomputed values in database
+- **Performance**: Very fast (hash table lookups, O(1))
 
 ### Acronym/Notarikon Engine
 - First letters across words
 - Last letters across words
 - Mixed strategies
+- **Implementation**: IndexedDB query + client-side string ops
+- **Performance**: Fast for single verse, medium for book-wide
 
-### ELS Engine
-- Operates on `chars.id`
-- Uses only `base_char`
-- Web Worker execution
+### ELS Engine ⚡ **Web Worker Required**
+- Operates on `chars.id` (global position)
+- Uses only `base_char` (consonantal text)
+- Skip distance range scanning
+- **Implementation**: Dedicated Web Worker for non-blocking search
+- **Performance**: Medium-slow (full scan), benefits from precomputed hashes
+- **Optimization**: Pre-indexed common skip distances, chunked processing
+
+### Text Search Engine ⚡ **Web Worker Recommended**
+- Keyword/phrase search
+- Pattern matching (regex support)
+- First/last letter filtering
+- **Implementation**: Web Worker for full-text scans
+- **Performance**: Medium (can scan ~300k chars in <1s on desktop)
 
 ### Structural Queries
 - "Nth letter of Torah"
 - "Middle letter of book"
 - "All verses with X letters"
+- **Implementation**: Direct IndexedDB queries or precomputed metadata
+- **Performance**: Very fast (O(1) for indexed queries)
+
+### Web Worker Architecture
+
+```javascript
+// Main thread
+const elsWorker = new Worker('engines/els.worker.js');
+elsWorker.postMessage({ term: 'משה', minSkip: -100, maxSkip: 100 });
+elsWorker.onmessage = (e) => {
+  displayResults(e.data.matches);
+  updateProgress(e.data.progress);
+};
+
+// Worker thread (els.worker.js)
+self.onmessage = async (e) => {
+  const { term, minSkip, maxSkip } = e.data;
+  const db = await openIndexedDB();
+  const chars = await db.getAll('chars');
+
+  // Heavy computation here (doesn't block UI)
+  for (let skip = minSkip; skip <= maxSkip; skip++) {
+    const matches = findELS(chars, term, skip);
+    self.postMessage({ matches, progress: calculateProgress() });
+  }
+};
+```
+
+This architecture ensures:
+- **UI remains responsive** during heavy searches
+- **Progress updates** for long operations
+- **Cancellable searches** (worker can be terminated)
+- **Parallel execution** (multiple workers if needed)
 
 ---
 
@@ -308,12 +359,14 @@ Loaded into IndexedDB on first app run.
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (Current)
+### Phase 1: Foundation ✅ **COMPLETED**
 - [x] Move original index.html to bible-codes.html
 - [x] Create new unified index.html dashboard
 - [x] Create CLAUDE.md implementation plan
-- [ ] Update service worker references
-- [ ] Update manifest.json for unified branding
+- [x] Update service worker references
+- [x] Update manifest.json for unified branding
+- [x] Update README.md with comprehensive documentation
+- [x] Document PWA capabilities and best practices
 
 ### Phase 2: Database Infrastructure
 - [ ] Design IndexedDB schema
@@ -358,25 +411,105 @@ Loaded into IndexedDB on first app run.
 
 ---
 
-## PWA Considerations
+## PWA Capabilities & Architecture
 
-### Advantages
-- IndexedDB persistence (large datasets)
-- Offline Torah access
-- Faster repeated searches
-- Web Workers allowed
-- Background caching
+### What PWAs Can Do (Fully Supported)
 
-### Limitations
-- ~50–100MB practical storage limit
-- iOS Safari constraints (still workable)
-- Client memory limits for large searches
+A **PWA can run arbitrary JavaScript calculations fully offline on the device**.
 
-### Strategies
-- Compressed indices
-- Incremental loading
-- Pagination for large result sets
-- Web Worker offloading
+#### Supported Features
+- **All client-side JS execution** (same as a normal web app)
+- **Heavy computations** (loops, numeric processing, string analysis)
+- **Web Workers** for parallel/non-blocking computation (strongly recommended)
+- **IndexedDB** for large datasets (tens of MBs)
+- **Offline execution** via Service Worker caching
+- **WebAssembly (WASM)** (optional) for high-performance compute
+
+#### What "Offline" Means in Practice
+
+Once installed or cached:
+- **No network required** - all functionality available without internet
+- **All JS runs locally** - computations happen on user's device
+- **Data read/write** from IndexedDB / Cache API
+- **Deterministic performance** based on device CPU/RAM
+
+### Technical Limits (Important)
+
+#### CPU
+- Limited only by device hardware
+- Mobile devices slower than desktop
+- Heavy searches benefit from Web Workers to prevent UI blocking
+
+#### Memory
+- **JS heap**: ~1–2 GB on desktop, much lower on mobile
+- **IndexedDB practical limit**: ~50–100 MB (browser-dependent)
+- **Mobile constraints**: More aggressive memory limits
+
+#### Browser API Restrictions
+- **No filesystem access** beyond browser APIs (IndexedDB, Cache API)
+- **No native threads** (Web Workers only)
+- **Quota management** varies by browser
+
+### Best Practices for Hebrew Bible Analysis
+
+#### Web Worker Strategy
+- Move **ELS searches** to Web Workers (avoid blocking UI)
+- Move **full-scan searches** to Web Workers
+- Use **dedicated workers** for database queries
+- Implement **progress callbacks** for long operations
+
+#### Data Optimization
+- **Pre-index data** (ordinal char table) to avoid repeated scans
+- **Chunked processing** for long searches (process in batches)
+- **Cache results** of expensive queries in IndexedDB
+- **Prefer integer operations** over string ops where possible
+- **Compress data** before storing (gzip JSON)
+
+#### Memory Management
+- **Lazy load** character data (load books on demand)
+- **Paginate results** (don't render 1000+ results at once)
+- **Release references** to large objects after use
+- **Monitor quota** and warn users before limits
+
+#### Performance Optimization
+- **Precompute indices**: gematria values, letter positions
+- **Binary search** where possible (sorted indices)
+- **Hash tables** for O(1) lookups (term → positions)
+- **Debounce** user input for search fields
+- **Virtualize** long lists (only render visible items)
+
+### PWA vs Normal Web Page
+
+| Capability | Normal Page | PWA | Notes |
+|-----------|-------------|-----|-------|
+| Offline JS | ❌ | ✅ | Full computation capability offline |
+| IndexedDB persistence | ⚠️ | ✅ | Reliable long-term storage |
+| Background caching | ❌ | ✅ | Service Worker pre-caches assets |
+| Installable | ❌ | ✅ | Add to home screen, runs standalone |
+| Worker reliability | ⚠️ | ✅ | Better lifecycle management |
+| Push notifications | ❌ | ✅ | (optional, not needed for this app) |
+
+### Architecture Validation
+
+✅ **Our architecture is fully PWA-compatible**:
+
+- **Character-level database**: Can be stored in IndexedDB
+- **Gematria calculations**: Run entirely client-side with no network
+- **Acronym/Notarikon**: Pure JS string operations
+- **ELS searches**: Web Worker implementation for performance
+- **Offline-first**: All data and code cached on first visit
+
+### Implementation Strategy
+
+1. **Phase 2**: Build IndexedDB schema, test with Genesis only (~10MB)
+2. **Phase 3**: Implement Web Workers for search engines
+3. **Phase 4**: Full Tanach data load with quota management
+4. **Phase 5**: Performance profiling and optimization
+5. **Phase 6**: Mobile device testing and memory tuning
+
+### Bottom Line
+
+A PWA is **fully capable** of running our Hebrew Tanach character-level database, gematria, acronym, and ELS computations **entirely offline on the user's device**. The architecture described is technically sound and aligned with browser capabilities.
 
 ---
 
