@@ -166,7 +166,7 @@ See [CLAUDE.md](CLAUDE.md) for detailed implementation plans and architecture do
 
 ## 📧 Contact
 
-- **Email**: roni762583@protonmail.com
+- **Email**: roni762583@gmail.com
 - **GitHub**: [bible-codes](https://github.com/bible-codes)
 
 ---

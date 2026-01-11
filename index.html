@@ -243,29 +243,6 @@
       </p>
     </section>
 
-    <!-- Quick Verse Lookup -->
-    <section class="features-section">
-      <h2 style="margin-bottom: 1rem;">Quick Verse Lookup</h2>
-      <p style="color: #666; margin-bottom: 1rem;">Enter a reference (e.g., "Genesis 1:1" or "Bereshit 1:1")</p>
-      <div style="display: flex; gap: 1rem; align-items: center;">
-        <input
-          type="text"
-          id="verse-lookup"
-          placeholder="Book Chapter:Verse"
-          style="flex: 1; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;"
-        >
-        <button
-          id="lookup-btn"
-          style="padding: 0.75rem 2rem; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;"
-        >
-          Lookup
-        </button>
-      </div>
-      <div id="verse-result" style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; display: none;">
-        <p style="color: #666; font-style: italic;">Feature coming soon...</p>
-      </div>
-    </section>
-
     <!-- Offline Indicator -->
     <div id="offline-indicator" class="offline-indicator hidden" style="position: fixed; bottom: 20px; right: 20px; background: #ff9800; color: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
       You are currently offline. Some features may be limited.
@@ -277,19 +254,11 @@
     <p>&copy; 2025 Hebrew Bible Analysis Suite | Open Source Project</p>
     <p>
       <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank" style="color: #667eea; text-decoration: none;">GitHub Repository</a> |
-      <a href="mailto:roni762583@protonmail.com" style="color: #667eea; text-decoration: none;">Contact</a>
+      <a href="mailto:roni762583@gmail.com" style="color: #667eea; text-decoration: none;">Contact</a>
     </p>
   </footer>
 
   <script>
-    // Quick verse lookup placeholder
-    document.getElementById('lookup-btn')?.addEventListener('click', () => {
-      const resultDiv = document.getElementById('verse-result');
-      if (resultDiv) {
-        resultDiv.style.display = 'block';
-      }
-    });
-
     // Offline indicator
     window.addEventListener('online', () => {
       document.getElementById('offline-indicator')?.classList.add('hidden');

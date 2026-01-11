@@ -592,7 +592,7 @@ This schema is **future-proof**:
 
 ## Contact & Resources
 
-- **Developer**: Aharon (roni762583@protonmail.com)
+- **Developer**: Aharon (roni762583@gmail.com)
 - **GitHub**: [bible-codes/bible-codes.github.io](https://github.com/bible-codes/bible-codes.github.io)
 - **Related**: [bible-data-science.github.io](https://github.com/roni762583/bible-data-science.github.io)
 
