@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Bible Codes</title>
+  <link rel="manifest" href="manifest.json">
+  <!-- Service Worker Registration -->
+  <script type="text/javascript">
+    // Register service worker for offline capabilities
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(registration => {
+            console.log('Service Worker registered with scope:', registration.scope);
+          })
+          .catch(error => {
+            console.error('Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
+</head>
+
+<body>
+  <!-- Header Section -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
+        <img src="img/favicon.png" alt="logo" class="logo">
+      </a>
+      <h1 class="bible-codes-heading">Bible Codes</h1>
+    </div>
+  </header>
+
+  <!-- Main Content Section -->
+  <main class="main-content">
+    <!-- Search Input Section -->
+    <section class="search-section">
+      <div class="input-container">
+        <label for="st1" class="input-label">First Search Term</label>
+        <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="Enter a search term">
+      </div>
+
+      <div class="range-container">
+        <label for="min-range">Min:</label>
+        <input type="number" id="min-range" value="-100">
+        <label for="max-range">Max:</label>
+        <input type="number" id="max-range" value="100">
+      </div>
+
+      <button class="btn" id="search-btn">Search</button>
+      
+      <!-- New Results Container -->
+      <div id="search-results-container" class="results-container">
+        <h3>Search Results</h3>
+        <div id="search-results" class="results-list"></div>
+      </div>
+    </section>
+
+    <!-- Torah Text Section -->
+    <section class="torah-section">
+      <div class="torah-controls">
+        <label for="wrap-length">Row Length:</label>
+        <input type="number" id="wrap-length" placeholder="Enter characters per row">
+        <button id="apply-wrap" class="btn">Apply</button>
+      </div>
+      <div class="torah-box">
+        <pre id="torah-text">Loading text...</pre>
+      </div>
+    </section>
+    
+    <!-- Offline status indicator -->
+    <div id="offline-indicator" class="offline-indicator hidden">
+      You are currently offline. Some features may be limited.
+    </div>
+  </main>
+
+  <script src="js/test.js" defer></script>
+  <script src="js/load-torah.js" defer></script>
+  <script src="js/search-algorithms.js" defer></script> <!-- New Script -->
+</body>
+
+</html>

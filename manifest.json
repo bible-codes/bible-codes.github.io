@@ -1,10 +1,11 @@
 {
-    "name": "Bible Code App",
-    "short_name": "BibleCode",
+    "name": "Hebrew Bible Analysis Suite",
+    "short_name": "Bible Analysis",
+    "description": "Comprehensive Hebrew Bible analysis tools - ELS, Gematria, Notarikon, and more",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#4CAF50",
+    "theme_color": "#667eea",
     "icons": [
       {
         "src": "img/favicon.png",

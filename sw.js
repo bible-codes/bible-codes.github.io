@@ -1,9 +1,10 @@
-const CACHE_NAME = 'bible-code-app-v1.1';
+const CACHE_NAME = 'bible-analysis-suite-v2.0';
 
 // Assets to cache for offline use
 const urlsToCache = [
   './',
   './index.html',
+  './bible-codes.html',
   './styles.css',
   './manifest.json',
   './img/favicon.png',

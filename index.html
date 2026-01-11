@@ -6,11 +6,117 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="stylesheet" href="styles.css">
-  <title>Bible Codes</title>
+  <title>Hebrew Bible Analysis Suite</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .hero-section {
+      text-align: center;
+      padding: 3rem 1rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      margin-bottom: 3rem;
+    }
+
+    .hero-section h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero-section p {
+      font-size: 1.2rem;
+      opacity: 0.95;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .tool-card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .tool-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .tool-card h3 {
+      color: #667eea;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    .tool-card p {
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .tool-status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .status-active {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-planned {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .features-section {
+      background: #f8f9fa;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .features-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      list-style: none;
+      padding: 0;
+    }
+
+    .features-list li {
+      padding: 0.75rem;
+      background: white;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+      border-top: 1px solid #e0e0e0;
+    }
+  </style>
   <!-- Service Worker Registration -->
   <script type="text/javascript">
-    // Register service worker for offline capabilities
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -29,59 +135,170 @@
   <!-- Header Section -->
   <header class="header">
     <div class="logo-container">
-      <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">
+      <a href="/">
         <img src="img/favicon.png" alt="logo" class="logo">
       </a>
-      <h1 class="bible-codes-heading">Bible Codes</h1>
+      <h1 class="bible-codes-heading">Hebrew Bible Analysis Suite</h1>
     </div>
   </header>
 
-  <!-- Main Content Section -->
-  <main class="main-content">
-    <!-- Search Input Section -->
-    <section class="search-section">
-      <div class="input-container">
-        <label for="st1" class="input-label">First Search Term</label>
-        <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="Enter a search term">
+  <main class="dashboard-container">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <h1>Comprehensive Hebrew Bible Analysis</h1>
+      <p>Client-side, offline-capable tools for Torah study, research, and exploration</p>
+      <p style="font-size: 0.9rem; margin-top: 1rem;">🔴 Active | 🟡 In Development | 🟢 Planned</p>
+    </section>
+
+    <!-- Tools Grid -->
+    <section class="tools-grid">
+      <!-- ELS / Bible Codes Tool -->
+      <a href="bible-codes.html" class="tool-card">
+        <h3>🔴 ELS Bible Codes Search</h3>
+        <p>Equidistant Letter Sequence (ELS) search engine with precomputed hashes and dynamic skip-distance analysis across the Torah text.</p>
+        <span class="tool-status status-active">Active</span>
+      </a>
+
+      <!-- Text Search Tool -->
+      <div class="tool-card">
+        <h3>🟡 Hebrew Text Search</h3>
+        <p>Advanced text search with pattern matching, keyword lookup, first/last letter filtering, and verse-by-verse navigation.</p>
+        <span class="tool-status status-planned">Planned</span>
       </div>
 
-      <div class="range-container">
-        <label for="min-range">Min:</label>
-        <input type="number" id="min-range" value="-100">
-        <label for="max-range">Max:</label>
-        <input type="number" id="max-range" value="100">
+      <!-- Gematria Calculator -->
+      <div class="tool-card">
+        <h3>🟡 Gematria Calculator</h3>
+        <p>Calculate gematria values using multiple methods (standard, reduced, ordinal, final letters). Search verses by numeric value.</p>
+        <span class="tool-status status-planned">Planned</span>
       </div>
 
-      <button class="btn" id="search-btn">Search</button>
-      
-      <!-- New Results Container -->
-      <div id="search-results-container" class="results-container">
-        <h3>Search Results</h3>
-        <div id="search-results" class="results-list"></div>
+      <!-- Notarikon / Acronym Tool -->
+      <div class="tool-card">
+        <h3>🟡 Notarikon & Acronyms</h3>
+        <p>Extract first/last letters from words to form acronyms. Explore traditional notarikon patterns and abbreviations.</p>
+        <span class="tool-status status-planned">Planned</span>
+      </div>
+
+      <!-- Letter Analysis -->
+      <div class="tool-card">
+        <h3>🟢 Letter & Word Analysis</h3>
+        <p>Character-level database for counting letters, analyzing word patterns, and exploring structural properties of the text.</p>
+        <span class="tool-status status-planned">Planned</span>
+      </div>
+
+      <!-- Cantillation Analysis -->
+      <div class="tool-card">
+        <h3>🟢 Taamim (Cantillation) Viewer</h3>
+        <p>View and compare cantillation marks (taamim) including alternate traditions like Aseret HaDibrot.</p>
+        <span class="tool-status status-planned">Planned</span>
+      </div>
+
+      <!-- Cross-References -->
+      <div class="tool-card">
+        <h3>🟢 Cross-Reference Index</h3>
+        <p>Explore where verses appear in Talmud, Midrash, and Zohar. Links to Sefaria and other traditional sources.</p>
+        <span class="tool-status status-planned">Planned</span>
+      </div>
+
+      <!-- Anagram Tool -->
+      <div class="tool-card">
+        <h3>🟢 Anagram & Permutation</h3>
+        <p>Character rearrangement and pattern detection for exploring letter combinations and word permutations.</p>
+        <span class="tool-status status-planned">Planned</span>
       </div>
     </section>
 
-    <!-- Torah Text Section -->
-    <section class="torah-section">
-      <div class="torah-controls">
-        <label for="wrap-length">Row Length:</label>
-        <input type="number" id="wrap-length" placeholder="Enter characters per row">
-        <button id="apply-wrap" class="btn">Apply</button>
+    <!-- Features Section -->
+    <section class="features-section">
+      <h2 style="margin-bottom: 1.5rem;">Core Features</h2>
+      <ul class="features-list">
+        <li>100% Client-Side Processing</li>
+        <li>Full Offline Capability (PWA)</li>
+        <li>Character-Level Database</li>
+        <li>IndexedDB for Large Datasets</li>
+        <li>Web Workers for Performance</li>
+        <li>Multi-Method Gematria</li>
+        <li>Niqqud & Taamim Aware</li>
+        <li>Alternate Cantillation Support</li>
+        <li>Verse & Word Navigation</li>
+        <li>Pattern & Regex Search</li>
+        <li>Statistical Analysis</li>
+        <li>Cross-Reference Linking</li>
+      </ul>
+    </section>
+
+    <!-- About Section -->
+    <section class="features-section">
+      <h2 style="margin-bottom: 1rem;">About This Project</h2>
+      <p style="line-height: 1.8; color: #555;">
+        This unified Hebrew Bible analysis suite provides comprehensive tools for Torah study, research, and exploration.
+        Built entirely with client-side technologies, all processing happens in your browser with no server dependencies.
+        The application uses a character-level database architecture that enables everything from traditional ELS searches
+        to advanced statistical analysis, gematria calculations, and structural exploration of the Masoretic text.
+      </p>
+      <p style="line-height: 1.8; color: #555; margin-top: 1rem;">
+        As a Progressive Web App (PWA), you can install this application and use it completely offline, making it ideal
+        for study and research without internet connectivity.
+      </p>
+    </section>
+
+    <!-- Quick Verse Lookup -->
+    <section class="features-section">
+      <h2 style="margin-bottom: 1rem;">Quick Verse Lookup</h2>
+      <p style="color: #666; margin-bottom: 1rem;">Enter a reference (e.g., "Genesis 1:1" or "Bereshit 1:1")</p>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <input
+          type="text"
+          id="verse-lookup"
+          placeholder="Book Chapter:Verse"
+          style="flex: 1; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;"
+        >
+        <button
+          id="lookup-btn"
+          style="padding: 0.75rem 2rem; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;"
+        >
+          Lookup
+        </button>
       </div>
-      <div class="torah-box">
-        <pre id="torah-text">Loading text...</pre>
+      <div id="verse-result" style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; display: none;">
+        <p style="color: #666; font-style: italic;">Feature coming soon...</p>
       </div>
     </section>
-    
-    <!-- Offline status indicator -->
-    <div id="offline-indicator" class="offline-indicator hidden">
+
+    <!-- Offline Indicator -->
+    <div id="offline-indicator" class="offline-indicator hidden" style="position: fixed; bottom: 20px; right: 20px; background: #ff9800; color: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
       You are currently offline. Some features may be limited.
     </div>
   </main>
 
-  <script src="js/test.js" defer></script>
-  <script src="js/load-torah.js" defer></script>
-  <script src="js/search-algorithms.js" defer></script> <!-- New Script -->
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2025 Hebrew Bible Analysis Suite | Open Source Project</p>
+    <p>
+      <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank" style="color: #667eea; text-decoration: none;">GitHub Repository</a> |
+      <a href="mailto:roni762583@protonmail.com" style="color: #667eea; text-decoration: none;">Contact</a>
+    </p>
+  </footer>
+
+  <script>
+    // Quick verse lookup placeholder
+    document.getElementById('lookup-btn')?.addEventListener('click', () => {
+      const resultDiv = document.getElementById('verse-result');
+      if (resultDiv) {
+        resultDiv.style.display = 'block';
+      }
+    });
+
+    // Offline indicator
+    window.addEventListener('online', () => {
+      document.getElementById('offline-indicator')?.classList.add('hidden');
+    });
+
+    window.addEventListener('offline', () => {
+      document.getElementById('offline-indicator')?.classList.remove('hidden');
+    });
+  </script>
 </body>
 
 </html>
