@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hebrew Root Extraction Test</title>
+  <style>
+    body {
+      font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #2c5282;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+    }
+
+    .test-section h2 {
+      color: #2c5282;
+      margin-bottom: 15px;
+      font-size: 1.2em;
+    }
+
+    .input-group {
+      margin: 15px 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      font-family: inherit;
+      direction: rtl;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background: #3182ce;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+
+    button:hover {
+      background: #2c5282;
+    }
+
+    button:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+    }
+
+    .results {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      direction: rtl;
+    }
+
+    .result-item {
+      padding: 10px;
+      margin: 10px 0;
+      background: white;
+      border-right: 4px solid #3182ce;
+      border-radius: 4px;
+    }
+
+    .word {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: #2c5282;
+    }
+
+    .root {
+      font-size: 1.5em;
+      color: #38a169;
+      margin: 5px 0;
+    }
+
+    .metadata {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .confidence {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 0.85em;
+      margin-right: 10px;
+    }
+
+    .confidence.high { background: #c6f6d5; color: #22543d; }
+    .confidence.medium { background: #feebc8; color: #7c2d12; }
+    .confidence.low { background: #fed7d7; color: #742a2a; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      background: #ebf8ff;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2em;
+      font-weight: bold;
+      color: #2c5282;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+
+    .status.success { background: #c6f6d5; color: #22543d; }
+    .status.error { background: #fed7d7; color: #742a2a; }
+    .status.info { background: #bee3f8; color: #2c5282; }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3182ce;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    pre {
+      background: #1a202c;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      direction: ltr;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>מנוע חילוץ שורשים עבריים</h1>
+    <div class="subtitle">Hebrew Root Extraction Engine Test</div>
+
+    <!-- Status -->
+    <div id="status"></div>
+
+    <!-- Statistics -->
+    <div class="stats" id="stats" style="display: none;">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-lexicon">-</div>
+        <div class="stat-label">Lexicon Entries</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-roots">-</div>
+        <div class="stat-label">Unique Roots</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-binyans">-</div>
+        <div class="stat-label">Binyans</div>
+      </div>
+    </div>
+
+    <!-- Single Word Test -->
+    <div class="test-section">
+      <h2>בדיקת מילה בודדת</h2>
+      <div class="input-group">
+        <label for="single-word">מילה עברית:</label>
+        <input type="text" id="single-word" placeholder="לדוגמה: מדברים, השמים, ויאמר">
+      </div>
+      <button onclick="testSingleWord()">חלץ שורש</button>
+      <button onclick="clearSingleResults()">נקה</button>
+      <div id="single-results" class="results" style="display: none;"></div>
+    </div>
+
+    <!-- Batch Test -->
+    <div class="test-section">
+      <h2>בדיקה מרובה</h2>
+      <div class="input-group">
+        <label for="batch-words">רשימת מילים (אחת בכל שורה):</label>
+        <textarea id="batch-words" placeholder="השמים&#10;והארץ&#10;מדברים&#10;ויאמר"></textarea>
+      </div>
+      <button onclick="testBatchWords()">חלץ שורשים</button>
+      <button onclick="clearBatchResults()">נקה</button>
+      <div id="batch-results" class="results" style="display: none;"></div>
+    </div>
+
+    <!-- Example Words -->
+    <div class="test-section">
+      <h2>דוגמאות</h2>
+      <button onclick="loadExample('genesis')">בראשית 1:1</button>
+      <button onclick="loadExample('verbs')">פעלים מורכבים</button>
+      <button onclick="loadExample('nouns')">שמות עם תחיליות וסופיות</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getRootExtractor } from './engines/roots.js';
+
+    let extractor = null;
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+      showStatus('Loading root extractor...', 'info');
+      showLoading('status');
+
+      try {
+        extractor = getRootExtractor();
+        await extractor.initialize();
+
+        const stats = extractor.getStats();
+        if (stats) {
+          showStats(stats);
+          showStatus('Root extractor ready!', 'success');
+        } else {
+          showStatus('Root extractor loaded (heuristic mode - lexicon not found)', 'info');
+        }
+      } catch (error) {
+        showStatus('Error loading root extractor: ' + error.message, 'error');
+        console.error(error);
+      }
+    });
+
+    // Test single word
+    window.testSingleWord = async function() {
+      const word = document.getElementById('single-word').value.trim();
+      if (!word) {
+        alert('נא להזין מילה');
+        return;
+      }
+
+      const resultsDiv = document.getElementById('single-results');
+      resultsDiv.style.display = 'block';
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      try {
+        const result = await extractor.extractRoot(word);
+        displayResult(result, word, resultsDiv);
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="status error">שגיאה: ${error.message}</div>`;
+      }
+    };
+
+    // Test batch words
+    window.testBatchWords = async function() {
+      const text = document.getElementById('batch-words').value.trim();
+      if (!text) {
+        alert('נא להזין רשימת מילים');
+        return;
+      }
+
+      const words = text.split('\n').map(w => w.trim()).filter(w => w);
+      const resultsDiv = document.getElementById('batch-results');
+      resultsDiv.style.display = 'block';
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      try {
+        const results = await extractor.extractRoots(words);
+        displayBatchResults(results, words, resultsDiv);
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="status error">שגיאה: ${error.message}</div>`;
+      }
+    };
+
+    // Display single result
+    function displayResult(result, word, container) {
+      const confidenceClass = result.confidence >= 0.7 ? 'high' :
+                             result.confidence >= 0.5 ? 'medium' : 'low';
+
+      container.innerHTML = `
+        <div class="result-item">
+          <div class="word">מילה: ${word}</div>
+          <div class="root">שורש: ${result.root}</div>
+          <div class="metadata">
+            <span class="confidence ${confidenceClass}">
+              Confidence: ${(result.confidence * 100).toFixed(0)}%
+            </span>
+            <span>Method: ${result.method}</span>
+            ${result.binyan ? `<span>Binyan: ${result.binyan}</span>` : ''}
+            ${result.pos ? `<span>POS: ${result.pos}</span>` : ''}
+          </div>
+          <pre>${JSON.stringify(result, null, 2)}</pre>
+        </div>
+      `;
+    }
+
+    // Display batch results
+    function displayBatchResults(results, words, container) {
+      let html = `<h3>נמצאו ${results.length} תוצאות:</h3>`;
+
+      results.forEach((result, i) => {
+        const confidenceClass = result.confidence >= 0.7 ? 'high' :
+                               result.confidence >= 0.5 ? 'medium' : 'low';
+
+        html += `
+          <div class="result-item">
+            <div class="word">${words[i]}</div>
+            <div class="root">שורש: ${result.root}</div>
+            <div class="metadata">
+              <span class="confidence ${confidenceClass}">
+                ${(result.confidence * 100).toFixed(0)}%
+              </span>
+              <span>${result.method}</span>
+              ${result.binyan ? `<span>${result.binyan}</span>` : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // Show statistics
+    function showStats(stats) {
+      document.getElementById('stats').style.display = 'grid';
+      document.getElementById('stat-lexicon').textContent = stats.totalWords.toLocaleString();
+      document.getElementById('stat-roots').textContent = stats.uniqueRoots.toLocaleString();
+      document.getElementById('stat-binyans').textContent = stats.binyans.length;
+    }
+
+    // Show status message
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.className = `status ${type}`;
+      statusDiv.textContent = message;
+      statusDiv.style.display = 'block';
+    }
+
+    // Show loading spinner
+    function showLoading(elementId) {
+      const elem = document.getElementById(elementId);
+      elem.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    }
+
+    // Clear results
+    window.clearSingleResults = function() {
+      document.getElementById('single-results').style.display = 'none';
+      document.getElementById('single-word').value = '';
+    };
+
+    window.clearBatchResults = function() {
+      document.getElementById('batch-results').style.display = 'none';
+      document.getElementById('batch-words').value = '';
+    };
+
+    // Load examples
+    window.loadExample = function(type) {
+      const examples = {
+        genesis: 'בראשית\nברא\nאלהים\nאת\nהשמים\nואת\nהארץ',
+        verbs: 'מדברים\nויאמר\nנשבר\nהקדים\nתפללו\nהתפלל',
+        nouns: 'השמים\nבמדבר\nלאדם\nהאדמה\nמישראל\nבמצרים'
+      };
+
+      if (examples[type]) {
+        document.getElementById('batch-words').value = examples[type];
+        testBatchWords();
+      }
+    };
+  </script>
+</body>
+</html>
