@@ -1,0 +1,23 @@
+# Uncompressed data files (too large, can be regenerated)
+data/*.json
+!data/precomputed-terms.json
+
+# Build artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp

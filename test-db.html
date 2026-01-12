@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database Test - Hebrew Bible Analysis Suite</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      margin: 0 0 10px 0;
+    }
+
+    .header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .section h2 {
+      margin-top: 0;
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+
+    button:hover {
+      background: #764ba2;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .log {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border: 1px solid #e0e0e0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 4px solid #667eea;
+    }
+
+    .stat-card h3 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .stat-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .result {
+      background: #f0f7ff;
+      border: 1px solid #b8daff;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .result pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .hebrew {
+      font-size: 18px;
+      direction: rtl;
+      font-family: 'Times New Roman', serif;
+    }
+
+    .progress {
+      width: 100%;
+      height: 20px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .success { color: #28a745; }
+    .error { color: #dc3545; }
+    .warning { color: #ffc107; }
+    .info { color: #17a2b8; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔬 Database Test Page</h1>
+    <p>Hebrew Bible Analysis Suite - IndexedDB Testing Interface</p>
+  </div>
+
+  <!-- Database Initialization -->
+  <div class="section">
+    <h2>1️⃣ Database Initialization</h2>
+    <button id="init-db" onclick="initDB()">Initialize Database</button>
+    <button id="load-genesis" onclick="loadGenesis()">Load Genesis</button>
+    <button id="check-status" onclick="checkStatus()">Check Status</button>
+    <button id="clear-db" onclick="clearDB()" style="background: #dc3545;">Clear All Data</button>
+
+    <div class="progress" id="load-progress" style="display: none;">
+      <div class="progress-bar" id="progress-bar">0%</div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="log" id="init-log"></div>
+  </div>
+
+  <!-- Query Tests -->
+  <div class="section">
+    <h2>2️⃣ Query Tests</h2>
+
+    <div style="margin-bottom: 20px;">
+      <h3>Verse Queries</h3>
+      <button onclick="testGetVerse()">Get Genesis 1:1</button>
+      <button onclick="testGetVerseContext()">Get Verse Context (1:1)</button>
+      <button onclick="testSearchVerses()">Search Verses (אלהים)</button>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <h3>Word Queries</h3>
+      <button onclick="testGetWords()">Get Words (Gen 1:1)</button>
+      <button onclick="testSearchWords()">Search Words (אלהים)</button>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <h3>Character Queries</h3>
+      <button onclick="testGetChars()">Get Characters (Gen 1:1)</button>
+      <button onclick="testGetCharRange()">Get Character Range (0-100)</button>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <h3>Gematria Queries</h3>
+      <button onclick="testGematriaWords()">Words with Gematria 26 (יהוה)</button>
+      <button onclick="testGematriaVerses()">Verses with Gematria 2701</button>
+    </div>
+
+    <div class="result" id="query-result"></div>
+  </div>
+
+  <!-- Performance Tests -->
+  <div class="section">
+    <h2>3️⃣ Performance Tests</h2>
+    <button onclick="testPerformance()">Run Performance Tests</button>
+    <div class="log" id="perf-log"></div>
+  </div>
+
+  <!-- Load scripts -->
+  <script src="db/schema.js"></script>
+  <script src="db/loader.js"></script>
+  <script src="db/query.js"></script>
+
+  <script>
+    // Logging utilities
+    function log(message, target = 'init-log', className = '') {
+      const logEl = document.getElementById(target);
+      const span = document.createElement('span');
+      span.className = className;
+      span.textContent = message + '\n';
+      logEl.appendChild(span);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(message);
+    }
+
+    function clearLog(target = 'init-log') {
+      document.getElementById(target).innerHTML = '';
+    }
+
+    // Progress tracking
+    function updateProgress(percent, label = '') {
+      const progressBar = document.getElementById('progress-bar');
+      const progressDiv = document.getElementById('load-progress');
+      progressDiv.style.display = 'block';
+      progressBar.style.width = percent + '%';
+      progressBar.textContent = label || `${Math.round(percent)}%`;
+    }
+
+    function hideProgress() {
+      document.getElementById('load-progress').style.display = 'none';
+    }
+
+    // Display stats
+    function displayStats(stats) {
+      const statsDiv = document.getElementById('stats');
+      statsDiv.innerHTML = `
+        <div class="stat-card">
+          <h3>Characters</h3>
+          <div class="value">${stats.stats.chars.toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Words</h3>
+          <div class="value">${stats.stats.words.toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Verses</h3>
+          <div class="value">${stats.stats.verses.toLocaleString()}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Storage Used</h3>
+          <div class="value">${stats.quota.usageMB} MB</div>
+        </div>
+        <div class="stat-card">
+          <h3>Books Loaded</h3>
+          <div class="value">${stats.loadedBooks.join(', ') || 'None'}</div>
+        </div>
+      `;
+    }
+
+    // Database functions
+    async function initDB() {
+      clearLog('init-log');
+      log('🔧 Initializing database...', 'init-log', 'info');
+
+      try {
+        const result = await initializeDatabase({ autoLoadGenesis: false });
+        log('✅ Database initialized successfully', 'init-log', 'success');
+        displayStats(result.status);
+      } catch (error) {
+        log('❌ Error: ' + error.message, 'init-log', 'error');
+      }
+    }
+
+    async function loadGenesis() {
+      clearLog('init-log');
+      log('📖 Loading Genesis...', 'init-log', 'info');
+
+      try {
+        const result = await loadBook('genesis', 1, {
+          onProgress: (stage, percent) => {
+            updateProgress(percent, `${stage}: ${Math.round(percent)}%`);
+          }
+        });
+
+        hideProgress();
+
+        if (result.status === 'success') {
+          log('✅ Genesis loaded successfully!', 'init-log', 'success');
+          log(`  Characters: ${result.stats.chars.toLocaleString()}`, 'init-log');
+          log(`  Words: ${result.stats.words.toLocaleString()}`, 'init-log');
+          log(`  Verses: ${result.stats.verses.toLocaleString()}`, 'init-log');
+
+          const status = await getLoadStatus();
+          displayStats(status);
+        } else {
+          log('❌ Failed to load Genesis: ' + result.error, 'init-log', 'error');
+        }
+      } catch (error) {
+        hideProgress();
+        log('❌ Error: ' + error.message, 'init-log', 'error');
+      }
+    }
+
+    async function checkStatus() {
+      clearLog('init-log');
+      log('🔍 Checking database status...', 'init-log', 'info');
+
+      try {
+        const status = await getLoadStatus();
+        log(`Books loaded: ${status.loadedBooks.join(', ') || 'None'}`, 'init-log');
+        log(`Characters: ${status.stats.chars.toLocaleString()}`, 'init-log');
+        log(`Words: ${status.stats.words.toLocaleString()}`, 'init-log');
+        log(`Verses: ${status.stats.verses.toLocaleString()}`, 'init-log');
+        log(`Storage: ${status.quota.usageMB} MB / ${status.quota.quotaMB} MB (${status.quota.percentUsed}%)`, 'init-log');
+        displayStats(status);
+      } catch (error) {
+        log('❌ Error: ' + error.message, 'init-log', 'error');
+      }
+    }
+
+    async function clearDB() {
+      if (!confirm('Are you sure you want to clear all data?')) return;
+
+      clearLog('init-log');
+      log('🗑️  Clearing database...', 'init-log', 'warning');
+
+      try {
+        await clearAllData();
+        log('✅ Database cleared', 'init-log', 'success');
+        displayStats({ stats: { chars: 0, words: 0, verses: 0 }, loadedBooks: [], quota: { usageMB: '0', quotaMB: '0', percentUsed: '0' }});
+      } catch (error) {
+        log('❌ Error: ' + error.message, 'init-log', 'error');
+      }
+    }
+
+    // Query test functions
+    async function testGetVerse() {
+      try {
+        const verse = await getVerse(1, 1, 1);
+        document.getElementById('query-result').innerHTML = `
+          <h4>Genesis 1:1</h4>
+          <p class="hebrew">${verse.verse_text_consonantal}</p>
+          <pre>${JSON.stringify(verse, null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testGetVerseContext() {
+      try {
+        const context = await getVerseContext(1, 1, 1);
+        document.getElementById('query-result').innerHTML = `
+          <h4>Genesis 1:1 - Full Context</h4>
+          <p><strong>Verse:</strong> ${context.words.length} words, ${context.chars.length} characters</p>
+          <p class="hebrew">${context.verse.verse_text_consonantal}</p>
+          <p><strong>Words:</strong></p>
+          <pre>${JSON.stringify(context.words.map(w => ({ text: w.word_text_consonantal, gematria: w.gematria_standard })), null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testSearchVerses() {
+      try {
+        const verses = await searchVerses('אלהים', { book: 1 });
+        document.getElementById('query-result').innerHTML = `
+          <h4>Verses containing "אלהים" (Elohim)</h4>
+          <p>Found ${verses.length} verses</p>
+          <pre>${verses.slice(0, 10).map(v => `${v.book}:${v.chapter}:${v.verse} - ${v.verse_text_consonantal.substring(0, 50)}...`).join('\n')}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testGetWords() {
+      try {
+        const words = await getWordsByVerse(1, 1, 1);
+        document.getElementById('query-result').innerHTML = `
+          <h4>Words in Genesis 1:1</h4>
+          <p>Found ${words.length} words</p>
+          <pre>${JSON.stringify(words.map(w => ({ text: w.word_text_consonantal, gematria: w.gematria_standard })), null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testSearchWords() {
+      try {
+        const words = await searchWords('אלהים', { exactMatch: true, book: 1 });
+        document.getElementById('query-result').innerHTML = `
+          <h4>Exact matches for "אלהים" (Elohim)</h4>
+          <p>Found ${words.length} occurrences</p>
+          <pre>${words.slice(0, 20).map(w => `${w.book}:${w.chapter}:${w.verse} word ${w.word_index} - gematria: ${w.gematria_standard}`).join('\n')}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testGetChars() {
+      try {
+        const chars = await getCharsByVerse(1, 1, 1);
+        document.getElementById('query-result').innerHTML = `
+          <h4>Characters in Genesis 1:1</h4>
+          <p>Found ${chars.length} characters</p>
+          <p class="hebrew">${chars.map(c => c.base_char).join('')}</p>
+          <pre>${JSON.stringify(chars.slice(0, 10), null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testGetCharRange() {
+      try {
+        const chars = await getCharRange(0, 100);
+        document.getElementById('query-result').innerHTML = `
+          <h4>Characters 0-100</h4>
+          <p class="hebrew">${chars.map(c => c.base_char).join('')}</p>
+          <pre>Count: ${chars.length} characters</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testGematriaWords() {
+      try {
+        const words = await searchWordsByGematria(26, 'standard');
+        document.getElementById('query-result').innerHTML = `
+          <h4>Words with Gematria 26 (יהוה = 10+5+6+5)</h4>
+          <p>Found ${words.length} words</p>
+          <pre>${JSON.stringify(words.map(w => ({ text: w.word_text_consonantal, location: `${w.book}:${w.chapter}:${w.verse}` })), null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testGematriaVerses() {
+      try {
+        const verses = await searchVersesByGematria(2701);
+        document.getElementById('query-result').innerHTML = `
+          <h4>Verses with Gematria 2701 (Genesis 1:1)</h4>
+          <p>Found ${verses.length} verses</p>
+          <pre>${JSON.stringify(verses.map(v => ({ ref: `${v.book}:${v.chapter}:${v.verse}`, text: v.verse_text_consonantal })), null, 2)}</pre>
+        `;
+      } catch (error) {
+        document.getElementById('query-result').textContent = 'Error: ' + error.message;
+      }
+    }
+
+    async function testPerformance() {
+      clearLog('perf-log');
+      log('🚀 Running performance tests...', 'perf-log', 'info');
+
+      const tests = [
+        { name: 'Get single verse', fn: () => getVerse(1, 1, 1) },
+        { name: 'Get verse context', fn: () => getVerseContext(1, 1, 1) },
+        { name: 'Get 100 characters', fn: () => getCharRange(0, 100) },
+        { name: 'Search verses (אלהים)', fn: () => searchVerses('אלהים', { book: 1 }) },
+        { name: 'Search words (exact)', fn: () => searchWords('אלהים', { exactMatch: true, book: 1 }) },
+        { name: 'Gematria search (26)', fn: () => searchWordsByGematria(26) }
+      ];
+
+      for (const test of tests) {
+        const start = performance.now();
+        try {
+          await test.fn();
+          const duration = (performance.now() - start).toFixed(2);
+          log(`✅ ${test.name}: ${duration}ms`, 'perf-log', duration < 50 ? 'success' : duration < 200 ? 'warning' : 'error');
+        } catch (error) {
+          log(`❌ ${test.name}: ${error.message}`, 'perf-log', 'error');
+        }
+      }
+
+      log('\n✨ Performance tests complete!', 'perf-log', 'success');
+    }
+
+    // Auto-initialize on load
+    window.addEventListener('load', async () => {
+      log('🌐 Page loaded', 'init-log', 'info');
+      log('Click "Initialize Database" to begin', 'init-log');
+    });
+  </script>
+</body>
+</html>
