@@ -47,10 +47,87 @@
 - Build acronym/abbreviation analysis interface
 - Pattern detection and combinations
 
-#### 4. Permutation/Anagram Tools 🟢
-- Character rearrangement
-- Pattern detectors
-- Integration with existing anagram.html from Bible Data Science
+#### 4. Tsirufim - Semantic Permutation Analysis 🟢
+**צירופים** - Advanced Hebrew letter permutation with semantic clustering
+
+**Problem Statement**: In Hebrew, letters composing words that describe a situation can recombine to spell out details related to those situations and real-life events. The challenge: massive combinatorial explosion, semantic relevance scoring, and extracting meaningful patterns.
+
+**Reference Implementation**: [JerusalemHills Permutations](https://jerusalemhills.com/games/permutations/permutations.html) ([GitHub](https://github.com/JerusalemHills/jerusalemhills.github.io))
+
+**Technical Approach**:
+
+##### Phase 1: Combinatorial Space Reduction (Hard Constraints)
+- **Dictionary validation**: Biblical, Modern Hebrew, names, places
+- **Morphological validity**: Root-pattern (שורש-משקל) compatibility
+- **Orthographic plausibility**: Consonantal constraints
+- **Gematria bounds**: Filter extreme outliers
+- **Output**: Finite candidate set from infinite possibilities
+
+##### Phase 2: Latent Space Embedding
+Each candidate word mapped to vector space using:
+
+1. **Distributional Embeddings** (modern NLP)
+   - Pre-trained Hebrew word embeddings (Tanakh, Rabbinic, Modern)
+   - FastText/Word2Vec for rare word approximations
+   - Contextual embeddings (BERT-Hebrew) for polysemy
+
+2. **Root-Based Semantic Vectors** (Hebrew-specific)
+   - Decompose: word → שורש (root) + בניין (binyan) + morphology
+   - Feature vectors capture conceptual gravity
+   - Superior to surface forms for Hebrew
+
+3. **Symbolic Feature Extensions**
+   - Gematria values (standard, reduced, ordinal)
+   - POS tags / named-entity likelihood
+   - Temporal/agent/action signals
+   - Textual domain (legal, narrative, prophetic)
+   - Concatenated/projected feature space
+
+##### Phase 3: Contextual Scoring
+Score candidates **relative to original situation**:
+
+- **Cosine similarity** to:
+  - Situation embedding (mean of original words)
+  - Event-type anchors (conflict, movement, judgment, union, exile)
+- **Semantic drift penalty**: Penalize distance from context
+- **Coherence boost**: Reward alignment with other generated words
+- **Output**: Relevance score (not truth value)
+
+##### Phase 4: Clustering & Semantic Directions
+- **Clustering**: HDBSCAN / spectral clustering on embeddings
+- Each cluster ≈ **thematic attractor**
+- **Principal directions** per cluster:
+  - Dominant semantic axes
+  - Action vs agent dimensions
+  - Outcome vs cause relationships
+  - Moral / legal / physical orientations
+- **Output**: Navigable semantic attractors
+
+##### Phase 5: Interpretation Layer
+Not predictive, but **exploratory**:
+- Recurrent narrative shapes
+- Conceptual continuations
+- Symbolic affordances of letter sets
+- Quantified midrashic exploration
+
+**Why This Works for Hebrew**:
+- Root system provides natural semantic scaffolding
+- Consonantal text reduces dimensionality
+- Rich morphology = structured feature space
+- Gematria adds numerical constraint layer
+
+**Implementation Stack**:
+- **Permutation engine**: Client-side combinatorics with pruning
+- **Embeddings**: Pre-computed Hebrew word2vec/FastText
+- **Clustering**: ML.js or TensorFlow.js for browser-based clustering
+- **Visualization**: D3.js for semantic space exploration
+- **Dictionary**: Preloaded Biblical + Modern Hebrew lexicon
+
+**Integration with Existing Database**:
+- Character-level DB provides source text
+- Word-level data for morphological analysis
+- Gematria values pre-computed
+- Cross-reference to original verse contexts
 
 #### 5. ELS (Bible Codes) 🔴
 - Already implemented in bible-codes.html
@@ -311,11 +388,16 @@ This architecture ensures:
 ├── styles.css                # Global styles
 │
 ├── data/
-│   ├── chars.json.gz         # Character database
-│   ├── words.json.gz         # Word database
-│   ├── verses.json.gz        # Verse database
+│   ├── chars.json.gz         # Character database (all 39 books)
+│   ├── words.json.gz         # Word database (all 39 books)
+│   ├── verses.json.gz        # Verse database (all 39 books)
 │   ├── torahNoSpaces.txt     # Raw Torah text (existing)
-│   └── precomputed-terms.json # ELS precomputed data (existing)
+│   ├── precomputed-terms.json # ELS precomputed data (existing)
+│   └── embeddings/           # Hebrew word embeddings
+│       ├── hebrew-fasttext.vec   # Pre-trained FastText
+│       ├── tanakh-w2v.json       # Tanakh-specific Word2Vec
+│       ├── roots-semantic.json   # Root-based features
+│       └── dictionary.json       # Biblical + Modern Hebrew lexicon
 │
 ├── db/
 │   ├── schema.js             # IndexedDB schema definitions
@@ -326,7 +408,13 @@ This architecture ensures:
 │   ├── gematria.js           # Gematria calculations
 │   ├── acronym.js            # Acronym/notarikon engine
 │   ├── els.worker.js         # ELS search (Web Worker)
-│   └── taamim.js             # Cantillation analysis
+│   ├── taamim.js             # Cantillation analysis
+│   └── tsirufim/             # Semantic permutation engine
+│       ├── permutations.js   # Combinatorial generation
+│       ├── embeddings.js     # Hebrew word embeddings
+│       ├── scoring.js        # Contextual relevance scoring
+│       ├── clustering.js     # Semantic clustering (HDBSCAN)
+│       └── visualization.js  # D3.js semantic space viz
 │
 ├── ui/
 │   ├── verseView.js          # Verse detail component
@@ -350,10 +438,11 @@ This architecture ensures:
 | text-search.html | `chars + words` | 🟡 Planned |
 | gematria.html | `words / verses` | 🟡 Planned |
 | acronym.html | `words → chars` | 🟡 Planned |
+| tsirufim.html | Semantic permutations + ML | 🟢 Planned |
 | letter-analysis.html | `chars` | 🟢 Planned |
 | taamim.html | `chars.taamim` | 🟢 Planned |
 | cross-ref.html | External APIs/local index | 🟢 Planned |
-| anagram.html | Pattern analysis | 🟢 Planned |
+| anagram.html | Pattern analysis (legacy) | 🟢 Planned |
 
 ---
 
@@ -414,8 +503,57 @@ This architecture ensures:
 - [ ] Letter analysis tool
 - [ ] Cantillation viewer
 - [ ] Cross-reference linking
-- [ ] Anagram solver
+- [ ] Anagram solver (basic)
 - [ ] Web Worker optimization
+
+### Phase 5.5: Tsirufim - Semantic Permutation Engine
+**צירופים** - Advanced semantic analysis of Hebrew letter permutations
+
+#### Stage 1: Permutation Infrastructure
+- [ ] Combinatorial generator with pruning
+- [ ] Hebrew dictionary loader (Biblical + Modern)
+- [ ] Root-pattern validation engine
+- [ ] Morphological analyzer
+- [ ] Gematria filtering system
+
+#### Stage 2: Embedding System
+- [ ] Pre-compute Hebrew word embeddings
+  - Train on Tanakh corpus (character DB)
+  - Train on rabbinic texts (if available)
+  - Load pre-trained FastText Hebrew
+- [ ] Root-based feature extractor
+  - Decompose words to שורש + בניין
+  - Build semantic feature vectors
+- [ ] Symbolic feature integration
+  - Gematria dimensions
+  - POS tags / NER likelihood
+  - Temporal/agent/action signals
+
+#### Stage 3: Contextual Scoring Engine
+- [ ] Situation embedding calculator
+- [ ] Cosine similarity scorer
+- [ ] Semantic drift penalty system
+- [ ] Inter-word coherence booster
+- [ ] Event-type anchor library
+
+#### Stage 4: Clustering & Visualization
+- [ ] HDBSCAN clustering implementation (ML.js or TensorFlow.js)
+- [ ] Principal component analysis per cluster
+- [ ] Semantic direction extraction
+- [ ] D3.js interactive visualization
+  - 2D/3D embedding space
+  - Cluster coloring and labels
+  - Interactive filtering
+  - Direction vector display
+
+#### Stage 5: UI & Integration
+- [ ] Create tsirufim.html interface
+- [ ] Input form for situation description
+- [ ] Real-time permutation generation
+- [ ] Score/cluster display
+- [ ] Semantic space explorer
+- [ ] Export results to JSON/CSV
+- [ ] Integration with character database
 
 ### Phase 6: Testing & Optimization
 - [ ] Performance testing on mobile/desktop
@@ -544,10 +682,11 @@ A PWA is **fully capable** of running our Hebrew Tanach character-level database
 | Gematria | ✓ | ✓ | Precomputed table | ✓ | 🟡 Planned |
 | Acronym/Notarikon | ✓ | ✓ | n/a | ✓ | 🟡 Planned |
 | ELS search | ✓ | ✓ | Precomputed hashes | ✓ | 🔴 Active |
+| Tsirufim (צירופים) | ✓ | ✓ + ML.js | Embeddings + Dictionary | ✓ | 🟢 Planned |
 | Cross-Reference Links | ✓ | APIs/local index | local JSON | ✓ | 🟢 Planned |
 | Letter analysis | ✓ | ✓ | Character DB | ✓ | 🟢 Planned |
 | Taamim viewer | ✓ | ✓ | Character DB | ✓ | 🟢 Planned |
-| Anagram solver | ✓ | ✓ | n/a | ✓ | 🟢 Planned |
+| Anagram solver (basic) | ✓ | ✓ | n/a | ✓ | 🟢 Planned |
 | Offline/PWA | ✓ | ✓ | n/a | ✓ | 🔴 Active |
 
 ---
