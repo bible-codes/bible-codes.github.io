@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>צירופים - ניתוח פרמוטציות סמנטי | Bible Codes</title>
+  <meta name="description" content="ניתוח צירופים סמנטי - גלה משמעויות נסתרות באמצעות פרמוטציות אותיות עבריות">
+  <link rel="icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+  <!-- Load D3.js for visualization -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    header .subtitle {
+      font-size: 1.1em;
+      opacity: 0.95;
+    }
+
+    nav {
+      background: #f8f9fa;
+      padding: 15px 30px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    nav a {
+      color: #667eea;
+      text-decoration: none;
+      margin: 0 15px;
+      font-weight: 600;
+      transition: color 0.3s;
+    }
+
+    nav a:hover {
+      color: #764ba2;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 30px;
+      padding: 30px;
+    }
+
+    .control-panel {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 8px;
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+
+    .control-section {
+      margin-bottom: 25px;
+    }
+
+    .control-section h3 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.2em;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 16px;
+      font-family: 'David Libre', serif;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .slider-group {
+      margin: 15px 0;
+    }
+
+    .slider-group label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #ddd;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #667eea;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.3s;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .secondary-button {
+      background: #6c757d;
+    }
+
+    .results-panel {
+      min-height: 600px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      background: #f8f9fa;
+      border: none;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      font-weight: 600;
+      color: #666;
+      transition: all 0.3s;
+    }
+
+    .tab.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .status.info { background: #d1ecf1; color: #0c5460; }
+    .status.success { background: #d4edda; color: #155724; }
+    .status.warning { background: #fff3cd; color: #856404; }
+    .status.error { background: #f8d7da; color: #721c24; }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .result-card {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .result-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .result-card.selected {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+
+    .result-word {
+      font-size: 1.8em;
+      font-weight: bold;
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 10px;
+      font-family: 'David Libre', serif;
+    }
+
+    .result-meta {
+      font-size: 0.85em;
+      color: #666;
+      text-align: center;
+    }
+
+    .result-score {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #667eea;
+      color: white;
+      border-radius: 12px;
+      font-size: 0.85em;
+      margin-top: 8px;
+    }
+
+    .cluster-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+      color: white;
+      margin-left: 5px;
+    }
+
+    .viz-container {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 500px;
+      margin-top: 20px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 0.9em;
+      opacity: 0.9;
+    }
+
+    footer {
+      background: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      border-top: 2px solid #e0e0e0;
+    }
+
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+
+      .control-panel {
+        position: static;
+      }
+    }
+
+    /* Hebrew font improvements */
+    @import url('https://fonts.googleapis.com/css2?family=David+Libre:wght@400;700&display=swap');
+
+    input[type="text"],
+    textarea,
+    .result-word {
+      font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>צירופים - ניתוח פרמוטציות סמנטי</h1>
+      <p class="subtitle">Semantic Permutation Analysis - Discover hidden meanings through Hebrew letter combinations</p>
+    </header>
+
+    <nav>
+      <a href="index.html">🏠 דף הבית</a>
+      <a href="bible-codes.html">🔍 קודי תורה</a>
+      <a href="text-search.html">📖 חיפוש טקסט</a>
+      <a href="gematria.html">🔢 גימטריה</a>
+      <a href="acronym.html">✡️ ראשי תיבות</a>
+      <a href="tsirufim.html" style="font-weight: 800; color: #764ba2;">🌟 צירופים</a>
+    </nav>
+
+    <div class="main-content">
+      <!-- Control Panel -->
+      <div class="control-panel">
+        <div class="control-section">
+          <h3>הגדרות פרמוטציה</h3>
+
+          <label for="letters">אותיות למיון:</label>
+          <input type="text" id="letters" placeholder="לדוגמה: משה, בראשית">
+
+          <label for="situation">הקשר/מצב (אופציונלי):</label>
+          <textarea id="situation" placeholder="תאר את ההקשר או המצב..."></textarea>
+
+          <label for="event-type">סוג אירוע:</label>
+          <select id="event-type">
+            <option value="">-- בחר (אופציונלי) --</option>
+            <option value="conflict">עימות/מלחמה</option>
+            <option value="movement">תנועה/מסע</option>
+            <option value="speech">דיבור/נבואה</option>
+            <option value="creation">בריאה/יצירה</option>
+            <option value="destruction">הרס/חורבן</option>
+            <option value="covenant">ברית/חוזה</option>
+            <option value="judgment">שיפוט/דין</option>
+            <option value="blessing">ברכה/טובה</option>
+            <option value="curse">קללה/רוע</option>
+            <option value="transformation">שינוי/הפיכה</option>
+          </select>
+        </div>
+
+        <div class="control-section">
+          <h3>אפשרויות סינון</h3>
+
+          <div class="slider-group">
+            <label>
+              <span>אורך מינימלי:</span>
+              <span id="minlen-value">2</span>
+            </label>
+            <input type="range" id="minlen" min="2" max="8" value="2">
+          </div>
+
+          <div class="slider-group">
+            <label>
+              <span>אורך מקסימלי:</span>
+              <span id="maxlen-value">6</span>
+            </label>
+            <input type="range" id="maxlen" min="2" max="10" value="6">
+          </div>
+
+          <div class="slider-group">
+            <label>
+              <span>סף ביטחון:</span>
+              <span id="confidence-value">0.3</span>
+            </label>
+            <input type="range" id="confidence" min="0" max="1" step="0.1" value="0.3">
+          </div>
+
+          <label>
+            <input type="checkbox" id="require-dictionary" checked>
+            רק מילים מהמילון
+          </label>
+
+          <label>
+            <input type="checkbox" id="require-root" checked>
+            חייב שורש מזוהה
+          </label>
+        </div>
+
+        <div class="control-section">
+          <h3>אלגוריתם אשכול</h3>
+
+          <label for="cluster-method">שיטה:</label>
+          <select id="cluster-method">
+            <option value="kmeans" selected>K-Means (מהיר)</option>
+            <option value="dbscan">DBSCAN (מבוסס-צפיפות)</option>
+            <option value="hierarchical">Hierarchical (היררכי)</option>
+          </select>
+
+          <div class="slider-group">
+            <label>
+              <span>מספר אשכולות:</span>
+              <span id="num-clusters-value">5</span>
+            </label>
+            <input type="range" id="num-clusters" min="2" max="10" value="5">
+          </div>
+        </div>
+
+        <button id="generate-btn">🎯 צור פרמוטציות</button>
+        <button id="clear-btn" class="secondary-button">🗑️ נקה</button>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="results-panel">
+        <div id="status-message"></div>
+
+        <!-- Statistics -->
+        <div class="stats-grid" id="stats" style="display: none;">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-generated">-</div>
+            <div class="stat-label">נוצרו</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-valid">-</div>
+            <div class="stat-label">תקפות</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-clusters">-</div>
+            <div class="stat-label">אשכולות</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-time">-</div>
+            <div class="stat-label">שניות</div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" data-tab="results">תוצאות</button>
+          <button class="tab" data-tab="visualization">ויזואליזציה</button>
+          <button class="tab" data-tab="clusters">אשכולות</button>
+          <button class="tab" data-tab="analysis">ניתוח</button>
+        </div>
+
+        <!-- Tab Content: Results -->
+        <div class="tab-content active" id="tab-results">
+          <div class="results-grid" id="results-container"></div>
+        </div>
+
+        <!-- Tab Content: Visualization -->
+        <div class="tab-content" id="tab-visualization">
+          <div class="viz-container" id="semantic-viz"></div>
+        </div>
+
+        <!-- Tab Content: Clusters -->
+        <div class="tab-content" id="tab-clusters">
+          <div id="clusters-container"></div>
+        </div>
+
+        <!-- Tab Content: Analysis -->
+        <div class="tab-content" id="tab-analysis">
+          <div id="analysis-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>© 2026 Hebrew Bible Analysis Suite | <a href="https://github.com/bible-codes/bible-codes.github.io">GitHub</a></p>
+      <p>צירופים - חקירה סמנטית של צירופי אותיות עבריות</p>
+    </footer>
+  </div>
+
+  <script type="module">
+    import { getPermutationGenerator } from './engines/tsirufim/permutations.js';
+    import { getEmbeddings } from './engines/tsirufim/embeddings.js';
+    import { getScorer } from './engines/tsirufim/scoring.js';
+    import { clusterKMeans, clusterDBSCAN, clusterHierarchical } from './engines/tsirufim/clustering.js';
+    import { createSemanticVisualizer, PCAProjector } from './engines/tsirufim/visualization.js';
+
+    // Global state
+    let generator = null;
+    let embeddings = null;
+    let scorer = null;
+    let results = null;
+    let clusterResult = null;
+    let visualizer = null;
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', async () => {
+      showStatus('מאתחל מערכת צירופים...', 'info');
+
+      try {
+        generator = getPermutationGenerator();
+        await generator.initialize();
+
+        embeddings = getEmbeddings();
+        await embeddings.initialize();
+
+        scorer = getScorer();
+        await scorer.initialize();
+
+        visualizer = createSemanticVisualizer('semantic-viz');
+
+        showStatus('מערכת מוכנה! הזן אותיות והקש על "צור פרמוטציות"', 'success');
+      } catch (error) {
+        showStatus('שגיאה באתחול: ' + error.message, 'error');
+        console.error(error);
+      }
+
+      setupEventListeners();
+    });
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Sliders
+      document.getElementById('minlen').addEventListener('input', (e) => {
+        document.getElementById('minlen-value').textContent = e.target.value;
+      });
+
+      document.getElementById('maxlen').addEventListener('input', (e) => {
+        document.getElementById('maxlen-value').textContent = e.target.value;
+      });
+
+      document.getElementById('confidence').addEventListener('input', (e) => {
+        document.getElementById('confidence-value').textContent = e.target.value;
+      });
+
+      document.getElementById('num-clusters').addEventListener('input', (e) => {
+        document.getElementById('num-clusters-value').textContent = e.target.value;
+      });
+
+      // Buttons
+      document.getElementById('generate-btn').addEventListener('click', generatePermutations);
+      document.getElementById('clear-btn').addEventListener('click', clearResults);
+
+      // Tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+      });
+    }
+
+    // Generate permutations
+    async function generatePermutations() {
+      const letters = document.getElementById('letters').value.trim();
+      if (!letters) {
+        showStatus('נא להזין אותיות', 'warning');
+        return;
+      }
+
+      const situation = document.getElementById('situation').value.trim();
+      const eventType = document.getElementById('event-type').value;
+      const minLen = parseInt(document.getElementById('minlen').value);
+      const maxLen = parseInt(document.getElementById('maxlen').value);
+      const minConfidence = parseFloat(document.getElementById('confidence').value);
+      const requireDictionary = document.getElementById('require-dictionary').checked;
+      const requireRoot = document.getElementById('require-root').checked;
+      const clusterMethod = document.getElementById('cluster-method').value;
+      const numClusters = parseInt(document.getElementById('num-clusters').value);
+
+      showStatus('מחולל פרמוטציות...', 'info');
+      showLoading();
+
+      const startTime = Date.now();
+
+      try {
+        // Generate permutations
+        const candidates = await generator.generate(letters, {
+          minLength: minLen,
+          maxLength: maxLen,
+          requireDictionary: requireDictionary,
+          requireRoot: requireRoot,
+          minConfidence: minConfidence
+        });
+
+        if (candidates.length === 0) {
+          showStatus('לא נמצאו צירופים תקפים. נסה להפחית את הדרישות.', 'warning');
+          return;
+        }
+
+        showStatus(`מבצע ניתוח סמנטי על ${candidates.length} מועמדים...`, 'info');
+
+        // Score candidates
+        const scoredCandidates = situation
+          ? await scorer.scoreCandidates(candidates, situation, { eventType })
+          : candidates.map(c => ({ ...c, totalScore: c.confidence, scores: {} }));
+
+        // Cluster candidates
+        showStatus('מבצע אשכול סמנטי...', 'info');
+
+        const words = scoredCandidates.map(c => c.word);
+
+        if (clusterMethod === 'kmeans') {
+          clusterResult = await clusterKMeans(words, numClusters);
+        } else if (clusterMethod === 'dbscan') {
+          clusterResult = await clusterDBSCAN(words, 0.5, 3);
+        } else {
+          clusterResult = await clusterHierarchical(words, numClusters);
+        }
+
+        // Save results
+        results = scoredCandidates;
+
+        const endTime = Date.now();
+        const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(1);
+
+        // Update UI
+        displayResults(results, clusterResult);
+        displayStats(generator.getStats(), clusterResult, elapsedSeconds);
+        displayClusters(clusterResult, results);
+        displayAnalysis(results, clusterResult);
+
+        showStatus(`השלם! נמצאו ${results.length} צירופים בעלי משמעות.`, 'success');
+
+      } catch (error) {
+        showStatus('שגיאה ביצירת צירופים: ' + error.message, 'error');
+        console.error(error);
+      }
+    }
+
+    // Display results
+    function displayResults(results, clusterResult) {
+      const container = document.getElementById('results-container');
+      container.innerHTML = '';
+
+      results.forEach((result, idx) => {
+        // Find cluster
+        let clusterIdx = -1;
+        if (clusterResult.labels) {
+          const wordIdx = clusterResult.clusters.findIndex(c =>
+            c.words.includes(result.word)
+          );
+          clusterIdx = wordIdx;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <div class="result-word">${result.word}</div>
+          <div class="result-meta">
+            שורש: ${result.root || 'לא ידוע'}<br/>
+            ${clusterIdx >= 0 ? `<span class="cluster-badge" style="background: ${getClusterColor(clusterIdx)}">אשכול ${clusterIdx + 1}</span>` : ''}
+          </div>
+          <div class="result-score">${(result.totalScore || result.confidence).toFixed(2)}</div>
+        `;
+
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.result-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          showWordDetails(result);
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    // Display statistics
+    function displayStats(genStats, clusterResult, time) {
+      document.getElementById('stats').style.display = 'grid';
+      document.getElementById('stat-generated').textContent = genStats.generated;
+      document.getElementById('stat-valid').textContent = genStats.valid;
+      document.getElementById('stat-clusters').textContent = clusterResult.clusters?.length || clusterResult.numClusters || 0;
+      document.getElementById('stat-time').textContent = time;
+    }
+
+    // Display clusters
+    function displayClusters(clusterResult, results) {
+      const container = document.getElementById('clusters-container');
+      container.innerHTML = '<h3>אשכולות סמנטיים</h3>';
+
+      clusterResult.clusters.forEach((cluster, idx) => {
+        const clusterDiv = document.createElement('div');
+        clusterDiv.style.cssText = 'margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;';
+        clusterDiv.innerHTML = `
+          <h4 style="color: ${getClusterColor(idx)}">אשכול ${idx + 1} (${cluster.size} מילים)</h4>
+          <p style="font-size: 1.3em; margin: 15px 0;">${cluster.words.join(' • ')}</p>
+        `;
+        container.appendChild(clusterDiv);
+      });
+    }
+
+    // Display analysis
+    function displayAnalysis(results, clusterResult) {
+      const container = document.getElementById('analysis-container');
+      container.innerHTML = '<h3>ניתוח סמנטי</h3>';
+
+      const analysisDiv = document.createElement('div');
+      analysisDiv.innerHTML = `
+        <p><strong>סך הכל מילים:</strong> ${results.length}</p>
+        <p><strong>אשכולות:</strong> ${clusterResult.clusters?.length || 0}</p>
+        <p><strong>ציון ממוצע:</strong> ${(results.reduce((sum, r) => sum + (r.totalScore || r.confidence), 0) / results.length).toFixed(3)}</p>
+        <p><strong>שורשים ייחודיים:</strong> ${new Set(results.map(r => r.root)).size}</p>
+      `;
+      container.appendChild(analysisDiv);
+    }
+
+    // Show word details
+    function showWordDetails(word) {
+      console.log('Word details:', word);
+      // Could open modal or sidebar with more info
+    }
+
+    // Get cluster color
+    function getClusterColor(idx) {
+      const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#30cfd0', '#a8edea', '#fed6e3'];
+      return colors[idx % colors.length];
+    }
+
+    // Switch tab
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+
+      // Render visualization when tab is shown
+      if (tabName === 'visualization' && results && clusterResult) {
+        renderVisualization();
+      }
+    }
+
+    // Render visualization
+    async function renderVisualization() {
+      showStatus('מכין ויזואליזציה...', 'info');
+
+      try {
+        // Get embeddings for all words
+        const words = results.map(r => r.word);
+        const embVectors = await embeddings.getEmbeddings(words);
+
+        // Project to 2D
+        const projected = PCAProjector.project(embVectors);
+
+        // Add word and score to projection
+        const embeddingsData = projected.map((proj, i) => ({
+          word: words[i],
+          x: proj.x,
+          y: proj.y,
+          score: results[i].totalScore || results[i].confidence
+        }));
+
+        // Render
+        visualizer.render(clusterResult, embeddingsData);
+
+        showStatus('ויזואליזציה מוכנה!', 'success');
+      } catch (error) {
+        showStatus('שגיאה בויזואליזציה: ' + error.message, 'error');
+        console.error(error);
+      }
+    }
+
+    // Clear results
+    function clearResults() {
+      document.getElementById('results-container').innerHTML = '';
+      document.getElementById('clusters-container').innerHTML = '';
+      document.getElementById('analysis-container').innerHTML = '';
+      document.getElementById('stats').style.display = 'none';
+      if (visualizer) visualizer.clear();
+      results = null;
+      clusterResult = null;
+      showStatus('תוצאות נוקו. מוכן להפעלה חדשה.', 'info');
+    }
+
+    // Show status
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status-message');
+      statusDiv.className = `status ${type}`;
+      statusDiv.textContent = message;
+      statusDiv.style.display = 'block';
+    }
+
+    // Show loading
+    function showLoading() {
+      const container = document.getElementById('results-container');
+      container.innerHTML = '<div class="loading"><div class="spinner"></div><p>מעבד...</p></div>';
+    }
+  </script>
+</body>
+</html>
