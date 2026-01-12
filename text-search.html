@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חיפוש טקסט - Hebrew Bible Text Search</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .search-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .search-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .search-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .search-header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .search-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.3em;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+            direction: rtl;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .search-btn:hover {
+            background: #2980b9;
+        }
+
+        .search-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .search-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .option-group label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .option-group select,
+        .option-group input {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            font-family: inherit;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .results-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .results-count {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .result-item {
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            transition: box-shadow 0.3s;
+        }
+
+        .result-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .result-reference {
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .result-text {
+            font-size: 1.4em;
+            line-height: 1.8;
+            font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+            direction: rtl;
+        }
+
+        .result-text .highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .result-meta {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #3498db;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .suggestions {
+            position: absolute;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            width: calc(100% - 140px);
+        }
+
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+            direction: rtl;
+        }
+
+        .suggestion-item:hover {
+            background: #f0f0f0;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-size: 1.1em;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <a href="index.html" class="back-link">← חזרה לדף הראשי / Back to Home</a>
+
+        <div class="search-header">
+            <h1>🔍 חיפוש טקסט</h1>
+            <p>Hebrew Bible Text Search - Search for words and phrases across the entire Tanakh</p>
+        </div>
+
+        <div class="search-form">
+            <div class="search-input-group">
+                <input type="text" id="searchInput" class="search-input"
+                       placeholder="הזן מילת חיפוש בעברית..." dir="rtl">
+                <button id="searchBtn" class="search-btn">חיפוש</button>
+            </div>
+            <div id="suggestions" class="suggestions" style="display: none;"></div>
+
+            <div class="search-options">
+                <div class="option-group">
+                    <label for="searchMode">מצב חיפוש / Search Mode:</label>
+                    <select id="searchMode">
+                        <option value="consonantal">Consonantal (כתיב חסר)</option>
+                        <option value="full">Full Text (כתיב מלא)</option>
+                    </select>
+                </div>
+
+                <div class="option-group">
+                    <label for="bookFilter">ספר / Book:</label>
+                    <select id="bookFilter">
+                        <option value="">All Books (כל הספרים)</option>
+                        <option value="genesis">Genesis (בראשית)</option>
+                        <option value="exodus">Exodus (שמות)</option>
+                        <option value="leviticus">Leviticus (ויקרא)</option>
+                        <option value="numbers">Numbers (במדבר)</option>
+                        <option value="deuteronomy">Deuteronomy (דברים)</option>
+                        <!-- Add more books as needed -->
+                    </select>
+                </div>
+
+                <div class="option-group">
+                    <label for="limitInput">Max Results:</label>
+                    <input type="number" id="limitInput" min="10" max="1000" value="100">
+                </div>
+
+                <div class="option-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="wholeWordCheck">
+                        <label for="wholeWordCheck">Whole word only</label>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="regexCheck">
+                        <label for="regexCheck">Use regex pattern</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsContainer" style="display: none;">
+            <div class="results-container">
+                <div class="results-header">
+                    <div class="results-count" id="resultsCount">נמצאו 0 תוצאות</div>
+                </div>
+                <div id="resultsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { searchText, getSearchSuggestions } from './engines/search.js';
+        import { ensureBookLoaded } from './db/loader.js';
+
+        let currentResults = [];
+
+        // Search button handler
+        document.getElementById('searchBtn').addEventListener('click', performSearch);
+
+        // Enter key handler
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // Auto-suggest on input
+        let suggestTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(suggestTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length >= 2) {
+                suggestTimeout = setTimeout(async () => {
+                    try {
+                        const suggestions = await getSearchSuggestions(query, 10);
+                        displaySuggestions(suggestions);
+                    } catch (error) {
+                        console.error('Suggestion error:', error);
+                    }
+                }, 300);
+            } else {
+                hideSuggestions();
+            }
+        });
+
+        // Perform search
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+
+            if (!query) {
+                alert('אנא הזן מילת חיפוש / Please enter a search term');
+                return;
+            }
+
+            const searchBtn = document.getElementById('searchBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsList = document.getElementById('resultsList');
+
+            // Show loading state
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'מחפש...';
+            resultsContainer.style.display = 'block';
+            resultsList.innerHTML = '<div class="loading">Searching</div>';
+
+            // Get search options
+            const options = {
+                mode: document.getElementById('searchMode').value,
+                wholeWord: document.getElementById('wholeWordCheck').checked,
+                regex: document.getElementById('regexCheck').checked,
+                limit: parseInt(document.getElementById('limitInput').value),
+                book: document.getElementById('bookFilter').value || null
+            };
+
+            try {
+                // Ensure book data is loaded
+                if (options.book) {
+                    await ensureBookLoaded(options.book);
+                }
+
+                // Perform search
+                const results = await searchText(query, options);
+                currentResults = results;
+
+                // Display results
+                displayResults(results, query);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsList.innerHTML = `
+                    <div class="no-results">
+                        ❌ שגיאה בחיפוש / Search Error<br>
+                        ${error.message}
+                    </div>
+                `;
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'חיפוש';
+            }
+        }
+
+        // Display search results
+        function displayResults(results, query) {
+            const resultsCount = document.getElementById('resultsCount');
+            const resultsList = document.getElementById('resultsList');
+
+            resultsCount.textContent = `נמצאו ${results.length} תוצאות / Found ${results.length} results`;
+
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div class="no-results">לא נמצאו תוצאות / No results found</div>';
+                return;
+            }
+
+            let html = '';
+            for (const result of results) {
+                const highlightedText = highlightMatches(result.text, result.matches);
+
+                html += `
+                    <div class="result-item">
+                        <div class="result-reference">
+                            ${result.book} ${result.chapter}:${result.verse}
+                        </div>
+                        <div class="result-text">
+                            ${highlightedText}
+                        </div>
+                        <div class="result-meta">
+                            ${result.matchCount} ${result.matchCount === 1 ? 'match' : 'matches'} found
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultsList.innerHTML = html;
+        }
+
+        // Highlight search matches in text
+        function highlightMatches(text, matches) {
+            if (!matches || matches.length === 0) {
+                return text;
+            }
+
+            // Sort matches by position (descending) to insert highlights from end to start
+            const sortedMatches = matches.sort((a, b) => b.start - a.start);
+
+            let highlightedText = text;
+            for (const match of sortedMatches) {
+                const before = highlightedText.substring(0, match.start);
+                const matched = highlightedText.substring(match.start, match.end);
+                const after = highlightedText.substring(match.end);
+                highlightedText = before + `<span class="highlight">${matched}</span>` + after;
+            }
+
+            return highlightedText;
+        }
+
+        // Display suggestions
+        function displaySuggestions(suggestions) {
+            const suggestionsDiv = document.getElementById('suggestions');
+
+            if (suggestions.length === 0) {
+                hideSuggestions();
+                return;
+            }
+
+            let html = '';
+            for (const suggestion of suggestions) {
+                html += `<div class="suggestion-item" data-value="${suggestion}">${suggestion}</div>`;
+            }
+
+            suggestionsDiv.innerHTML = html;
+            suggestionsDiv.style.display = 'block';
+
+            // Add click handlers
+            suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.getElementById('searchInput').value = item.dataset.value;
+                    hideSuggestions();
+                    performSearch();
+                });
+            });
+        }
+
+        // Hide suggestions
+        function hideSuggestions() {
+            document.getElementById('suggestions').style.display = 'none';
+        }
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#searchInput') && !e.target.closest('#suggestions')) {
+                hideSuggestions();
+            }
+        });
+    </script>
+</body>
+</html>

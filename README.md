@@ -19,11 +19,24 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
   - Precomputed hashes for common phrases
   - Dynamic search for custom inputs
   - Skip distance analysis
+- **Hebrew Text Search** ([text-search.html](https://bible-codes.github.io/text-search.html))
+  - Advanced pattern matching with regex support
+  - First/last letter filtering
+  - Auto-suggestions
+  - Consonantal and full text modes
+- **Gematria Calculator** ([gematria.html](https://bible-codes.github.io/gematria.html))
+  - Multiple calculation methods (standard, reduced, ordinal)
+  - Search by value or range
+  - Find matching words
+  - Statistical analysis
+- **Acronym/Notarikon** ([acronym.html](https://bible-codes.github.io/acronym.html))
+  - Extract Roshei Teivot (first letters) and Sofei Teivot (last letters)
+  - Search by acronym pattern
+  - Book-wide analysis
+  - Multiple extraction methods
 
 ### 🟡 In Development
-- **Hebrew Text Search** - Advanced pattern matching and verse lookup
-- **Gematria Calculator** - Multiple calculation methods (standard, reduced, ordinal)
-- **Notarikon Tool** - Acronym and abbreviation analysis
+- **Tsirufim (צירופים)** - Semantic permutation analysis with ML-powered clustering
 
 ### 🟢 Planned Features
 - **Letter & Word Analysis** - Character-level statistical analysis

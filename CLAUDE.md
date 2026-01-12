@@ -16,6 +16,21 @@
   - Precomputed hashes and dynamic search
   - Service worker for offline caching
   - PWA support via manifest
+- **Hebrew Text Search** (`text-search.html`)
+  - Pattern matching with regex support
+  - First/last letter filtering
+  - Auto-suggestions
+  - Consonantal and full text modes
+- **Gematria Calculator** (`gematria.html`)
+  - Multiple calculation methods (standard, reduced, ordinal)
+  - Search by value or range
+  - Find matching words
+  - Statistical analysis
+- **Acronym/Notarikon** (`acronym.html`)
+  - First letters (Roshei Teivot), Last letters (Sofei Teivot)
+  - Middle letters and alternating patterns
+  - Search by acronym
+  - Book-wide analysis
 
 ### Repositories
 - **bible-codes.github.io**: Pure client-side JS app for ELS searches ([GitHub](https://github.com/bible-codes/bible-codes.github.io))
@@ -28,24 +43,26 @@
 
 ### Core Functionalities to Implement
 
-#### 1. Hebrew Bible Text Search 🟡
+#### 1. Hebrew Bible Text Search 🔴
 - Standard text search (keyword/phrase)
 - Verse lookup by book/chapter/verse
 - Advanced search (first/last letter anywhere, pattern search)
 - Letter and word counts per verse
+- Auto-suggestions and regex support
 
-#### 2. Numeric Analysis 🟡
+#### 2. Numeric Analysis 🔴
 - Gematria calculation by multiple methods:
   - Standard (א=1, ב=2, ..., ת=400)
   - Reduced (sum of digits)
   - Ordinal (א=1, ב=2, ..., ת=22)
-  - Final letter variants
 - Search verses/words by gematria value
+- Range search and statistical analysis
 
-#### 3. Acronym/Notarikon Tools 🟡
-- Extract first/last letters of each word
+#### 3. Acronym/Notarikon Tools 🔴
+- Extract first/last letters of each word (Roshei/Sofei Teivot)
 - Build acronym/abbreviation analysis interface
 - Pattern detection and combinations
+- Search by acronym, book-wide analysis
 
 #### 4. Tsirufim - Semantic Permutation Analysis 🟢
 **צירופים** - Advanced Hebrew letter permutation with semantic clustering
@@ -435,9 +452,9 @@ This architecture ensures:
 |------|-----------|--------|
 | index.html | Dashboard navigation | 🔴 Active |
 | bible-codes.html | ELS search (existing) | 🔴 Active |
-| text-search.html | `chars + words` | 🟡 Planned |
-| gematria.html | `words / verses` | 🟡 Planned |
-| acronym.html | `words → chars` | 🟡 Planned |
+| text-search.html | `chars + words` | 🔴 Active |
+| gematria.html | `words / verses` | 🔴 Active |
+| acronym.html | `words → chars` | 🔴 Active |
 | tsirufim.html | Semantic permutations + ML | 🟢 Planned |
 | letter-analysis.html | `chars` | 🟢 Planned |
 | taamim.html | `chars.taamim` | 🟢 Planned |
@@ -486,18 +503,46 @@ This architecture ensures:
   - Performance benchmarks
   - Storage quota monitoring
 
-### Phase 3: Core Search Engines
-- [ ] Implement text search engine
-- [ ] Implement gematria calculator
-- [ ] Implement acronym/notarikon engine
-- [ ] Optimize ELS engine with new database
+### Phase 3: Core Search Engines ✅ **COMPLETED**
+- [x] Implement text search engine (engines/search.js)
+  - Text search with regex and pattern matching
+  - First/last letter filtering
+  - Auto-suggest functionality
+  - Consonantal and full text modes
+- [x] Implement gematria calculator (engines/gematria.js)
+  - Standard, reduced, ordinal methods
+  - Search by gematria value
+  - Range search
+  - Statistical analysis
+- [x] Implement acronym/notarikon engine (engines/acronym.js)
+  - First letters (Roshei Teivot)
+  - Last letters (Sofei Teivot)
+  - Middle letters and alternating patterns
+  - Pattern analysis and meaningful acronym detection
+- [x] Create ELS Web Worker (engines/els.worker.js)
+  - Non-blocking background search
+  - Progress updates
+  - Cancellable searches
 
-### Phase 4: UI Development
-- [ ] Create text-search.html
-- [ ] Create gematria.html
-- [ ] Create acronym.html
-- [ ] Create verse detail view component
-- [ ] Implement navigation between tools
+### Phase 4: UI Development ✅ **COMPLETED**
+- [x] Create text-search.html
+  - Hebrew text search interface
+  - Search suggestions
+  - Multiple search modes
+  - Result highlighting
+- [x] Create gematria.html
+  - Interactive calculator
+  - Multi-method calculation
+  - Search by value or range
+  - Find matching words
+- [x] Create acronym.html
+  - Extract acronyms from verses
+  - Search by acronym pattern
+  - Book-wide analysis
+  - Multiple extraction methods
+- [x] Update index.html dashboard
+  - Link to all new tools
+  - Updated status indicators
 
 ### Phase 5: Advanced Features
 - [ ] Letter analysis tool
@@ -759,4 +804,5 @@ This schema is **future-proof**:
 
 ---
 
-*Last Updated: 2026-01-12 - Phase 2 Complete*
+*Last Updated: 2026-01-12 - Phase 3 & Phase 4 Complete*
+*Active Tools: ELS Search, Text Search, Gematria Calculator, Acronym/Notarikon*

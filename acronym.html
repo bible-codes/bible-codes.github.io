@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>נוטריקון - Acronym / Notarikon</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .acronym-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .acronym-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .acronym-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .acronym-header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-right: 5px solid #3498db;
+        }
+
+        .info-box h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .extract-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-field label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .input-field input,
+        .input-field select {
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 1em;
+        }
+
+        .input-field input[dir="rtl"] {
+            font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+            font-size: 1.2em;
+        }
+
+        .method-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .method-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-align: center;
+        }
+
+        .method-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .method-card.selected {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .method-card h3 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .method-card p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .action-btn {
+            padding: 15px 30px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            display: block;
+        }
+
+        .action-btn:hover {
+            background: #2980b9;
+        }
+
+        .action-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .result-display {
+            margin-top: 30px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .acronym-display {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .acronym-text {
+            font-size: 4em;
+            font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+            color: #3498db;
+            font-weight: bold;
+            direction: rtl;
+            margin: 20px 0;
+        }
+
+        .verse-context {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .verse-reference {
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .verse-text {
+            font-size: 1.5em;
+            font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+            direction: rtl;
+            line-height: 1.8;
+        }
+
+        .verse-text .highlight {
+            background: #fff3cd;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #856404;
+        }
+
+        .search-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            transition: box-shadow 0.3s;
+        }
+
+        .result-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .result-acronym {
+            font-size: 2em;
+            font-family: 'David Libre', 'Frank Ruehl CLM', serif;
+            color: #3498db;
+            font-weight: bold;
+            margin-bottom: 10px;
+            direction: rtl;
+        }
+
+        .result-meta {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #3498db;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-size: 1.1em;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="acronym-container">
+        <a href="index.html" class="back-link">← חזרה לדף הראשי / Back to Home</a>
+
+        <div class="acronym-header">
+            <h1>🔤 נוטריקון</h1>
+            <p>Acronym / Notarikon - Extract hidden meanings from first, last, and middle letters</p>
+            <p style="font-size: 0.9em;">
+                <strong>Notarikon (נוטריקון)</strong> is a traditional Jewish hermeneutical technique that creates
+                acronyms by extracting letters from words to reveal hidden connections and meanings.
+            </p>
+        </div>
+
+        <div class="info-box">
+            <h3>📖 About Notarikon</h3>
+            <p>
+                <strong>Roshei Teivot (ראשי תיבות)</strong> - First letters of words<br>
+                <strong>Sofei Teivot (סופי תיבות)</strong> - Last letters of words<br>
+                <strong>Middle Letters</strong> - Central letters of words<br>
+                <strong>Alternating</strong> - First, last, first, last...
+            </p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="extract">Extract Acronym</button>
+            <button class="tab-btn" data-tab="search">Search by Acronym</button>
+            <button class="tab-btn" data-tab="analyze">Analyze Book</button>
+        </div>
+
+        <!-- Extract Tab -->
+        <div id="extractTab" class="tab-content active">
+            <div class="extract-section">
+                <h2 class="section-title">חלץ נוטריקון / Extract Acronym</h2>
+
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="extractBook">Book (ספר):</label>
+                        <select id="extractBook">
+                            <option value="genesis">Genesis (בראשית)</option>
+                            <option value="exodus">Exodus (שמות)</option>
+                            <option value="leviticus">Leviticus (ויקרא)</option>
+                            <option value="numbers">Numbers (במדבר)</option>
+                            <option value="deuteronomy">Deuteronomy (דברים)</option>
+                            <!-- Add more books -->
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="extractChapter">Chapter (פרק):</label>
+                        <input type="number" id="extractChapter" min="1" value="1">
+                    </div>
+                    <div class="input-field">
+                        <label for="extractVerse">Verse (פסוק):</label>
+                        <input type="number" id="extractVerse" min="1" value="1">
+                    </div>
+                </div>
+
+                <div class="method-cards" id="methodCards">
+                    <div class="method-card selected" data-method="first">
+                        <h3>First Letters</h3>
+                        <p>ראשי תיבות</p>
+                    </div>
+                    <div class="method-card" data-method="last">
+                        <h3>Last Letters</h3>
+                        <p>סופי תיבות</p>
+                    </div>
+                    <div class="method-card" data-method="middle">
+                        <h3>Middle Letters</h3>
+                        <p>אותיות אמצעיות</p>
+                    </div>
+                    <div class="method-card" data-method="alternating">
+                        <h3>Alternating</h3>
+                        <p>לסירוגין</p>
+                    </div>
+                </div>
+
+                <button id="extractBtn" class="action-btn">Extract Acronym</button>
+
+                <div id="extractResults" style="display: none;" class="result-display"></div>
+            </div>
+        </div>
+
+        <!-- Search Tab -->
+        <div id="searchTab" class="tab-content">
+            <div class="extract-section">
+                <h2 class="section-title">חפש לפי נוטריקון / Search by Acronym</h2>
+
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="searchAcronym">Acronym to Find (נוטריקון):</label>
+                        <input type="text" id="searchAcronym" dir="rtl" placeholder="הזן אותיות...">
+                    </div>
+                    <div class="input-field">
+                        <label for="searchMethod">Method:</label>
+                        <select id="searchMethod">
+                            <option value="first">First Letters (ראשי תיבות)</option>
+                            <option value="last">Last Letters (סופי תיבות)</option>
+                            <option value="middle">Middle Letters</option>
+                            <option value="alternating">Alternating</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="searchBook">Book (optional):</label>
+                        <select id="searchBook">
+                            <option value="">All Books</option>
+                            <option value="genesis">Genesis (בראשית)</option>
+                            <option value="exodus">Exodus (שמות)</option>
+                            <option value="leviticus">Leviticus (ויקרא)</option>
+                            <option value="numbers">Numbers (במדבר)</option>
+                            <option value="deuteronomy">Deuteronomy (דברים)</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="searchLimit">Max Results:</label>
+                        <input type="number" id="searchLimit" value="50" min="1" max="200">
+                    </div>
+                </div>
+
+                <button id="searchBtn" class="action-btn">Search</button>
+
+                <div id="searchResults" style="display: none;" class="result-display"></div>
+            </div>
+        </div>
+
+        <!-- Analyze Tab -->
+        <div id="analyzeTab" class="tab-content">
+            <div class="extract-section">
+                <h2 class="section-title">ניתוח ספר / Analyze Book</h2>
+
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="analyzeBook">Book:</label>
+                        <select id="analyzeBook">
+                            <option value="genesis">Genesis (בראשית)</option>
+                            <option value="exodus">Exodus (שמות)</option>
+                            <option value="leviticus">Leviticus (ויקרא)</option>
+                            <option value="numbers">Numbers (במדבר)</option>
+                            <option value="deuteronomy">Deuteronomy (דברים)</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="analyzeMethod">Method:</label>
+                        <select id="analyzeMethod">
+                            <option value="first">First Letters</option>
+                            <option value="last">Last Letters</option>
+                            <option value="middle">Middle Letters</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="analyzeBtn" class="action-btn">Analyze Patterns</button>
+
+                <div id="analyzeResults" style="display: none;" class="result-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import {
+            extractAcronym,
+            searchByAcronym,
+            analyzeAcronymPatterns,
+            AcronymMethod
+        } from './engines/acronym.js';
+        import { getVersesByReference } from './db/query.js';
+        import { ensureBookLoaded } from './db/loader.js';
+
+        let selectedMethod = AcronymMethod.FIRST_LETTERS;
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab + 'Tab').classList.add('active');
+            });
+        });
+
+        // Method card selection
+        document.querySelectorAll('.method-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedMethod = card.dataset.method;
+            });
+        });
+
+        // Extract button handler
+        document.getElementById('extractBtn').addEventListener('click', performExtraction);
+
+        // Search button handler
+        document.getElementById('searchBtn').addEventListener('click', performSearch);
+
+        // Analyze button handler
+        document.getElementById('analyzeBtn').addEventListener('click', performAnalysis);
+
+        // Perform extraction
+        async function performExtraction() {
+            const book = document.getElementById('extractBook').value;
+            const chapter = parseInt(document.getElementById('extractChapter').value);
+            const verse = parseInt(document.getElementById('extractVerse').value);
+
+            const btn = document.getElementById('extractBtn');
+            const results = document.getElementById('extractResults');
+
+            btn.disabled = true;
+            btn.textContent = 'Extracting...';
+            results.style.display = 'block';
+            results.innerHTML = '<div class="loading">Extracting acronym</div>';
+
+            try {
+                // Ensure data is loaded
+                await ensureBookLoaded(book);
+
+                // Get verse ID
+                const verses = await getVersesByReference(book, chapter, verse);
+                if (verses.length === 0) {
+                    throw new Error('Verse not found');
+                }
+
+                // Extract acronym
+                const acronym = await extractAcronym(verses[0].verse_id, selectedMethod);
+
+                // Display result
+                displayExtractedAcronym(acronym);
+
+            } catch (error) {
+                console.error('Extraction error:', error);
+                results.innerHTML = `<div class="no-results">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Extract Acronym';
+            }
+        }
+
+        // Display extracted acronym
+        function displayExtractedAcronym(acronym) {
+            const results = document.getElementById('extractResults');
+
+            const methodNames = {
+                'first': 'Roshei Teivot (ראשי תיבות)',
+                'last': 'Sofei Teivot (סופי תיבות)',
+                'middle': 'Middle Letters',
+                'alternating': 'Alternating'
+            };
+
+            let html = `
+                <div class="acronym-display">
+                    <h3>Extracted Acronym</h3>
+                    <div class="acronym-text">${acronym.acronym}</div>
+                    <p><strong>Method:</strong> ${methodNames[acronym.method]}</p>
+                    <p><strong>Letters:</strong> ${acronym.letterCount}</p>
+                </div>
+
+                <div class="verse-context">
+                    <div class="verse-reference">
+                        ${acronym.book} ${acronym.chapter}:${acronym.verse}
+                    </div>
+                    <div class="verse-text">
+                        ${acronym.verseText}
+                    </div>
+                </div>
+            `;
+
+            results.innerHTML = html;
+        }
+
+        // Perform search
+        async function performSearch() {
+            const acronymText = document.getElementById('searchAcronym').value.trim();
+            const method = document.getElementById('searchMethod').value;
+            const book = document.getElementById('searchBook').value || null;
+            const limit = parseInt(document.getElementById('searchLimit').value);
+
+            if (!acronymText) {
+                alert('Please enter an acronym to search for');
+                return;
+            }
+
+            const btn = document.getElementById('searchBtn');
+            const results = document.getElementById('searchResults');
+
+            btn.disabled = true;
+            btn.textContent = 'Searching...';
+            results.style.display = 'block';
+            results.innerHTML = '<div class="loading">Searching for matches</div>';
+
+            try {
+                // Ensure data is loaded
+                if (book) {
+                    await ensureBookLoaded(book);
+                }
+
+                // Search for acronym
+                const matches = await searchByAcronym(acronymText, method, {
+                    book,
+                    limit,
+                    exactMatch: false
+                });
+
+                // Display results
+                displaySearchResults(matches);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                results.innerHTML = `<div class="no-results">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Search';
+            }
+        }
+
+        // Display search results
+        function displaySearchResults(matches) {
+            const results = document.getElementById('searchResults');
+
+            if (matches.length === 0) {
+                results.innerHTML = '<div class="no-results">No matching verses found</div>';
+                return;
+            }
+
+            let html = `
+                <h3>Found ${matches.length} matching verses</h3>
+                <div class="search-results">
+            `;
+
+            for (const match of matches) {
+                html += `
+                    <div class="result-card">
+                        <div class="result-acronym">${match.acronym}</div>
+                        <div class="result-meta">
+                            ${match.book} ${match.chapter}:${match.verse}<br>
+                            ${match.letterCount} letters
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            results.innerHTML = html;
+        }
+
+        // Perform analysis
+        async function performAnalysis() {
+            const book = document.getElementById('analyzeBook').value;
+            const method = document.getElementById('analyzeMethod').value;
+
+            const btn = document.getElementById('analyzeBtn');
+            const results = document.getElementById('analyzeResults');
+
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+            results.style.display = 'block';
+            results.innerHTML = '<div class="loading">Analyzing patterns</div>';
+
+            try {
+                // Ensure data is loaded
+                await ensureBookLoaded(book);
+
+                // Analyze patterns
+                const analysis = await analyzeAcronymPatterns(book, method);
+
+                // Display analysis
+                displayAnalysis(analysis);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                results.innerHTML = `<div class="no-results">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analyze Patterns';
+            }
+        }
+
+        // Display analysis
+        function displayAnalysis(analysis) {
+            const results = document.getElementById('analyzeResults');
+
+            let html = `
+                <h3>Pattern Analysis for ${analysis.book}</h3>
+
+                <div class="verse-context">
+                    <h4>Statistics</h4>
+                    <p><strong>Total Unique Acronyms:</strong> ${analysis.totalUniqueAcronyms}</p>
+                    <p><strong>Most Common Acronyms:</strong></p>
+                    <ul>
+            `;
+
+            for (const dup of analysis.mostCommonAcronyms.slice(0, 10)) {
+                html += `<li><strong>${dup.acronym}</strong> - appears ${dup.count} times</li>`;
+            }
+
+            html += `
+                    </ul>
+                </div>
+            `;
+
+            results.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
