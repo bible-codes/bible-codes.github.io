@@ -1,6 +1,6 @@
 /**
  * Contextual Semantic Scoring Engine
- *
+ * 
  * Scores permutation candidates based on semantic relevance to situation/context:
  * - Cosine similarity to situation embedding
  * - Event-type anchor alignment
