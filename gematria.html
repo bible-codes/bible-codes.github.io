@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>גימטריה - Gematria Calculator</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/mobile-optimized.css">
     <style>
         .gematria-container {
             max-width: 1200px;
@@ -351,9 +352,64 @@
     </style>
 </head>
 <body>
-    <div class="gematria-container">
-        <a href="index.html" class="back-link">← חזרה לדף הראשי / Back to Home</a>
+    <header class="mobile-header">
+        <div class="mobile-header-inner">
+            <a href="index.html" class="logo">📖 ניתוח תנ"ך</a>
+            <button id="hamburger" class="hamburger" aria-label="תפריט">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+        <nav id="mobile-nav" class="mobile-nav">
+            <ul class="mobile-nav-list">
+                <li class="mobile-nav-item">
+                    <a href="index.html" class="mobile-nav-link">
+                        <span class="nav-icon">🏠</span>
+                        <span>דף הבית</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="bible-codes.html" class="mobile-nav-link">
+                        <span class="nav-icon">🔍</span>
+                        <span>קודי תורה (ELS)</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="text-search.html" class="mobile-nav-link">
+                        <span class="nav-icon">📖</span>
+                        <span>חיפוש טקסט</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="gematria.html" class="mobile-nav-link">
+                        <span class="nav-icon">🔢</span>
+                        <span>גימטריה</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="acronym.html" class="mobile-nav-link">
+                        <span class="nav-icon">✡️</span>
+                        <span>ראשי תיבות</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="tsirufim.html" class="mobile-nav-link">
+                        <span class="nav-icon">🌟</span>
+                        <span>צירופים</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="test-roots.html" class="mobile-nav-link">
+                        <span class="nav-icon">🌱</span>
+                        <span>בדיקת שורשים</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </header>
 
+    <div class="gematria-container">
         <div class="gematria-header">
             <h1>🔢 גימטריה</h1>
             <p>Gematria Calculator - Calculate and search numeric values of Hebrew text</p>
@@ -482,6 +538,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Root Integration -->
+    <script type="module" src="integrations/gematria-root-integration.js"></script>
 
     <script type="module">
         import {

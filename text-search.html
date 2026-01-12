@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>חיפוש טקסט - Hebrew Bible Text Search</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/mobile-optimized.css">
     <style>
         .search-container {
             max-width: 1200px;
@@ -238,9 +239,64 @@
     </style>
 </head>
 <body>
-    <div class="search-container">
-        <a href="index.html" class="back-link">← חזרה לדף הראשי / Back to Home</a>
+    <header class="mobile-header">
+        <div class="mobile-header-inner">
+            <a href="index.html" class="logo">📖 ניתוח תנ"ך</a>
+            <button id="hamburger" class="hamburger" aria-label="תפריט">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+        <nav id="mobile-nav" class="mobile-nav">
+            <ul class="mobile-nav-list">
+                <li class="mobile-nav-item">
+                    <a href="index.html" class="mobile-nav-link">
+                        <span class="nav-icon">🏠</span>
+                        <span>דף הבית</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="bible-codes.html" class="mobile-nav-link">
+                        <span class="nav-icon">🔍</span>
+                        <span>קודי תורה (ELS)</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="text-search.html" class="mobile-nav-link">
+                        <span class="nav-icon">📖</span>
+                        <span>חיפוש טקסט</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="gematria.html" class="mobile-nav-link">
+                        <span class="nav-icon">🔢</span>
+                        <span>גימטריה</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="acronym.html" class="mobile-nav-link">
+                        <span class="nav-icon">✡️</span>
+                        <span>ראשי תיבות</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="tsirufim.html" class="mobile-nav-link">
+                        <span class="nav-icon">🌟</span>
+                        <span>צירופים</span>
+                    </a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="test-roots.html" class="mobile-nav-link">
+                        <span class="nav-icon">🌱</span>
+                        <span>בדיקת שורשים</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </header>
 
+    <div class="search-container">
         <div class="search-header">
             <h1>🔍 חיפוש טקסט</h1>
             <p>Hebrew Bible Text Search - Search for words and phrases across the entire Tanakh</p>
@@ -307,6 +363,9 @@
         </div>
     </div>
 
+    <!-- Root Integration -->
+    <script type="module" src="integrations/text-search-root-integration.js"></script>
+
     <script type="module">
         import { searchText, getSearchSuggestions } from './engines/search.js';
         import { ensureBookLoaded } from './db/loader.js';
@@ -343,7 +402,7 @@
             }
         });
 
-        // Perform search
+        // Perform search (exposed for root integration)
         async function performSearch() {
             const query = document.getElementById('searchInput').value.trim();
 
@@ -384,6 +443,8 @@
                 // Display results
                 displayResults(results, query);
 
+                return results; // Return for root integration
+
             } catch (error) {
                 console.error('Search error:', error);
                 resultsList.innerHTML = `
@@ -392,11 +453,15 @@
                         ${error.message}
                     </div>
                 `;
+                throw error; // Re-throw for root integration
             } finally {
                 searchBtn.disabled = false;
                 searchBtn.textContent = 'חיפוש';
             }
         }
+
+        // Expose for root integration module
+        window.performTextSearch = performSearch;
 
         // Display search results
         function displayResults(results, query) {

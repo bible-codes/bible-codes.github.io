@@ -1,18 +1,27 @@
-const CACHE_NAME = 'bible-analysis-suite-v2.0';
+const CACHE_NAME = 'bible-analysis-suite-v3.0';
 
 // Assets to cache for offline use
 const urlsToCache = [
   './',
   './index.html',
   './bible-codes.html',
+  './text-search.html',
+  './gematria.html',
+  './acronym.html',
   './styles.css',
+  './css/mobile-optimized.css',
   './manifest.json',
   './img/favicon.png',
   './data/torahNoSpaces.txt',
   './data/precomputed-terms.json',
   './js/test.js',
   './js/load-torah.js',
-  './js/search-algorithms.js'
+  './js/search-algorithms.js',
+  './js/mobile-nav.js',
+  './engines/root-integration.js',
+  './integrations/text-search-root-integration.js',
+  './integrations/gematria-root-integration.js',
+  './integrations/acronym-root-integration.js'
 ];
 
 // Install event - cache assets
