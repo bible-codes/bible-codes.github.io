@@ -6,11 +6,20 @@ Parses Hebrew biblical texts and generates character-level, word-level,
 and verse-level JSON databases for the Hebrew Bible Analysis Suite.
 
 Input: Leningrad Codex JSON files (torah-codes/texts/)
-Output: JSON files for IndexedDB (data/)
+Output: JSON and compressed .gz files for IndexedDB (data/)
+
+Usage:
+    python build-database.py [book_name|all]
+
+    Examples:
+        python build-database.py genesis
+        python build-database.py exodus
+        python build-database.py all
 """
 
 import json
 import sys
+import gzip
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -42,7 +51,7 @@ REGULAR_FORMS = {
 # Hebrew base letters (including finals)
 HEBREW_LETTERS = set(GEMATRIA_STANDARD.keys())
 
-# Book names mapping (for future expansion to full Tanach)
+# Book names mapping
 BOOK_NAMES = {
     'Genesis': 1, 'Exodus': 2, 'Leviticus': 3, 'Numbers': 4, 'Deuteronomy': 5,
     'Joshua': 6, 'Judges': 7, 'I Samuel': 8, 'II Samuel': 9,
@@ -53,6 +62,49 @@ BOOK_NAMES = {
     'Proverbs': 28, 'Job': 29, 'Song of Songs': 30, 'Ruth': 31,
     'Lamentations': 32, 'Ecclesiastes': 33, 'Esther': 34, 'Daniel': 35,
     'Ezra': 36, 'Nehemiah': 37, 'I Chronicles': 38, 'II Chronicles': 39
+}
+
+# File name to book name mapping (Leningrad Codex filenames)
+BOOK_FILES = {
+    1: ('text_leningrad_1genesis.json', 'genesis'),
+    2: ('text_leningrad_2exodus.json', 'exodus'),
+    3: ('text_leningrad_3leviticus.json', 'leviticus'),
+    4: ('text_leningrad_4numbers.json', 'numbers'),
+    5: ('text_leningrad_5deuteronomy.json', 'deuteronomy'),
+    6: ('text_leningrad_6joshua.json', 'joshua'),
+    7: ('text_leningrad_7judges.json', 'judges'),
+    8: ('text_leningrad_8Isamuel.json', 'isamuel'),
+    9: ('text_leningrad_9IIsamuel.json', 'iisamuel'),
+    10: ('text_leningrad_10Ikings.json', 'ikings'),
+    11: ('text_leningrad_11IIkings.json', 'iikings'),
+    12: ('text_leningrad_12isaiah.json', 'isaiah'),
+    13: ('text_leningrad_13jeremiah.json', 'jeremiah'),
+    14: ('text_leningrad_14ezekiel.json', 'ezekiel'),
+    15: ('text_leningrad_15hosea.json', 'hosea'),
+    16: ('text_leningrad_16joel.json', 'joel'),
+    17: ('text_leningrad_17amos.json', 'amos'),
+    18: ('text_leningrad_18obadiah.json', 'obadiah'),
+    19: ('text_leningrad_19jonah.json', 'jonah'),
+    20: ('text_leningrad_20micah.json', 'micah'),
+    21: ('text_leningrad_21nahum.json', 'nahum'),
+    22: ('text_leningrad_22habakkuk.json', 'habakkuk'),
+    23: ('text_leningrad_23zephaniah.json', 'zephaniah'),
+    24: ('text_leningrad_24haggai.json', 'haggai'),
+    25: ('text_leningrad_25zechariah.json', 'zechariah'),
+    26: ('text_leningrad_26malachi.json', 'malachi'),
+    27: ('text_leningrad_27psalms.json', 'psalms'),
+    28: ('text_leningrad_28proverbs.json', 'proverbs'),
+    29: ('text_leningrad_29job.json', 'job'),
+    30: ('text_leningrad_30songofsongs.json', 'songofsongs'),
+    31: ('text_leningrad_31ruth.json', 'ruth'),
+    32: ('text_leningrad_32lamentations.json', 'lamentations'),
+    33: ('text_leningrad_33ecclesiastes.json', 'ecclesiastes'),
+    34: ('text_leningrad_34esther.json', 'esther'),
+    35: ('text_leningrad_35daniel.json', 'daniel'),
+    36: ('text_leningrad_36ezra.json', 'ezra'),
+    37: ('text_leningrad_37nehemiah.json', 'nehemiah'),
+    38: ('text_leningrad_38Ichronicles.json', 'ichronicles'),
+    39: ('text_leningrad_39IIchronicles.json', 'iichronicles')
 }
 
 
@@ -298,6 +350,91 @@ def parse_book(json_file: Path, book_number: int) -> Tuple[List[Dict], List[Dict
     return chars, words, verses
 
 
+def write_output_files(book_name: str, chars: List[Dict], words: List[Dict],
+                       verses: List[Dict], output_dir: Path, compress: bool = True):
+    """
+    Write output files (JSON and optionally compressed .gz).
+
+    Args:
+        book_name: Book name for filenames (e.g., 'genesis')
+        chars, words, verses: Data to write
+        output_dir: Output directory
+        compress: Whether to generate .gz files
+    """
+    print("\n💾 Writing output files...")
+
+    files = {
+        'chars': (f'{book_name}-chars.json', chars),
+        'words': (f'{book_name}-words.json', words),
+        'verses': (f'{book_name}-verses.json', verses)
+    }
+
+    total_uncompressed = 0
+    total_compressed = 0
+
+    for data_type, (filename, data) in files.items():
+        # Write uncompressed JSON
+        json_file = output_dir / filename
+        with open(json_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        uncompressed_size = json_file.stat().st_size
+        total_uncompressed += uncompressed_size
+        print(f"  ✅ {filename} ({uncompressed_size / 1024:.1f} KB)")
+
+        # Write compressed .gz
+        if compress:
+            gz_file = output_dir / f'{filename}.gz'
+            with gzip.open(gz_file, 'wt', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
+
+            compressed_size = gz_file.stat().st_size
+            total_compressed += compressed_size
+            compression_ratio = uncompressed_size / compressed_size if compressed_size > 0 else 0
+            print(f"     {filename}.gz ({compressed_size / 1024:.1f} KB, {compression_ratio:.1f}x compression)")
+
+    return total_uncompressed, total_compressed
+
+
+def process_book(book_number: int, texts_dir: Path, output_dir: Path, compress: bool = True):
+    """Process a single book."""
+    if book_number not in BOOK_FILES:
+        print(f"❌ Error: Unknown book number {book_number}")
+        return False
+
+    filename, book_name = BOOK_FILES[book_number]
+    json_file = texts_dir / filename
+
+    if not json_file.exists():
+        print(f"❌ Error: {json_file} not found")
+        return False
+
+    print(f"\n{'='*60}")
+    print(f"Processing Book {book_number}: {book_name.title()}")
+    print('='*60)
+
+    # Parse book
+    chars, words, verses = parse_book(json_file, book_number)
+
+    # Write output files
+    uncompressed, compressed = write_output_files(
+        book_name, chars, words, verses, output_dir, compress
+    )
+
+    # Summary
+    print("\n📊 Summary:")
+    print(f"  Book: {book_name.title()} ({book_number})")
+    print(f"  Characters: {len(chars):,}")
+    print(f"  Words: {len(words):,}")
+    print(f"  Verses: {len(verses):,}")
+    print(f"  Chapters: {verses[-1]['chapter']}")
+    print(f"  Uncompressed: {uncompressed / 1024:.1f} KB")
+    print(f"  Compressed: {compressed / 1024:.1f} KB")
+    print(f"  Ratio: {uncompressed / compressed if compressed > 0 else 0:.1f}x")
+
+    return True
+
+
 def main():
     """Main entry point."""
     # Paths
@@ -307,45 +444,62 @@ def main():
 
     output_dir.mkdir(exist_ok=True)
 
-    # Parse Genesis
-    genesis_json = texts_dir / 'text_leningrad_1genesis.json'
-
-    if not genesis_json.exists():
-        print(f"❌ Error: {genesis_json} not found")
+    # Parse command-line arguments
+    if len(sys.argv) < 2:
+        print("Usage: python build-database.py [book_name|book_number|all]")
+        print("\nExamples:")
+        print("  python build-database.py genesis")
+        print("  python build-database.py 1")
+        print("  python build-database.py all")
+        print("\nAvailable books:")
+        for num, (_, name) in sorted(BOOK_FILES.items()):
+            print(f"  {num:2d}. {name}")
         return 1
 
-    chars, words, verses = parse_book(genesis_json, book_number=1)
+    arg = sys.argv[1].lower()
 
-    # Output files
-    chars_file = output_dir / 'genesis-chars.json'
-    words_file = output_dir / 'genesis-words.json'
-    verses_file = output_dir / 'genesis-verses.json'
+    # Determine which books to process
+    if arg == 'all':
+        book_numbers = list(range(1, 40))
+        print(f"🌍 Processing all {len(book_numbers)} books...")
+    elif arg.isdigit():
+        book_numbers = [int(arg)]
+    else:
+        # Find book by name
+        book_numbers = [num for num, (_, name) in BOOK_FILES.items() if name == arg]
+        if not book_numbers:
+            print(f"❌ Error: Unknown book '{arg}'")
+            return 1
 
-    print("\n💾 Writing output files...")
+    # Process books
+    success_count = 0
+    total_uncompressed = 0
+    total_compressed = 0
 
-    with open(chars_file, 'w', encoding='utf-8') as f:
-        json.dump(chars, f, ensure_ascii=False, indent=2)
-    print(f"  ✅ {chars_file.name} ({chars_file.stat().st_size / 1024:.1f} KB)")
+    for book_number in book_numbers:
+        if process_book(book_number, texts_dir, output_dir, compress=True):
+            success_count += 1
+            # Accumulate sizes
+            _, book_name = BOOK_FILES[book_number]
+            for suffix in ['chars', 'words', 'verses']:
+                json_file = output_dir / f'{book_name}-{suffix}.json'
+                gz_file = output_dir / f'{book_name}-{suffix}.json.gz'
+                if json_file.exists():
+                    total_uncompressed += json_file.stat().st_size
+                if gz_file.exists():
+                    total_compressed += gz_file.stat().st_size
 
-    with open(words_file, 'w', encoding='utf-8') as f:
-        json.dump(words, f, ensure_ascii=False, indent=2)
-    print(f"  ✅ {words_file.name} ({words_file.stat().st_size / 1024:.1f} KB)")
+    # Final summary
+    print(f"\n{'='*60}")
+    print("✨ DATABASE GENERATION COMPLETE")
+    print('='*60)
+    print(f"  Books processed: {success_count}/{len(book_numbers)}")
+    print(f"  Total uncompressed: {total_uncompressed / (1024 * 1024):.1f} MB")
+    print(f"  Total compressed: {total_compressed / (1024 * 1024):.1f} MB")
+    print(f"  Overall ratio: {total_uncompressed / total_compressed if total_compressed > 0 else 0:.1f}x")
+    print(f"  Output directory: {output_dir.absolute()}")
 
-    with open(verses_file, 'w', encoding='utf-8') as f:
-        json.dump(verses, f, ensure_ascii=False, indent=2)
-    print(f"  ✅ {verses_file.name} ({verses_file.stat().st_size / 1024:.1f} KB)")
-
-    # Summary statistics
-    print("\n📊 Summary:")
-    print(f"  Book: Genesis (1)")
-    print(f"  Characters: {len(chars):,}")
-    print(f"  Words: {len(words):,}")
-    print(f"  Verses: {len(verses):,}")
-    print(f"  Chapters: {verses[-1]['chapter']}")
-    print(f"  Total size: {(chars_file.stat().st_size + words_file.stat().st_size + verses_file.stat().st_size) / 1024:.1f} KB")
-
-    print("\n✨ Database generation complete!")
-    return 0
+    return 0 if success_count == len(book_numbers) else 1
 
 
 if __name__ == '__main__':
