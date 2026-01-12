@@ -368,12 +368,34 @@ This architecture ensures:
 - [x] Update README.md with comprehensive documentation
 - [x] Document PWA capabilities and best practices
 
-### Phase 2: Database Infrastructure
-- [ ] Design IndexedDB schema
-- [ ] Create data ingestion scripts (Python)
-- [ ] Generate chars.json.gz, words.json.gz, verses.json.gz
-- [ ] Implement IndexedDB loader
-- [ ] Create database query utilities
+### Phase 2: Database Infrastructure ✅ **COMPLETED**
+- [x] Design IndexedDB schema (db/schema.js)
+  - Character-level canonical storage (chars table)
+  - Word-level derived data (words table)
+  - Verse-level aggregated data (verses table)
+  - Metadata tracking (loaded books, app state)
+- [x] Create data ingestion scripts (Python)
+  - build-database.py with CLI interface
+  - Processes all 39 Tanach books
+  - Gematria calculations (standard, reduced, ordinal)
+- [x] Generate compressed data for all 39 books
+  - 117 files (chars, words, verses × 39 books)
+  - 630 MB uncompressed → 21 MB compressed (30.3x ratio)
+  - ~1.2M characters, ~309K words, ~23K verses
+- [x] Implement IndexedDB loader (db/loader.js)
+  - Fetch and decompress .gz files
+  - Batch insertion with progress tracking
+  - Book metadata and load status management
+- [x] Create database query utilities (db/query.js)
+  - Character queries (by ID, verse, book, range)
+  - Word queries (by ID, verse, gematria)
+  - Verse queries (by reference, chapter, book)
+  - Gematria search (words and verses)
+  - Full context retrieval
+- [x] Create test interface (test-db.html)
+  - Interactive database testing
+  - Performance benchmarks
+  - Storage quota monitoring
 
 ### Phase 3: Core Search Engines
 - [ ] Implement text search engine
@@ -598,4 +620,4 @@ This schema is **future-proof**:
 
 ---
 
-*Last Updated: 2026-01-11*
+*Last Updated: 2026-01-12 - Phase 2 Complete*
