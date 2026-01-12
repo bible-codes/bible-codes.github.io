@@ -1,127 +1,251 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="description" content="ניתוח מקיף של התנ״ך העברי - כלים לחיפוש קודי תורה, גימטריה, ניתוח סמנטי ועוד">
+  <meta name="theme-color" content="#667eea">
   <link rel="icon" type="image/png" href="img/favicon.png">
-  <link rel="stylesheet" href="styles.css">
-  <title>Hebrew Bible Analysis Suite</title>
+  <link rel="stylesheet" href="css/mobile-optimized.css">
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <title>חבילת ניתוח התנ״ך העברי | Hebrew Bible Analysis Suite</title>
+
   <style>
-    .dashboard-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .hero-section {
-      text-align: center;
-      padding: 3rem 1rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
       color: white;
-      border-radius: 12px;
-      margin-bottom: 3rem;
+      text-align: center;
+      padding: var(--space-2xl) var(--space-md);
+      margin-bottom: var(--space-xl);
     }
 
-    .hero-section h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
+    .hero-title {
+      font-size: var(--font-size-3xl);
+      margin-bottom: var(--space-md);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
 
-    .hero-section p {
-      font-size: 1.2rem;
+    .hero-subtitle {
+      font-size: var(--font-size-lg);
       opacity: 0.95;
+      margin-bottom: var(--space-sm);
+    }
+
+    .hero-legend {
+      font-size: var(--font-size-sm);
+      opacity: 0.9;
+      margin-top: var(--space-md);
+    }
+
+    @media (min-width: 768px) {
+      .hero-title {
+        font-size: var(--font-size-4xl);
+      }
     }
 
     .tools-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin-bottom: 3rem;
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+      margin-bottom: var(--space-xl);
+    }
+
+    @media (min-width: 640px) {
+      .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .tools-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
     .tool-card {
       background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s, box-shadow 0.2s;
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      box-shadow: 0 4px 8px var(--shadow);
+      transition: all var(--transition-normal);
       text-decoration: none;
-      color: inherit;
-      display: block;
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      min-height: 200px;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .tool-card:hover {
+    .tool-card:hover,
+    .tool-card:active {
       transform: translateY(-4px);
-      box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 8px 16px var(--shadow-lg);
     }
 
-    .tool-card h3 {
-      color: #667eea;
-      margin-bottom: 1rem;
-      font-size: 1.5rem;
+    .tool-icon {
+      font-size: 3rem;
+      margin-bottom: var(--space-md);
     }
 
-    .tool-card p {
-      color: #666;
-      line-height: 1.6;
+    .tool-title {
+      color: var(--primary);
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      margin-bottom: var(--space-sm);
+    }
+
+    .tool-description {
+      color: var(--text-secondary);
+      line-height: var(--line-height-normal);
+      flex-grow: 1;
+      margin-bottom: var(--space-md);
     }
 
     .tool-status {
       display: inline-block;
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      margin-top: 1rem;
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      align-self: flex-start;
     }
 
     .status-active {
       background: #d4edda;
-      color: #155724;
+      color: var(--success);
+    }
+
+    .status-new {
+      background: #cfe2ff;
+      color: var(--info);
     }
 
     .status-planned {
       background: #fff3cd;
-      color: #856404;
+      color: var(--warning);
     }
 
     .features-section {
-      background: #f8f9fa;
-      padding: 2rem;
-      border-radius: 12px;
-      margin-bottom: 2rem;
-    }
-
-    .features-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1rem;
-      list-style: none;
-      padding: 0;
-    }
-
-    .features-list li {
-      padding: 0.75rem;
       background: white;
-      border-radius: 8px;
-      border-left: 4px solid #667eea;
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      margin-bottom: var(--space-xl);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .section-title {
+      color: var(--primary);
+      font-size: var(--font-size-2xl);
+      margin-bottom: var(--space-lg);
+      text-align: center;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-sm);
+    }
+
+    @media (min-width: 640px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .feature-item {
+      padding: var(--space-md);
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      border-right: 4px solid var(--primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .feature-icon {
+      font-size: 1.5rem;
+    }
+
+    .feature-text {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .about-section {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      margin-bottom: var(--space-xl);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .about-text {
+      line-height: var(--line-height-loose);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-md);
+    }
+
+    .offline-indicator {
+      position: fixed;
+      bottom: var(--space-md);
+      left: var(--space-md);
+      right: var(--space-md);
+      background: var(--warning);
+      color: white;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 12px var(--shadow-lg);
+      z-index: var(--z-toast);
+      text-align: center;
+      font-weight: 600;
+    }
+
+    @media (min-width: 768px) {
+      .offline-indicator {
+        left: auto;
+        right: var(--space-lg);
+        max-width: 300px;
+      }
     }
 
     .footer {
       text-align: center;
-      padding: 2rem;
-      color: #666;
-      border-top: 1px solid #e0e0e0;
+      padding: var(--space-xl);
+      color: var(--text-secondary);
+      background: white;
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-xl);
+    }
+
+    .footer-links {
+      margin-top: var(--space-md);
+    }
+
+    .footer-link {
+      color: var(--primary);
+      text-decoration: none;
+      margin: 0 var(--space-sm);
+    }
+
+    .footer-link:hover {
+      text-decoration: underline;
     }
   </style>
+
   <!-- Service Worker Registration -->
-  <script type="text/javascript">
+  <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
           .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
+            console.log('Service Worker registered:', registration.scope);
           })
           .catch(error => {
             console.error('Service Worker registration failed:', error);
@@ -132,144 +256,245 @@
 </head>
 
 <body>
-  <!-- Header Section -->
-  <header class="header">
-    <div class="logo-container">
-      <a href="/">
-        <img src="img/favicon.png" alt="logo" class="logo">
-      </a>
-      <h1 class="bible-codes-heading">Hebrew Bible Analysis Suite</h1>
+  <!-- Mobile Navigation -->
+  <header class="mobile-header">
+    <div class="mobile-header-inner">
+      <a href="index.html" class="logo">📖 ניתוח תנ"ך</a>
+      <button id="hamburger" class="hamburger" aria-label="תפריט">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
+
+    <nav id="mobile-nav" class="mobile-nav">
+      <ul class="mobile-nav-list">
+        <li class="mobile-nav-item">
+          <a href="index.html" class="mobile-nav-link active">
+            <span class="nav-icon">🏠</span>
+            <span>דף הבית</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="bible-codes.html" class="mobile-nav-link">
+            <span class="nav-icon">🔍</span>
+            <span>קודי תורה (ELS)</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="text-search.html" class="mobile-nav-link">
+            <span class="nav-icon">📖</span>
+            <span>חיפוש טקסט</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="gematria.html" class="mobile-nav-link">
+            <span class="nav-icon">🔢</span>
+            <span>גימטריה</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="acronym.html" class="mobile-nav-link">
+            <span class="nav-icon">✡️</span>
+            <span>ראשי תיבות</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="tsirufim.html" class="mobile-nav-link">
+            <span class="nav-icon">🌟</span>
+            <span>צירופים</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="test-roots.html" class="mobile-nav-link">
+            <span class="nav-icon">🌱</span>
+            <span>בדיקת שורשים</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
   </header>
 
-  <main class="dashboard-container">
+  <main class="container">
     <!-- Hero Section -->
-    <section class="hero-section">
-      <h1>Comprehensive Hebrew Bible Analysis</h1>
-      <p>Client-side, offline-capable tools for Torah study, research, and exploration</p>
-      <p style="font-size: 0.9rem; margin-top: 1rem;">🔴 Active | 🟡 In Development | 🟢 Planned</p>
+    <section class="hero">
+      <h1 class="hero-title">ניתוח מקיף של התנ״ך העברי</h1>
+      <p class="hero-subtitle">Comprehensive Hebrew Bible Analysis</p>
+      <p class="hero-subtitle">כלים מתקדמים לחיפוש, ניתוח וחקר התורה</p>
+      <p class="hero-legend">🔴 פעיל | 🔵 חדש | 🟡 מתוכנן</p>
     </section>
 
     <!-- Tools Grid -->
     <section class="tools-grid">
-      <!-- ELS / Bible Codes Tool -->
+      <!-- ELS Bible Codes -->
       <a href="bible-codes.html" class="tool-card">
-        <h3>🔴 ELS Bible Codes Search</h3>
-        <p>Equidistant Letter Sequence (ELS) search engine with precomputed hashes and dynamic skip-distance analysis across the Torah text.</p>
-        <span class="tool-status status-active">Active</span>
+        <div class="tool-icon">🔍</div>
+        <h3 class="tool-title">קודי תורה (ELS)</h3>
+        <p class="tool-description">חיפוש רצפים שווי-מרחק (ELS) עם ניתוח skip-distance דינמי על פני הטקסט המלא.</p>
+        <span class="tool-status status-active">🔴 פעיל</span>
       </a>
 
-      <!-- Text Search Tool -->
+      <!-- Text Search -->
       <a href="text-search.html" class="tool-card">
-        <h3>🔴 Hebrew Text Search</h3>
-        <p>Advanced text search with pattern matching, keyword lookup, first/last letter filtering, and verse-by-verse navigation.</p>
-        <span class="tool-status status-active">Active</span>
+        <div class="tool-icon">📖</div>
+        <h3 class="tool-title">חיפוש טקסט</h3>
+        <p class="tool-description">חיפוש מתקדם עם התאמת תבניות, סינון אותיות ראשונות/אחרונות, וניווט פסוק אחר פסוק.</p>
+        <span class="tool-status status-active">🔴 פעיל</span>
       </a>
 
-      <!-- Gematria Calculator -->
+      <!-- Gematria -->
       <a href="gematria.html" class="tool-card">
-        <h3>🔴 Gematria Calculator</h3>
-        <p>Calculate gematria values using multiple methods (standard, reduced, ordinal). Search verses by numeric value.</p>
-        <span class="tool-status status-active">Active</span>
+        <div class="tool-icon">🔢</div>
+        <h3 class="tool-title">גימטריה</h3>
+        <p class="tool-description">חישוב גימטריה במספר שיטות (רגיל, מצומצם, סידורי). חיפוש פסוקים לפי ערך מספרי.</p>
+        <span class="tool-status status-active">🔴 פעיל</span>
       </a>
 
-      <!-- Notarikon / Acronym Tool -->
+      <!-- Acronym/Notarikon -->
       <a href="acronym.html" class="tool-card">
-        <h3>🔴 Notarikon & Acronyms</h3>
-        <p>Extract first/last letters from words to form acronyms. Explore traditional notarikon patterns and abbreviations.</p>
-        <span class="tool-status status-active">Active</span>
+        <div class="tool-icon">✡️</div>
+        <h3 class="tool-title">ראשי תיבות ונוטריקון</h3>
+        <p class="tool-description">חילוץ אותיות ראשונות ואחרונות ליצירת ראשי תיבות. ניתוח תבניות נוטריקון מסורתיות.</p>
+        <span class="tool-status status-active">🔴 פעיל</span>
       </a>
 
-      <!-- Tsirufim - Semantic Permutation -->
-      <div class="tool-card">
-        <h3>🟢 Tsirufim (צירופים)</h3>
-        <p>Advanced semantic permutation analysis: explore how letters from words describing situations recombine into related meanings. Uses ML-powered clustering and Hebrew embeddings to discover latent semantic patterns.</p>
-        <span class="tool-status status-planned">Planned</span>
-      </div>
+      <!-- Tsirufim NEW -->
+      <a href="tsirufim.html" class="tool-card">
+        <div class="tool-icon">🌟</div>
+        <h3 class="tool-title">צירופים סמנטיים</h3>
+        <p class="tool-description">ניתוח פרמוטציות סמנטי מתקדם: גלה כיצד אותיות מצטרפות למשמעויות קשורות. משתמש בלמידת מכונה ואשכולות סמנטיים.</p>
+        <span class="tool-status status-new">🔵 חדש!</span>
+      </a>
+
+      <!-- Root Extraction NEW -->
+      <a href="test-roots.html" class="tool-card">
+        <div class="tool-icon">🌱</div>
+        <h3 class="tool-title">חילוץ שורשים</h3>
+        <p class="tool-description">זיהוי שורשים עבריים (שלושיים/רבועיים) ממילים. 56K מילים במילון, זיהוי בניין, ציון ביטחון.</p>
+        <span class="tool-status status-new">🔵 חדש!</span>
+      </a>
 
       <!-- Letter Analysis -->
-      <div class="tool-card">
-        <h3>🟢 Letter & Word Analysis</h3>
-        <p>Character-level database for counting letters, analyzing word patterns, and exploring structural properties of the text.</p>
-        <span class="tool-status status-planned">Planned</span>
+      <div class="tool-card" style="opacity: 0.7;">
+        <div class="tool-icon">📊</div>
+        <h3 class="tool-title">ניתוח אותיות ומילים</h3>
+        <p class="tool-description">מסד נתונים ברמת תו לספירת אותיות, ניתוח תבניות מילים וחקר מבנה הטקסט.</p>
+        <span class="tool-status status-planned">🟡 מתוכנן</span>
       </div>
 
-      <!-- Cantillation Analysis -->
-      <div class="tool-card">
-        <h3>🟢 Taamim (Cantillation) Viewer</h3>
-        <p>View and compare cantillation marks (taamim) including alternate traditions like Aseret HaDibrot.</p>
-        <span class="tool-status status-planned">Planned</span>
+      <!-- Cantillation -->
+      <div class="tool-card" style="opacity: 0.7;">
+        <div class="tool-icon">🎵</div>
+        <h3 class="tool-title">מציג טעמים</h3>
+        <p class="tool-description">צפייה והשוואה של סימני טעמים, כולל מסורות חלופיות כמו עשרת הדיברות.</p>
+        <span class="tool-status status-planned">🟡 מתוכנן</span>
       </div>
 
       <!-- Cross-References -->
-      <div class="tool-card">
-        <h3>🟢 Cross-Reference Index</h3>
-        <p>Explore where verses appear in Talmud, Midrash, and Zohar. Links to Sefaria and other traditional sources.</p>
-        <span class="tool-status status-planned">Planned</span>
-      </div>
-
-      <!-- Basic Anagram Tool -->
-      <div class="tool-card">
-        <h3>🟢 Basic Anagram Tool</h3>
-        <p>Simple character rearrangement and pattern detection for exploring letter combinations.</p>
-        <span class="tool-status status-planned">Planned</span>
+      <div class="tool-card" style="opacity: 0.7;">
+        <div class="tool-icon">🔗</div>
+        <h3 class="tool-title">אינדקס צולב</h3>
+        <p class="tool-description">חקור היכן פסוקים מופיעים בתלמוד, מדרש וזוהר. קישורים לספריא ומקורות אחרים.</p>
+        <span class="tool-status status-planned">🟡 מתוכנן</span>
       </div>
     </section>
 
     <!-- Features Section -->
     <section class="features-section">
-      <h2 style="margin-bottom: 1.5rem;">Core Features</h2>
-      <ul class="features-list">
-        <li>100% Client-Side Processing</li>
-        <li>Full Offline Capability (PWA)</li>
-        <li>Character-Level Database</li>
-        <li>IndexedDB for Large Datasets</li>
-        <li>Web Workers for Performance</li>
-        <li>Multi-Method Gematria</li>
-        <li>Niqqud & Taamim Aware</li>
-        <li>Alternate Cantillation Support</li>
-        <li>Verse & Word Navigation</li>
-        <li>Pattern & Regex Search</li>
-        <li>Statistical Analysis</li>
-        <li>Cross-Reference Linking</li>
-        <li>Hebrew Word Embeddings</li>
-        <li>Semantic Permutation Clustering</li>
-        <li>Root-Based Analysis (שורש-משקל)</li>
-        <li>ML-Powered Text Exploration</li>
-      </ul>
+      <h2 class="section-title">תכונות מרכזיות</h2>
+      <div class="features-grid">
+        <div class="feature-item">
+          <span class="feature-icon">💻</span>
+          <span class="feature-text">100% עיבוד צד-לקוח</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📴</span>
+          <span class="feature-text">עבודה מלאה במצב לא מקוון</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🗄️</span>
+          <span class="feature-text">מסד נתונים ברמת תו</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">⚡</span>
+          <span class="feature-text">ביצועים מהירים</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🔢</span>
+          <span class="feature-text">גימטריה מרובת שיטות</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🌱</span>
+          <span class="feature-text">ניתוח מבוסס שורשים</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🧠</span>
+          <span class="feature-text">למידת מכונה סמנטית</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🎯</span>
+          <span class="feature-text">חיפוש מדויק ומהיר</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📱</span>
+          <span class="feature-text">ממשק מותאם למובייל</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🔐</span>
+          <span class="feature-text">פרטיות מלאה (ללא שרת)</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🌐</span>
+          <span class="feature-text">PWA להתקנה</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📊</span>
+          <span class="feature-text">ניתוח סטטיסטי</span>
+        </div>
+      </div>
     </section>
 
     <!-- About Section -->
-    <section class="features-section">
-      <h2 style="margin-bottom: 1rem;">About This Project</h2>
-      <p style="line-height: 1.8; color: #555;">
-        This unified Hebrew Bible analysis suite provides comprehensive tools for Torah study, research, and exploration.
-        Built entirely with client-side technologies, all processing happens in your browser with no server dependencies.
-        The application uses a character-level database architecture that enables everything from traditional ELS searches
-        to advanced statistical analysis, gematria calculations, and structural exploration of the Masoretic text.
+    <section class="about-section">
+      <h2 class="section-title">אודות הפרויקט</h2>
+      <p class="about-text">
+        חבילת ניתוח תנ"ך עברי מקיפה המספקת כלים מתקדמים ללימוד תורה, מחקר וחקירה.
+        הפרויקט בנוי כולו בטכנולוגיות צד-לקוח, כך שכל העיבוד מתבצע בדפדפן שלך ללא תלות בשרת.
+        האפליקציה משתמשת בארכיטקטורת מסד נתונים ברמת תו המאפשרת הכל החל מחיפושי ELS מסורתיים
+        ועד ניתוח סטטיסטי מתקדם, חישובי גימטריה וחקר מבני של הטקסט המסורתי.
       </p>
-      <p style="line-height: 1.8; color: #555; margin-top: 1rem;">
-        As a Progressive Web App (PWA), you can install this application and use it completely offline, making it ideal
-        for study and research without internet connectivity.
+      <p class="about-text">
+        בתור Progressive Web App (PWA), ניתן להתקין את האפליקציה ולהשתמש בה לחלוטין במצב לא מקוון,
+        מה שהופך אותה לאידיאלית ללימוד ומחקר ללא צורך בחיבור לאינטרנט.
+      </p>
+      <p class="about-text">
+        <strong>חדש!</strong> המערכת כוללת כעת מנוע חילוץ שורשים עבריים עם מילון של 56,000+ מילים,
+        וכלי צירופים סמנטיים המשתמש בלמידת מכונה לזיהוי קשרים סמנטיים נסתרים בין מילים.
       </p>
     </section>
 
     <!-- Offline Indicator -->
-    <div id="offline-indicator" class="offline-indicator hidden" style="position: fixed; bottom: 20px; right: 20px; background: #ff9800; color: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-      You are currently offline. Some features may be limited.
+    <div id="offline-indicator" class="offline-indicator hidden">
+      ⚠️ אתה במצב לא מקוון. חלק מהתכונות עשויות להיות מוגבלות.
     </div>
   </main>
 
   <!-- Footer -->
   <footer class="footer">
-    <p>&copy; 2025 Hebrew Bible Analysis Suite | Open Source Project</p>
-    <p>
-      <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank" style="color: #667eea; text-decoration: none;">GitHub Repository</a> |
-      <a href="mailto:roni762583@gmail.com" style="color: #667eea; text-decoration: none;">Contact</a>
-    </p>
+    <p>&copy; 2026 חבילת ניתוח התנ"ך העברי | פרויקט קוד פתוח</p>
+    <div class="footer-links">
+      <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank" class="footer-link">GitHub</a>
+      <a href="DOCUMENTATION.md" class="footer-link">תיעוד</a>
+      <a href="mailto:roni762583@gmail.com" class="footer-link">צור קשר</a>
+    </div>
   </footer>
 
-  <script>
+  <script type="module">
+    import { initMobileNav } from './js/mobile-nav.js';
+
+    // Initialize mobile navigation
+    initMobileNav();
+
     // Offline indicator
     window.addEventListener('online', () => {
       document.getElementById('offline-indicator')?.classList.add('hidden');
@@ -278,7 +503,11 @@
     window.addEventListener('offline', () => {
       document.getElementById('offline-indicator')?.classList.remove('hidden');
     });
+
+    // Check initial offline status
+    if (!navigator.onLine) {
+      document.getElementById('offline-indicator')?.classList.remove('hidden');
+    }
   </script>
 </body>
-
 </html>
