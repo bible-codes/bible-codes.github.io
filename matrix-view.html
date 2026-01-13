@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix View - Hebrew Bible Grid Visualization</title>
+    <link rel="stylesheet" href="css/mobile-optimized.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <style>
+        .matrix-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .controls-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .control-group input[type="number"],
+        .control-group select {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .control-row > div {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .matrix-display {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .matrix-grid {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            line-height: 1.5;
+            letter-spacing: 0.1em;
+            direction: ltr;
+            text-align: left;
+            white-space: pre;
+            margin: 20px 0;
+        }
+
+        .matrix-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+
+        .matrix-cell {
+            width: 35px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ecf0f1;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .matrix-cell:hover {
+            background: #ecf0f1;
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .matrix-cell.highlighted {
+            background: #ffeb3b;
+            border: 2px solid #fbc02d;
+            font-weight: bold;
+        }
+
+        .matrix-cell.highlighted-red {
+            background: #ffcdd2;
+            border: 2px solid #e53935;
+        }
+
+        .matrix-cell.highlighted-blue {
+            background: #bbdefb;
+            border: 2px solid #1976d2;
+        }
+
+        .matrix-cell.highlighted-green {
+            background: #c8e6c9;
+            border: 2px solid #43a047;
+        }
+
+        .matrix-cell.final-letter {
+            color: #e74c3c;
+        }
+
+        .matrix-metadata {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .metadata-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .metadata-value {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .matrix-cell:hover .tooltip {
+            opacity: 1;
+        }
+
+        .els-search-panel {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 5px solid #ffc107;
+        }
+
+        .els-search-panel h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        .els-results {
+            margin-top: 15px;
+        }
+
+        .els-result-item {
+            background: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .verse-reference {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .matrix-cell {
+                width: 25px;
+                height: 30px;
+                font-size: 18px;
+            }
+
+            .matrix-display {
+                padding: 15px;
+            }
+
+            .controls-panel {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-container">
+        <h1>📊 Matrix View - Character Grid Visualization</h1>
+        <p class="subtitle">View Hebrew Bible text in rectangular grids for pattern analysis and ELS visualization</p>
+
+        <div class="controls-panel">
+            <h2>Matrix Configuration</h2>
+
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="start-position">Starting Position (s)</label>
+                    <input type="number" id="start-position" value="0" min="0" max="1200000">
+                    <small>Global character index (0 to ~1.2M)</small>
+                </div>
+
+                <div class="control-group">
+                    <label for="verse-start">Or Start from Verse:</label>
+                    <select id="book-select">
+                        <option value="">Select Book...</option>
+                        <option value="genesis">Genesis (בראשית)</option>
+                        <option value="exodus">Exodus (שמות)</option>
+                        <option value="leviticus">Leviticus (ויקרא)</option>
+                        <option value="numbers">Numbers (במדבר)</option>
+                        <option value="deuteronomy">Deuteronomy (דברים)</option>
+                    </select>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <input type="number" id="chapter-num" placeholder="Chapter" min="1" style="max-width: 100px;">
+                        <input type="number" id="verse-num" placeholder="Verse" min="1" style="max-width: 100px;">
+                        <button class="btn btn-secondary" onclick="setFromVerse()">Set</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="matrix-width">Characters Per Row (n)</label>
+                    <input type="number" id="matrix-width" value="50" min="1" max="200">
+                </div>
+
+                <div class="control-group">
+                    <label for="matrix-height">Number of Rows (r)</label>
+                    <input type="number" id="matrix-height" value="20" min="1" max="100">
+                </div>
+
+                <div class="control-group">
+                    <label>Total Characters:</label>
+                    <div class="metadata-value" id="total-chars">1000</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="consonantal-only" checked>
+                    Consonantal Only (no niqqud/taamim)
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="generateMatrix()">🔄 Generate Matrix</button>
+                <button class="btn btn-secondary" onclick="exportMatrix()">💾 Export as Text</button>
+                <button class="btn btn-success" onclick="findELSInMatrix()">🔍 Find ELS in Matrix</button>
+            </div>
+        </div>
+
+        <div id="matrix-output" style="display: none;">
+            <div class="matrix-display">
+                <h3>Character Matrix</h3>
+                <div id="matrix-grid"></div>
+
+                <div class="matrix-metadata">
+                    <h4>Matrix Information</h4>
+                    <div class="metadata-grid">
+                        <div class="metadata-item">
+                            <div class="metadata-label">Start Position</div>
+                            <div class="metadata-value" id="meta-start">0</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">End Position</div>
+                            <div class="metadata-value" id="meta-end">0</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">Total Characters</div>
+                            <div class="metadata-value" id="meta-total">0</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">Dimensions</div>
+                            <div class="metadata-value" id="meta-dimensions">0 × 0</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">Books Covered</div>
+                            <div class="metadata-value" id="meta-books">-</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">Verse Range</div>
+                            <div class="metadata-value" id="meta-verses">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="els-search-panel" id="els-panel" style="display: none;">
+                <h3>🔍 ELS Search in Matrix</h3>
+                <p>Search for equidistant letter sequences within this matrix grid.</p>
+
+                <div class="control-row">
+                    <div class="control-group">
+                        <label for="els-term">Search Term (Hebrew consonants)</label>
+                        <input type="text" id="els-term" placeholder="משה" style="font-size: 20px;">
+                    </div>
+                    <div class="control-group">
+                        <label for="els-skip">Skip Distance</label>
+                        <input type="number" id="els-skip" value="1" placeholder="1, 50, -1, etc.">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="searchELS()">Search</button>
+
+                <div class="els-results" id="els-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h2>Generating Matrix...</h2>
+            <p id="loading-message">Please wait</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { matrixEngine } from './engines/matrix.js';
+        import { loadBook } from './db/loader.js';
+
+        let currentMatrix = null;
+        let currentConfig = null;
+
+        // Make functions globally available
+        window.generateMatrix = generateMatrix;
+        window.exportMatrix = exportMatrix;
+        window.findELSInMatrix = findELSInMatrix;
+        window.searchELS = searchELS;
+        window.setFromVerse = setFromVerse;
+
+        // Update total chars when width/height changes
+        document.getElementById('matrix-width').addEventListener('input', updateTotalChars);
+        document.getElementById('matrix-height').addEventListener('input', updateTotalChars);
+
+        function updateTotalChars() {
+            const width = parseInt(document.getElementById('matrix-width').value) || 0;
+            const height = parseInt(document.getElementById('matrix-height').value) || 0;
+            document.getElementById('total-chars').textContent = (width * height).toLocaleString();
+        }
+
+        async function setFromVerse() {
+            const book = document.getElementById('book-select').value;
+            const chapter = parseInt(document.getElementById('chapter-num').value);
+            const verse = parseInt(document.getElementById('verse-num').value);
+
+            if (!book || !chapter || !verse) {
+                alert('Please select book, chapter, and verse');
+                return;
+            }
+
+            showLoading('Finding verse position...');
+
+            try {
+                await matrixEngine.init();
+                const position = await matrixEngine.verseToPosition(book, chapter, verse);
+                document.getElementById('start-position').value = position;
+
+                hideLoading();
+                alert(`Verse position: ${position.toLocaleString()}`);
+            } catch (error) {
+                hideLoading();
+                console.error('Error finding verse:', error);
+                alert('Error finding verse position');
+            }
+        }
+
+        async function generateMatrix() {
+            const start = parseInt(document.getElementById('start-position').value) || 0;
+            const width = parseInt(document.getElementById('matrix-width').value) || 50;
+            const height = parseInt(document.getElementById('matrix-height').value) || 20;
+            const consonantalOnly = document.getElementById('consonantal-only').checked;
+
+            if (width < 1 || height < 1) {
+                alert('Width and height must be at least 1');
+                return;
+            }
+
+            if (width * height > 10000) {
+                if (!confirm('Large matrix may be slow. Continue?')) {
+                    return;
+                }
+            }
+
+            showLoading('Generating matrix...');
+
+            try {
+                // Initialize engine
+                await matrixEngine.init();
+
+                // Load Genesis if not loaded
+                const booksToLoad = ['genesis'];
+                for (const book of booksToLoad) {
+                    await loadBook(book);
+                }
+
+                // Generate matrix
+                currentConfig = { start, width, height, consonantalOnly };
+                const result = await matrixEngine.generateMatrix(currentConfig);
+                currentMatrix = result;
+
+                // Display matrix
+                displayMatrix(result);
+
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                console.error('Error generating matrix:', error);
+                alert('Error generating matrix: ' + error.message);
+            }
+        }
+
+        function displayMatrix(result) {
+            const { matrix, metadata } = result;
+            const gridElement = document.getElementById('matrix-grid');
+
+            // Clear existing content
+            gridElement.innerHTML = '';
+
+            // Create matrix grid
+            matrix.forEach((row, rowIdx) => {
+                const rowElement = document.createElement('div');
+                rowElement.className = 'matrix-row';
+
+                row.forEach((cell, colIdx) => {
+                    const cellElement = document.createElement('div');
+                    cellElement.className = 'matrix-cell';
+
+                    if (cell.isFinal) {
+                        cellElement.classList.add('final-letter');
+                    }
+
+                    cellElement.textContent = cell.char || ' ';
+                    cellElement.dataset.globalPos = cell.globalPos;
+                    cellElement.dataset.row = rowIdx;
+                    cellElement.dataset.col = colIdx;
+
+                    // Add tooltip
+                    if (cell.metadata && cell.metadata.bookName) {
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'tooltip';
+                        tooltip.textContent = `${cell.metadata.bookName} ${cell.metadata.chapter}:${cell.metadata.verse} | Pos: ${cell.globalPos}`;
+                        cellElement.appendChild(tooltip);
+                    }
+
+                    rowElement.appendChild(cellElement);
+                });
+
+                gridElement.appendChild(rowElement);
+            });
+
+            // Update metadata
+            document.getElementById('meta-start').textContent = metadata.startPos.toLocaleString();
+            document.getElementById('meta-end').textContent = metadata.endPos.toLocaleString();
+            document.getElementById('meta-total').textContent = metadata.totalChars.toLocaleString();
+            document.getElementById('meta-dimensions').textContent = `${metadata.width} × ${metadata.actualRows}`;
+            document.getElementById('meta-books').textContent = metadata.books.join(', ');
+            document.getElementById('meta-verses').textContent = `${metadata.verses.length} verses`;
+
+            // Show output
+            document.getElementById('matrix-output').style.display = 'block';
+            document.getElementById('matrix-output').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function exportMatrix() {
+            if (!currentMatrix) {
+                alert('Generate a matrix first');
+                return;
+            }
+
+            const { matrix } = currentMatrix;
+            let text = '';
+
+            matrix.forEach(row => {
+                row.forEach(cell => {
+                    text += cell.char || ' ';
+                });
+                text += '\n';
+            });
+
+            // Create download
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `matrix_${currentConfig.start}_${currentConfig.width}x${currentConfig.height}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function findELSInMatrix() {
+            if (!currentMatrix) {
+                alert('Generate a matrix first');
+                return;
+            }
+
+            const panel = document.getElementById('els-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function searchELS() {
+            const term = document.getElementById('els-term').value.trim();
+            const skip = parseInt(document.getElementById('els-skip').value) || 1;
+
+            if (!term) {
+                alert('Enter a search term');
+                return;
+            }
+
+            if (!currentMatrix) {
+                alert('Generate a matrix first');
+                return;
+            }
+
+            showLoading('Searching for ELS patterns...');
+
+            try {
+                const results = matrixEngine.findELSInMatrix(currentMatrix.matrix, term, skip);
+
+                displayELSResults(results);
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                console.error('Error searching ELS:', error);
+                alert('Error searching: ' + error.message);
+            }
+        }
+
+        function displayELSResults(results) {
+            const resultsDiv = document.getElementById('els-results');
+
+            if (results.length === 0) {
+                resultsDiv.innerHTML = '<p>No matches found</p>';
+                return;
+            }
+
+            // Clear existing highlights
+            document.querySelectorAll('.matrix-cell').forEach(cell => {
+                cell.classList.remove('highlighted', 'highlighted-red', 'highlighted-blue', 'highlighted-green');
+            });
+
+            let html = `<p>Found ${results.length} match(es)</p>`;
+
+            results.forEach((result, idx) => {
+                const color = idx === 0 ? 'highlighted' : ['highlighted-red', 'highlighted-blue', 'highlighted-green'][idx % 3];
+
+                // Highlight cells
+                result.positions.forEach(pos => {
+                    const cell = document.querySelector(`.matrix-cell[data-row="${pos.row}"][data-col="${pos.col}"]`);
+                    if (cell) {
+                        cell.classList.add(color);
+                    }
+                });
+
+                html += `
+                    <div class="els-result-item">
+                        <strong>${result.term}</strong> | Skip: ${result.skip} | Direction: ${result.direction}
+                        <br>Start: ${result.startPos.toLocaleString()}
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function showLoading(message) {
+            document.getElementById('loading-message').textContent = message;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        // Initialize
+        updateTotalChars();
+    </script>
+</body>
+</html>

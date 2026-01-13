@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book View - Hebrew Bible Reader</title>
+    <link rel="stylesheet" href="css/mobile-optimized.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <style>
+        .book-reader-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .reader-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .control-group select,
+        .control-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .display-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            padding: 10px 0;
+            border-top: 1px solid #eee;
+            margin-top: 10px;
+        }
+
+        .display-options label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .display-options input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 10px 0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-nav {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-nav:hover {
+            background: #2980b9;
+        }
+
+        .btn-nav:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .text-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+
+        .chapter-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .chapter-header h2 {
+            font-size: 32px;
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+        }
+
+        .chapter-header .book-name {
+            font-size: 24px;
+            color: #7f8c8d;
+        }
+
+        .verse {
+            margin-bottom: 15px;
+            line-height: 2;
+            font-size: 20px;
+            direction: rtl;
+            text-align: right;
+        }
+
+        .verse.with-niqqud {
+            font-family: 'SBL Hebrew', 'Ezra SIL', 'Times New Roman', serif;
+            font-size: 22px;
+            line-height: 2.2;
+        }
+
+        .verse-number {
+            display: inline-block;
+            font-weight: bold;
+            color: #3498db;
+            margin-left: 10px;
+            font-size: 18px;
+            vertical-align: super;
+            cursor: pointer;
+        }
+
+        .verse-number:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+
+        .verse-text {
+            display: inline;
+        }
+
+        .verse-highlight {
+            background: #fff9c4;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .search-box {
+            margin-top: 15px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+
+        .search-results {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .chapter-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-bar {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+        }
+
+        /* Print styles */
+        @media print {
+            .reader-controls,
+            .navigation-buttons,
+            .chapter-footer,
+            .stats-bar {
+                display: none;
+            }
+
+            .text-container {
+                box-shadow: none;
+                padding: 20px;
+            }
+
+            .verse {
+                page-break-inside: avoid;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .book-reader-container {
+                padding: 10px;
+            }
+
+            .text-container {
+                padding: 20px;
+            }
+
+            .verse {
+                font-size: 18px;
+            }
+
+            .chapter-header h2 {
+                font-size: 24px;
+            }
+
+            .control-row {
+                flex-direction: column;
+            }
+
+            .control-group {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="book-reader-container">
+        <h1>📖 Book View - Hebrew Bible Reader</h1>
+        <p class="subtitle">Read the Hebrew Bible in traditional book format with verse navigation</p>
+
+        <div class="reader-controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="book-select">Book (ספר)</label>
+                    <select id="book-select" onchange="onBookChange()">
+                        <option value="">Select a book...</option>
+                        <optgroup label="Torah (תורה)">
+                            <option value="genesis">Genesis (בראשית)</option>
+                            <option value="exodus">Exodus (שמות)</option>
+                            <option value="leviticus">Leviticus (ויקרא)</option>
+                            <option value="numbers">Numbers (במדבר)</option>
+                            <option value="deuteronomy">Deuteronomy (דברים)</option>
+                        </optgroup>
+                        <optgroup label="Prophets (נביאים)">
+                            <option value="joshua">Joshua (יהושע)</option>
+                            <option value="judges">Judges (שופטים)</option>
+                            <option value="1samuel">1 Samuel (שמואל א)</option>
+                            <option value="2samuel">2 Samuel (שמואל ב)</option>
+                            <option value="1kings">1 Kings (מלכים א)</option>
+                            <option value="2kings">2 Kings (מלכים ב)</option>
+                            <option value="isaiah">Isaiah (ישעיהו)</option>
+                            <option value="jeremiah">Jeremiah (ירמיהו)</option>
+                            <option value="ezekiel">Ezekiel (יחזקאל)</option>
+                        </optgroup>
+                        <optgroup label="Writings (כתובים)">
+                            <option value="psalms">Psalms (תהילים)</option>
+                            <option value="proverbs">Proverbs (משלי)</option>
+                            <option value="job">Job (איוב)</option>
+                            <option value="ruth">Ruth (רות)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="chapter-select">Chapter (פרק)</label>
+                    <select id="chapter-select" onchange="loadChapter()">
+                        <option value="">Select chapter...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="display-options">
+                <label>
+                    <input type="checkbox" id="show-niqqud" checked onchange="updateDisplay()">
+                    Show Niqqud (ניקוד)
+                </label>
+                <label>
+                    <input type="checkbox" id="show-taamim" onchange="updateDisplay()">
+                    Show Taamim (טעמים)
+                </label>
+                <label>
+                    <input type="checkbox" id="show-verse-numbers" checked onchange="updateDisplay()">
+                    Show Verse Numbers
+                </label>
+                <label>
+                    <input type="checkbox" id="larger-text" onchange="updateDisplay()">
+                    Larger Text
+                </label>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search in current chapter... (חיפוש)" oninput="searchInChapter()">
+                <div class="search-results" id="search-results"></div>
+            </div>
+        </div>
+
+        <div class="navigation-buttons">
+            <button class="btn btn-nav" id="prev-chapter" onclick="previousChapter()" disabled>
+                ⏮️ Previous Chapter
+            </button>
+            <button class="btn btn-nav" id="next-chapter" onclick="nextChapter()" disabled>
+                Next Chapter ⏭️
+            </button>
+        </div>
+
+        <div class="text-container" id="text-container">
+            <div class="loading-spinner">
+                <div>Welcome to the Hebrew Bible Reader</div>
+                <p>Select a book and chapter to begin reading</p>
+            </div>
+        </div>
+
+        <div class="stats-bar" id="stats-bar" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-value" id="stat-verses">0</div>
+                <div class="stat-label">Verses</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-words">0</div>
+                <div class="stat-label">Words</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-chars">0</div>
+                <div class="stat-label">Characters</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { openDB } from './db/schema.js';
+        import { loadBook } from './db/loader.js';
+        import { getVersesByChapter } from './db/query.js';
+
+        let db = null;
+        let currentBook = '';
+        let currentChapter = 0;
+        let currentVerses = [];
+        let maxChapters = 0;
+
+        // Book metadata (chapters per book)
+        const bookMetadata = {
+            genesis: { chapters: 50, hebrew: 'בראשית', bookNum: 1 },
+            exodus: { chapters: 40, hebrew: 'שמות', bookNum: 2 },
+            leviticus: { chapters: 27, hebrew: 'ויקרא', bookNum: 3 },
+            numbers: { chapters: 36, hebrew: 'במדבר', bookNum: 4 },
+            deuteronomy: { chapters: 34, hebrew: 'דברים', bookNum: 5 },
+            joshua: { chapters: 24, hebrew: 'יהושע', bookNum: 6 },
+            judges: { chapters: 21, hebrew: 'שופטים', bookNum: 7 },
+            '1samuel': { chapters: 31, hebrew: 'שמואל א', bookNum: 9 },
+            '2samuel': { chapters: 24, hebrew: 'שמואל ב', bookNum: 10 },
+            '1kings': { chapters: 22, hebrew: 'מלכים א', bookNum: 11 },
+            '2kings': { chapters: 25, hebrew: 'מלכים ב', bookNum: 12 },
+            isaiah: { chapters: 66, hebrew: 'ישעיהו', bookNum: 13 },
+            jeremiah: { chapters: 52, hebrew: 'ירמיהו', bookNum: 14 },
+            ezekiel: { chapters: 48, hebrew: 'יחזקאל', bookNum: 15 },
+            psalms: { chapters: 150, hebrew: 'תהילים', bookNum: 28 },
+            proverbs: { chapters: 31, hebrew: 'משלי', bookNum: 29 },
+            job: { chapters: 42, hebrew: 'איוב', bookNum: 30 },
+            ruth: { chapters: 4, hebrew: 'רות', bookNum: 8 }
+        };
+
+        // Make functions globally available
+        window.onBookChange = onBookChange;
+        window.loadChapter = loadChapter;
+        window.previousChapter = previousChapter;
+        window.nextChapter = nextChapter;
+        window.updateDisplay = updateDisplay;
+        window.searchInChapter = searchInChapter;
+
+        async function init() {
+            db = await openDB();
+        }
+
+        async function onBookChange() {
+            const bookSelect = document.getElementById('book-select');
+            const book = bookSelect.value;
+
+            if (!book) return;
+
+            currentBook = book;
+            const metadata = bookMetadata[book];
+
+            if (!metadata) {
+                alert('Book metadata not found');
+                return;
+            }
+
+            maxChapters = metadata.chapters;
+
+            // Populate chapter dropdown
+            const chapterSelect = document.getElementById('chapter-select');
+            chapterSelect.innerHTML = '<option value="">Select chapter...</option>';
+
+            for (let i = 1; i <= maxChapters; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                chapterSelect.appendChild(option);
+            }
+
+            // Show loading
+            showLoading();
+
+            // Load book data
+            try {
+                await loadBook(book);
+                hideLoading();
+                chapterSelect.value = '1';
+                await loadChapter();
+            } catch (error) {
+                console.error('Error loading book:', error);
+                alert('Error loading book: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        async function loadChapter() {
+            const chapterSelect = document.getElementById('chapter-select');
+            const chapter = parseInt(chapterSelect.value);
+
+            if (!chapter || !currentBook) return;
+
+            currentChapter = chapter;
+            showLoading();
+
+            try {
+                const bookNum = bookMetadata[currentBook].bookNum;
+                const verses = await getVersesByChapter(bookNum, chapter);
+
+                currentVerses = verses;
+                displayVerses(verses);
+                updateNavigationButtons();
+                updateStats(verses);
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading chapter:', error);
+                alert('Error loading chapter: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        function displayVerses(verses) {
+            const container = document.getElementById('text-container');
+            const showNiqqud = document.getElementById('show-niqqud').checked;
+            const showTaamim = document.getElementById('show-taamim').checked;
+            const showVerseNums = document.getElementById('show-verse-numbers').checked;
+            const largerText = document.getElementById('larger-text').checked;
+
+            const metadata = bookMetadata[currentBook];
+
+            let html = `
+                <div class="chapter-header">
+                    <div class="book-name">${metadata.hebrew}</div>
+                    <h2>Chapter ${currentChapter} (פרק ${currentChapter})</h2>
+                </div>
+            `;
+
+            verses.forEach(verse => {
+                const verseText = getText(verse, showNiqqud, showTaamim);
+                const verseClass = (showNiqqud || showTaamim) ? 'verse with-niqqud' : 'verse';
+                const fontSize = largerText ? 'font-size: 24px;' : '';
+
+                html += `
+                    <div class="${verseClass}" style="${fontSize}" data-verse="${verse.verse}">
+                        ${showVerseNums ? `<span class="verse-number">${verse.verse}</span>` : ''}
+                        <span class="verse-text">${verseText}</span>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="chapter-footer">
+                    <p>End of Chapter ${currentChapter}</p>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function getText(verse, showNiqqud, showTaamim) {
+            if (!showNiqqud && !showTaamim) {
+                return verse.verse_text_consonantal || verse.verse_text_full;
+            }
+
+            return verse.verse_text_full || verse.verse_text_consonantal;
+        }
+
+        function updateDisplay() {
+            if (currentVerses.length > 0) {
+                displayVerses(currentVerses);
+            }
+        }
+
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prev-chapter');
+            const nextBtn = document.getElementById('next-chapter');
+
+            prevBtn.disabled = currentChapter <= 1;
+            nextBtn.disabled = currentChapter >= maxChapters;
+        }
+
+        async function previousChapter() {
+            if (currentChapter > 1) {
+                currentChapter--;
+                document.getElementById('chapter-select').value = currentChapter;
+                await loadChapter();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        async function nextChapter() {
+            if (currentChapter < maxChapters) {
+                currentChapter++;
+                document.getElementById('chapter-select').value = currentChapter;
+                await loadChapter();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function searchInChapter() {
+            const query = document.getElementById('search-input').value.trim();
+            const resultsDiv = document.getElementById('search-results');
+
+            if (!query) {
+                resultsDiv.textContent = '';
+                // Remove all highlights
+                document.querySelectorAll('.verse-highlight').forEach(el => {
+                    el.outerHTML = el.textContent;
+                });
+                return;
+            }
+
+            // Count matches
+            let matchCount = 0;
+            const verses = document.querySelectorAll('.verse-text');
+
+            verses.forEach(verseEl => {
+                const originalText = verseEl.textContent;
+                let highlightedText = originalText;
+
+                if (originalText.includes(query)) {
+                    const regex = new RegExp(`(${query})`, 'g');
+                    highlightedText = originalText.replace(regex, '<span class="verse-highlight">$1</span>');
+                    matchCount++;
+                }
+
+                verseEl.innerHTML = highlightedText;
+            });
+
+            resultsDiv.textContent = matchCount > 0
+                ? `Found ${matchCount} verse(s) containing "${query}"`
+                : `No matches found for "${query}"`;
+        }
+
+        function updateStats(verses) {
+            if (verses.length === 0) {
+                document.getElementById('stats-bar').style.display = 'none';
+                return;
+            }
+
+            const totalVerses = verses.length;
+            const totalWords = verses.reduce((sum, v) => sum + (v.word_count || 0), 0);
+            const totalChars = verses.reduce((sum, v) => sum + (v.char_count || 0), 0);
+
+            document.getElementById('stat-verses').textContent = totalVerses;
+            document.getElementById('stat-words').textContent = totalWords;
+            document.getElementById('stat-chars').textContent = totalChars;
+            document.getElementById('stats-bar').style.display = 'flex';
+        }
+
+        function showLoading() {
+            const container = document.getElementById('text-container');
+            container.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <div>Loading chapter...</div>
+                </div>
+            `;
+        }
+
+        function hideLoading() {
+            // Loading will be replaced by content
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
