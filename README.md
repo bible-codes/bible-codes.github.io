@@ -13,36 +13,65 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
 
 ## 🎯 Current Features
 
-### 🔴 Active Tools
+### 🔴 Active Tools (10 Tools)
+
 - **ELS Bible Codes Search** ([bible-codes.html](https://bible-codes.github.io/bible-codes.html))
   - Equidistant Letter Sequence (ELS) searches
+  - **NEW: Clickable matrix view** - click any result to see vertical display
   - Precomputed hashes for common phrases
   - Dynamic search for custom inputs
   - Skip distance analysis
+
 - **Hebrew Text Search** ([text-search.html](https://bible-codes.github.io/text-search.html))
   - Advanced pattern matching with regex support
   - First/last letter filtering
   - Auto-suggestions
   - Consonantal and full text modes
+
 - **Gematria Calculator** ([gematria.html](https://bible-codes.github.io/gematria.html))
   - Multiple calculation methods (standard, reduced, ordinal)
   - Search by value or range
   - Find matching words
   - Statistical analysis
+
 - **Acronym/Notarikon** ([acronym.html](https://bible-codes.github.io/acronym.html))
   - Extract Roshei Teivot (first letters) and Sofei Teivot (last letters)
   - Search by acronym pattern
   - Book-wide analysis
   - Multiple extraction methods
 
-### 🟡 In Development
-- **Tsirufim (צירופים)** - Semantic permutation analysis with ML-powered clustering
+- **Tsirufim - Semantic Permutations** ([tsirufim.html](https://bible-codes.github.io/tsirufim.html)) 🆕
+  - Advanced Hebrew letter permutation analysis
+  - ML-powered semantic clustering (HDBSCAN)
+  - D3.js interactive visualization
+  - 56K+ word dictionary validation
+
+- **Matrix View** ([matrix-view.html](https://bible-codes.github.io/matrix-view.html)) 🆕
+  - Rectangular character grid visualization
+  - Configurable dimensions and starting position
+  - ELS search within matrix
+  - Export to text file
+
+- **Book View** ([book-view.html](https://bible-codes.github.io/book-view.html)) 🆕
+  - Traditional book-style Hebrew reader
+  - Chapter/verse navigation
+  - Toggle niqqud and cantillation marks
+  - All 39 books of Tanach
+
+- **Root Extraction** ([test-roots.html](https://bible-codes.github.io/test-roots.html)) 🆕
+  - Hebrew root identification (triliteral/quadriliteral)
+  - 56K word dictionary
+  - Binyan detection and confidence scoring
 
 ### 🟢 Planned Features
-- **Letter & Word Analysis** - Character-level statistical analysis
+- **Letter & Word Analysis** - Character-level statistical analysis (engine complete)
 - **Cantillation Viewer** - Taamim analysis including alternate traditions
 - **Cross-Reference Index** - Links to Talmud, Midrash, and Zohar citations
-- **Anagram Solver** - Pattern detection and permutations
+
+### 🌐 New Features
+- **Hebrew/English Toggle** - Switch language on index page (EN/עב button)
+- **PWA Installable** - Install as standalone app on any device
+- **Fully Offline** - All tools work without internet
 
 ---
 
@@ -190,6 +219,6 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-*Last Updated: 2026-01-11*
+*Last Updated: 2026-02-02*
 
 Thank you for exploring the Hebrew Bible Analysis Suite!
