@@ -1,24 +1,66 @@
-const CACHE_NAME = 'bible-analysis-suite-v3.0';
+const CACHE_NAME = 'bible-analysis-suite-v4.0';
 
 // Assets to cache for offline use
 const urlsToCache = [
+  // Core pages
   './',
   './index.html',
   './bible-codes.html',
   './text-search.html',
   './gematria.html',
   './acronym.html',
+  './tsirufim.html',
+  './matrix-view.html',
+  './book-view.html',
+  './test-db.html',
+  './test-roots.html',
+
+  // Stylesheets
   './styles.css',
   './css/mobile-optimized.css',
+
+  // PWA assets
   './manifest.json',
   './img/favicon.png',
+  './icons/icon-192x192.png',
+  './icons/icon-512x512.png',
+  './icons/apple-touch-icon.png',
+
+  // Core data
   './data/torahNoSpaces.txt',
   './data/precomputed-terms.json',
+
+  // Core JavaScript
   './js/test.js',
   './js/load-torah.js',
   './js/search-algorithms.js',
   './js/mobile-nav.js',
+
+  // Database modules
+  './db/schema.js',
+  './db/loader.js',
+  './db/query.js',
+  './db/dictionary-schema.js',
+  './db/dictionary-loader.js',
+
+  // Search engines
+  './engines/search.js',
+  './engines/gematria.js',
+  './engines/acronym.js',
+  './engines/els.worker.js',
+  './engines/roots.js',
   './engines/root-integration.js',
+  './engines/matrix.js',
+  './engines/letter-analysis.js',
+
+  // Tsirufim modules
+  './engines/tsirufim/permutations.js',
+  './engines/tsirufim/embeddings.js',
+  './engines/tsirufim/scoring.js',
+  './engines/tsirufim/clustering.js',
+  './engines/tsirufim/visualization.js',
+
+  // Integration modules
   './integrations/text-search-root-integration.js',
   './integrations/gematria-root-integration.js',
   './integrations/acronym-root-integration.js'
@@ -26,16 +68,25 @@ const urlsToCache = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
-  
+  console.log('Service Worker: Installing v4.0...');
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Service Worker: Caching app shell and content');
-        return cache.addAll(urlsToCache);
+        // Cache assets individually to handle failures gracefully
+        return Promise.allSettled(
+          urlsToCache.map(url =>
+            cache.add(url).catch(err => {
+              console.warn(`Service Worker: Failed to cache ${url}:`, err.message);
+              return null;
+            })
+          )
+        );
       })
-      .then(() => {
-        console.log('Service Worker: All content is cached');
+      .then((results) => {
+        const cached = results.filter(r => r.status === 'fulfilled').length;
+        console.log(`Service Worker: Cached ${cached}/${urlsToCache.length} resources`);
         return self.skipWaiting();
       })
       .catch(error => {
@@ -46,10 +97,10 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
-  
+  console.log('Service Worker: Activating v4.0...');
+
   const cacheWhitelist = [CACHE_NAME];
-  
+
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -69,51 +120,50 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fall back to network
 self.addEventListener('fetch', (event) => {
-  console.log('Service Worker: Fetch event for', event.request.url);
-  
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
         // Cache hit - return the cached response
         if (response) {
-          console.log('Service Worker: Serving from cache:', event.request.url);
           return response;
         }
-        
+
         // Clone the request to ensure it's safe to use
         const fetchRequest = event.request.clone();
-        
+
         // Not in cache - fetch from network
         return fetch(fetchRequest)
           .then((response) => {
             // Check if we received a valid response
             if (!response || response.status !== 200 || response.type !== 'basic') {
-              console.log('Service Worker: Network fetch successful, but not cacheable');
               return response;
             }
-            
+
             // Clone the response to ensure it's safe to use
             const responseToCache = response.clone();
-            
-            // Cache the fetched response
+
+            // Cache the fetched response for future
             caches.open(CACHE_NAME)
               .then((cache) => {
-                console.log('Service Worker: Caching new resource:', event.request.url);
                 cache.put(event.request, responseToCache);
               });
-            
+
             return response;
           })
           .catch(error => {
             console.error('Service Worker: Fetch failed:', error);
-            
-            // For specific file types like HTML files, you might want to return a custom offline page
-            // This is a simple implementation - enhance as needed
+
+            // For HTML files, return index.html as fallback
             if (event.request.url.indexOf('.html') > -1) {
               return caches.match('./index.html');
             }
-            
-            // For other resources, just let the error propagate
+
+            // For other resources, let the error propagate
             throw error;
           });
       })
@@ -128,9 +178,7 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Function to handle sync of pending searches - to be implemented in future
+// Function to handle sync of pending searches
 function syncPendingSearches() {
-  // This would handle any pending searches that were attempted while offline
-  // For now, just return a resolved promise
   return Promise.resolve();
 }

@@ -1,17 +1,59 @@
 {
-    "name": "Hebrew Bible Analysis Suite",
-    "short_name": "Bible Analysis",
-    "description": "Comprehensive Hebrew Bible analysis tools - ELS, Gematria, Notarikon, and more",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#667eea",
-    "icons": [
-      {
-        "src": "img/favicon.png",
-        "sizes": "64x64 32x32 24x24 16x16",
-        "type": "image/png"
-      }
-    ]
-  }
-  
+  "name": "Hebrew Bible Analysis Suite",
+  "short_name": "Bible Analysis",
+  "description": "Comprehensive Hebrew Bible analysis tools - ELS, Gematria, Notarikon, Tsirufim, and more",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea",
+  "categories": ["education", "productivity", "utilities"],
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "img/favicon.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ELS Bible Codes",
+      "short_name": "ELS",
+      "url": "./bible-codes.html",
+      "icons": [{"src": "icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Gematria Calculator",
+      "short_name": "Gematria",
+      "url": "./gematria.html",
+      "icons": [{"src": "icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Text Search",
+      "short_name": "Search",
+      "url": "./text-search.html",
+      "icons": [{"src": "icons/icon-192x192.png", "sizes": "192x192"}]
+    }
+  ]
+}
