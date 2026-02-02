@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <meta name="description" content="ניתוח מקיף של התנ״ך העברי - כלים לחיפוש קודי תורה, גימטריה, ניתוח סמנטי ועוד">
+  <meta name="description" content="Comprehensive Hebrew Bible analysis tools - ELS, Gematria, Notarikon, Tsirufim, and more">
   <meta name="theme-color" content="#667eea">
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="stylesheet" href="css/mobile-optimized.css">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <title>חבילת ניתוח התנ״ך העברי | Hebrew Bible Analysis Suite</title>
+  <title>Hebrew Bible Analysis Suite | חבילת ניתוח התנ״ך העברי</title>
 
   <style>
     .hero {
@@ -163,10 +163,17 @@
       padding: var(--space-md);
       background: var(--bg-secondary);
       border-radius: var(--radius-md);
-      border-right: 4px solid var(--primary);
       display: flex;
       align-items: center;
       gap: var(--space-sm);
+    }
+
+    [dir="rtl"] .feature-item {
+      border-right: 4px solid var(--primary);
+    }
+
+    [dir="ltr"] .feature-item {
+      border-left: 4px solid var(--primary);
     }
 
     .feature-icon {
@@ -195,22 +202,35 @@
     .offline-indicator {
       position: fixed;
       bottom: var(--space-md);
-      left: var(--space-md);
-      right: var(--space-md);
+      z-index: var(--z-toast);
+      text-align: center;
+      font-weight: 600;
       background: var(--warning);
       color: white;
       padding: var(--space-md);
       border-radius: var(--radius-md);
       box-shadow: 0 4px 12px var(--shadow-lg);
-      z-index: var(--z-toast);
-      text-align: center;
-      font-weight: 600;
+    }
+
+    [dir="rtl"] .offline-indicator {
+      left: var(--space-md);
+      right: var(--space-md);
+    }
+
+    [dir="ltr"] .offline-indicator {
+      left: var(--space-md);
+      right: var(--space-md);
     }
 
     @media (min-width: 768px) {
-      .offline-indicator {
+      [dir="rtl"] .offline-indicator {
         left: auto;
         right: var(--space-lg);
+        max-width: 300px;
+      }
+      [dir="ltr"] .offline-indicator {
+        right: auto;
+        left: var(--space-lg);
         max-width: 300px;
       }
     }
@@ -237,6 +257,48 @@
     .footer-link:hover {
       text-decoration: underline;
     }
+
+    /* Language Toggle Button */
+    .lang-toggle {
+      position: fixed;
+      top: var(--space-md);
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: var(--space-sm) var(--space-md);
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      cursor: pointer;
+      z-index: var(--z-modal);
+      box-shadow: 0 2px 8px var(--shadow);
+      transition: all var(--transition-fast);
+    }
+
+    [dir="rtl"] .lang-toggle {
+      left: var(--space-md);
+    }
+
+    [dir="ltr"] .lang-toggle {
+      right: var(--space-md);
+    }
+
+    .lang-toggle:hover {
+      background: var(--secondary);
+      transform: scale(1.05);
+    }
+
+    @media (min-width: 768px) {
+      .lang-toggle {
+        top: var(--space-lg);
+      }
+      [dir="rtl"] .lang-toggle {
+        left: var(--space-lg);
+      }
+      [dir="ltr"] .lang-toggle {
+        right: var(--space-lg);
+      }
+    }
   </style>
 
   <!-- Service Worker Registration -->
@@ -256,11 +318,14 @@
 </head>
 
 <body>
+  <!-- Language Toggle -->
+  <button id="lang-toggle" class="lang-toggle" aria-label="Toggle language">EN</button>
+
   <!-- Mobile Navigation -->
   <header class="mobile-header">
     <div class="mobile-header-inner">
-      <a href="index.html" class="logo">📖 ניתוח תנ"ך</a>
-      <button id="hamburger" class="hamburger" aria-label="תפריט">
+      <a href="index.html" class="logo" data-i18n="logo">ניתוח תנ"ך</a>
+      <button id="hamburger" class="hamburger" aria-label="Menu" data-i18n-aria="menuLabel">
         <span></span>
         <span></span>
         <span></span>
@@ -272,43 +337,55 @@
         <li class="mobile-nav-item">
           <a href="index.html" class="mobile-nav-link active">
             <span class="nav-icon">🏠</span>
-            <span>דף הבית</span>
+            <span data-i18n="home">Home</span>
           </a>
         </li>
         <li class="mobile-nav-item">
           <a href="bible-codes.html" class="mobile-nav-link">
             <span class="nav-icon">🔍</span>
-            <span>קודי תורה (ELS)</span>
+            <span data-i18n="elsCodes">Torah Codes (ELS)</span>
           </a>
         </li>
         <li class="mobile-nav-item">
           <a href="text-search.html" class="mobile-nav-link">
             <span class="nav-icon">📖</span>
-            <span>חיפוש טקסט</span>
+            <span data-i18n="textSearch">Text Search</span>
           </a>
         </li>
         <li class="mobile-nav-item">
           <a href="gematria.html" class="mobile-nav-link">
             <span class="nav-icon">🔢</span>
-            <span>גימטריה</span>
+            <span data-i18n="gematria">Gematria</span>
           </a>
         </li>
         <li class="mobile-nav-item">
           <a href="acronym.html" class="mobile-nav-link">
             <span class="nav-icon">✡️</span>
-            <span>ראשי תיבות</span>
+            <span data-i18n="acronyms">Acronyms</span>
           </a>
         </li>
         <li class="mobile-nav-item">
           <a href="tsirufim.html" class="mobile-nav-link">
             <span class="nav-icon">🌟</span>
-            <span>צירופים</span>
+            <span data-i18n="tsirufim">Tsirufim</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="matrix-view.html" class="mobile-nav-link">
+            <span class="nav-icon">🔲</span>
+            <span data-i18n="matrixView">Matrix View</span>
+          </a>
+        </li>
+        <li class="mobile-nav-item">
+          <a href="book-view.html" class="mobile-nav-link">
+            <span class="nav-icon">📜</span>
+            <span data-i18n="bookView">Book View</span>
           </a>
         </li>
         <li class="mobile-nav-item">
           <a href="test-roots.html" class="mobile-nav-link">
             <span class="nav-icon">🌱</span>
-            <span>בדיקת שורשים</span>
+            <span data-i18n="rootTest">Root Testing</span>
           </a>
         </li>
       </ul>
@@ -318,10 +395,9 @@
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <h1 class="hero-title">ניתוח מקיף של התנ״ך העברי</h1>
-      <p class="hero-subtitle">Comprehensive Hebrew Bible Analysis</p>
-      <p class="hero-subtitle">כלים מתקדמים לחיפוש, ניתוח וחקר התורה</p>
-      <p class="hero-legend">🔴 פעיל | 🔵 חדש | 🟡 מתוכנן</p>
+      <h1 class="hero-title" data-i18n="heroTitle">Comprehensive Hebrew Bible Analysis</h1>
+      <p class="hero-subtitle" data-i18n="heroSubtitle">Advanced tools for searching, analyzing, and studying the Torah</p>
+      <p class="hero-legend">🔴 <span data-i18n="statusActive">Active</span> | 🔵 <span data-i18n="statusNew">New!</span> | 🟡 <span data-i18n="statusPlanned">Planned</span></p>
     </section>
 
     <!-- Tools Grid -->
@@ -329,168 +405,199 @@
       <!-- ELS Bible Codes -->
       <a href="bible-codes.html" class="tool-card">
         <div class="tool-icon">🔍</div>
-        <h3 class="tool-title">קודי תורה (ELS)</h3>
-        <p class="tool-description">חיפוש רצפים שווי-מרחק (ELS) עם ניתוח skip-distance דינמי על פני הטקסט המלא.</p>
-        <span class="tool-status status-active">🔴 פעיל</span>
+        <h3 class="tool-title" data-i18n="elsTitle">Torah Codes (ELS)</h3>
+        <p class="tool-description" data-i18n="elsDesc">Equidistant Letter Sequence (ELS) search with dynamic skip-distance analysis across the full text.</p>
+        <span class="tool-status status-active">🔴 <span data-i18n="statusActive">Active</span></span>
       </a>
 
       <!-- Text Search -->
       <a href="text-search.html" class="tool-card">
         <div class="tool-icon">📖</div>
-        <h3 class="tool-title">חיפוש טקסט</h3>
-        <p class="tool-description">חיפוש מתקדם עם התאמת תבניות, סינון אותיות ראשונות/אחרונות, וניווט פסוק אחר פסוק.</p>
-        <span class="tool-status status-active">🔴 פעיל</span>
+        <h3 class="tool-title" data-i18n="textSearchTitle">Text Search</h3>
+        <p class="tool-description" data-i18n="textSearchDesc">Advanced search with pattern matching, first/last letter filtering, and verse-by-verse navigation.</p>
+        <span class="tool-status status-active">🔴 <span data-i18n="statusActive">Active</span></span>
       </a>
 
       <!-- Gematria -->
       <a href="gematria.html" class="tool-card">
         <div class="tool-icon">🔢</div>
-        <h3 class="tool-title">גימטריה</h3>
-        <p class="tool-description">חישוב גימטריה במספר שיטות (רגיל, מצומצם, סידורי). חיפוש פסוקים לפי ערך מספרי.</p>
-        <span class="tool-status status-active">🔴 פעיל</span>
+        <h3 class="tool-title" data-i18n="gematriaTitle">Gematria</h3>
+        <p class="tool-description" data-i18n="gematriaDesc">Gematria calculation using multiple methods (standard, reduced, ordinal). Search verses by numeric value.</p>
+        <span class="tool-status status-active">🔴 <span data-i18n="statusActive">Active</span></span>
       </a>
 
       <!-- Acronym/Notarikon -->
       <a href="acronym.html" class="tool-card">
         <div class="tool-icon">✡️</div>
-        <h3 class="tool-title">ראשי תיבות ונוטריקון</h3>
-        <p class="tool-description">חילוץ אותיות ראשונות ואחרונות ליצירת ראשי תיבות. ניתוח תבניות נוטריקון מסורתיות.</p>
-        <span class="tool-status status-active">🔴 פעיל</span>
+        <h3 class="tool-title" data-i18n="acronymTitle">Acronyms & Notarikon</h3>
+        <p class="tool-description" data-i18n="acronymDesc">Extract first and last letters to form acronyms. Analysis of traditional Notarikon patterns.</p>
+        <span class="tool-status status-active">🔴 <span data-i18n="statusActive">Active</span></span>
       </a>
 
       <!-- Tsirufim NEW -->
       <a href="tsirufim.html" class="tool-card">
         <div class="tool-icon">🌟</div>
-        <h3 class="tool-title">צירופים סמנטיים</h3>
-        <p class="tool-description">ניתוח פרמוטציות סמנטי מתקדם: גלה כיצד אותיות מצטרפות למשמעויות קשורות. משתמש בלמידת מכונה ואשכולות סמנטיים.</p>
-        <span class="tool-status status-new">🔵 חדש!</span>
+        <h3 class="tool-title" data-i18n="tsirufimTitle">Semantic Permutations</h3>
+        <p class="tool-description" data-i18n="tsirufimDesc">Advanced semantic permutation analysis: discover how letters combine into related meanings. Uses machine learning and semantic clustering.</p>
+        <span class="tool-status status-new">🔵 <span data-i18n="statusNew">New!</span></span>
       </a>
 
       <!-- Root Extraction NEW -->
       <a href="test-roots.html" class="tool-card">
         <div class="tool-icon">🌱</div>
-        <h3 class="tool-title">חילוץ שורשים</h3>
-        <p class="tool-description">זיהוי שורשים עבריים (שלושיים/רבועיים) ממילים. 56K מילים במילון, זיהוי בניין, ציון ביטחון.</p>
-        <span class="tool-status status-new">🔵 חדש!</span>
+        <h3 class="tool-title" data-i18n="rootsTitle">Root Extraction</h3>
+        <p class="tool-description" data-i18n="rootsDesc">Identify Hebrew roots (triliteral/quadriliteral) from words. 56K word dictionary, binyan detection, confidence scoring.</p>
+        <span class="tool-status status-new">🔵 <span data-i18n="statusNew">New!</span></span>
+      </a>
+
+      <!-- Matrix View NEW -->
+      <a href="matrix-view.html" class="tool-card">
+        <div class="tool-icon">🔲</div>
+        <h3 class="tool-title" data-i18n="matrixView">Matrix View</h3>
+        <p class="tool-description" data-i18n="matrixViewDesc">Visual character grid with configurable dimensions. Search for ELS patterns within the matrix display.</p>
+        <span class="tool-status status-new">🔵 <span data-i18n="statusNew">New!</span></span>
+      </a>
+
+      <!-- Book View NEW -->
+      <a href="book-view.html" class="tool-card">
+        <div class="tool-icon">📜</div>
+        <h3 class="tool-title" data-i18n="bookView">Book View</h3>
+        <p class="tool-description" data-i18n="bookViewDesc">Traditional book-style reader with chapter/verse navigation. Toggle niqqud and cantillation marks.</p>
+        <span class="tool-status status-new">🔵 <span data-i18n="statusNew">New!</span></span>
       </a>
 
       <!-- Letter Analysis -->
       <div class="tool-card" style="opacity: 0.7;">
         <div class="tool-icon">📊</div>
-        <h3 class="tool-title">ניתוח אותיות ומילים</h3>
-        <p class="tool-description">מסד נתונים ברמת תו לספירת אותיות, ניתוח תבניות מילים וחקר מבנה הטקסט.</p>
-        <span class="tool-status status-planned">🟡 מתוכנן</span>
+        <h3 class="tool-title" data-i18n="letterAnalysisTitle">Letter & Word Analysis</h3>
+        <p class="tool-description" data-i18n="letterAnalysisDesc">Character-level database for letter counting, word pattern analysis, and text structure exploration.</p>
+        <span class="tool-status status-planned">🟡 <span data-i18n="statusPlanned">Planned</span></span>
       </div>
 
       <!-- Cantillation -->
       <div class="tool-card" style="opacity: 0.7;">
         <div class="tool-icon">🎵</div>
-        <h3 class="tool-title">מציג טעמים</h3>
-        <p class="tool-description">צפייה והשוואה של סימני טעמים, כולל מסורות חלופיות כמו עשרת הדיברות.</p>
-        <span class="tool-status status-planned">🟡 מתוכנן</span>
+        <h3 class="tool-title" data-i18n="cantillationTitle">Cantillation Viewer</h3>
+        <p class="tool-description" data-i18n="cantillationDesc">View and compare cantillation marks, including alternate traditions like the Ten Commandments.</p>
+        <span class="tool-status status-planned">🟡 <span data-i18n="statusPlanned">Planned</span></span>
       </div>
 
       <!-- Cross-References -->
       <div class="tool-card" style="opacity: 0.7;">
         <div class="tool-icon">🔗</div>
-        <h3 class="tool-title">אינדקס צולב</h3>
-        <p class="tool-description">חקור היכן פסוקים מופיעים בתלמוד, מדרש וזוהר. קישורים לספריא ומקורות אחרים.</p>
-        <span class="tool-status status-planned">🟡 מתוכנן</span>
+        <h3 class="tool-title" data-i18n="crossRefTitle">Cross-Reference Index</h3>
+        <p class="tool-description" data-i18n="crossRefDesc">Explore where verses appear in Talmud, Midrash, and Zohar. Links to Sefaria and other sources.</p>
+        <span class="tool-status status-planned">🟡 <span data-i18n="statusPlanned">Planned</span></span>
       </div>
     </section>
 
     <!-- Features Section -->
     <section class="features-section">
-      <h2 class="section-title">תכונות מרכזיות</h2>
+      <h2 class="section-title" data-i18n="featuresTitle">Key Features</h2>
       <div class="features-grid">
         <div class="feature-item">
           <span class="feature-icon">💻</span>
-          <span class="feature-text">100% עיבוד צד-לקוח</span>
+          <span class="feature-text" data-i18n="feature1">100% Client-Side Processing</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">📴</span>
-          <span class="feature-text">עבודה מלאה במצב לא מקוון</span>
+          <span class="feature-text" data-i18n="feature2">Full Offline Functionality</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🗄️</span>
-          <span class="feature-text">מסד נתונים ברמת תו</span>
+          <span class="feature-text" data-i18n="feature3">Character-Level Database</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">⚡</span>
-          <span class="feature-text">ביצועים מהירים</span>
+          <span class="feature-text" data-i18n="feature4">Fast Performance</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🔢</span>
-          <span class="feature-text">גימטריה מרובת שיטות</span>
+          <span class="feature-text" data-i18n="feature5">Multiple Gematria Methods</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🌱</span>
-          <span class="feature-text">ניתוח מבוסס שורשים</span>
+          <span class="feature-text" data-i18n="feature6">Root-Based Analysis</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🧠</span>
-          <span class="feature-text">למידת מכונה סמנטית</span>
+          <span class="feature-text" data-i18n="feature7">Semantic Machine Learning</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🎯</span>
-          <span class="feature-text">חיפוש מדויק ומהיר</span>
+          <span class="feature-text" data-i18n="feature8">Precise & Fast Search</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">📱</span>
-          <span class="feature-text">ממשק מותאם למובייל</span>
+          <span class="feature-text" data-i18n="feature9">Mobile-Optimized Interface</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🔐</span>
-          <span class="feature-text">פרטיות מלאה (ללא שרת)</span>
+          <span class="feature-text" data-i18n="feature10">Full Privacy (No Server)</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">🌐</span>
-          <span class="feature-text">PWA להתקנה</span>
+          <span class="feature-text" data-i18n="feature11">Installable PWA</span>
         </div>
         <div class="feature-item">
           <span class="feature-icon">📊</span>
-          <span class="feature-text">ניתוח סטטיסטי</span>
+          <span class="feature-text" data-i18n="feature12">Statistical Analysis</span>
         </div>
       </div>
     </section>
 
     <!-- About Section -->
     <section class="about-section">
-      <h2 class="section-title">אודות הפרויקט</h2>
-      <p class="about-text">
-        חבילת ניתוח תנ"ך עברי מקיפה המספקת כלים מתקדמים ללימוד תורה, מחקר וחקירה.
-        הפרויקט בנוי כולו בטכנולוגיות צד-לקוח, כך שכל העיבוד מתבצע בדפדפן שלך ללא תלות בשרת.
-        האפליקציה משתמשת בארכיטקטורת מסד נתונים ברמת תו המאפשרת הכל החל מחיפושי ELS מסורתיים
-        ועד ניתוח סטטיסטי מתקדם, חישובי גימטריה וחקר מבני של הטקסט המסורתי.
+      <h2 class="section-title" data-i18n="aboutTitle">About the Project</h2>
+      <p class="about-text" data-i18n="aboutText1">
+        A comprehensive Hebrew Bible analysis suite providing advanced tools for Torah study, research, and exploration. The project is built entirely with client-side technologies, so all processing happens in your browser without server dependency. The application uses a character-level database architecture enabling everything from traditional ELS searches to advanced statistical analysis, gematria calculations, and structural exploration of the Masoretic text.
+      </p>
+      <p class="about-text" data-i18n="aboutText2">
+        As a Progressive Web App (PWA), the application can be installed and used completely offline, making it ideal for study and research without an internet connection.
       </p>
       <p class="about-text">
-        בתור Progressive Web App (PWA), ניתן להתקין את האפליקציה ולהשתמש בה לחלוטין במצב לא מקוון,
-        מה שהופך אותה לאידיאלית ללימוד ומחקר ללא צורך בחיבור לאינטרנט.
-      </p>
-      <p class="about-text">
-        <strong>חדש!</strong> המערכת כוללת כעת מנוע חילוץ שורשים עבריים עם מילון של 56,000+ מילים,
-        וכלי צירופים סמנטיים המשתמש בלמידת מכונה לזיהוי קשרים סמנטיים נסתרים בין מילים.
+        <strong data-i18n="statusNew">New!</strong> <span data-i18n="aboutText3">The system now includes a Hebrew root extraction engine with a 56,000+ word dictionary, and a semantic permutation tool using machine learning to identify hidden semantic connections between words.</span>
       </p>
     </section>
 
     <!-- Offline Indicator -->
-    <div id="offline-indicator" class="offline-indicator hidden">
-      ⚠️ אתה במצב לא מקוון. חלק מהתכונות עשויות להיות מוגבלות.
+    <div id="offline-indicator" class="offline-indicator hidden" data-i18n="offlineMsg">
+      You are offline. Some features may be limited.
     </div>
   </main>
 
   <!-- Footer -->
   <footer class="footer">
-    <p>&copy; 2026 חבילת ניתוח התנ"ך העברי | פרויקט קוד פתוח</p>
+    <p>&copy; 2026 <span data-i18n="footerCopyright">Hebrew Bible Analysis Suite | Open Source Project</span></p>
     <div class="footer-links">
       <a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank" class="footer-link">GitHub</a>
-      <a href="DOCUMENTATION.md" class="footer-link">תיעוד</a>
-      <a href="mailto:roni762583@gmail.com" class="footer-link">צור קשר</a>
+      <a href="DOCUMENTATION.md" class="footer-link" data-i18n="documentation">Documentation</a>
+      <a href="mailto:roni762583@gmail.com" class="footer-link" data-i18n="contact">Contact</a>
     </div>
   </footer>
 
   <script type="module">
     import { initMobileNav } from './js/mobile-nav.js';
+    import { initI18n, applyTranslations, toggleLang, getLang, t } from './js/i18n.js';
+
+    // Initialize i18n
+    initI18n();
+
+    // Apply translations on load
+    applyTranslations('index');
+
+    // Update toggle button text based on current language
+    const toggleBtn = document.getElementById('lang-toggle');
+    toggleBtn.textContent = getLang() === 'he' ? 'EN' : 'עב';
+    toggleBtn.title = getLang() === 'he' ? 'Switch to English' : 'עבור לעברית';
+
+    // Language toggle handler
+    toggleBtn.addEventListener('click', () => {
+      toggleLang();
+      applyTranslations('index');
+      toggleBtn.textContent = getLang() === 'he' ? 'EN' : 'עב';
+      toggleBtn.title = getLang() === 'he' ? 'Switch to English' : 'עבור לעברית';
+    });
 
     // Initialize mobile navigation
     initMobileNav();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-analysis-suite-v4.0';
+const CACHE_NAME = 'bible-analysis-suite-v4.1';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -35,6 +35,7 @@ const urlsToCache = [
   './js/load-torah.js',
   './js/search-algorithms.js',
   './js/mobile-nav.js',
+  './js/i18n.js',
 
   // Database modules
   './db/schema.js',
