@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELS Index Test</title>
+  <link rel="stylesheet" href="css/mobile-optimized.css">
+  <style>
+    .test-section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      color: var(--primary);
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .input-row input {
+      padding: 10px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      min-width: 150px;
+    }
+    .input-row input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+    .btn {
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .results {
+      background: #f9f9f9;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .result-item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-item:last-child {
+      border-bottom: none;
+    }
+    .word-badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .stat-badge {
+      background: #e8f4f8;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-box .value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .stat-box .label {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    #loadingIndicator {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .proximity-matrix {
+      overflow-x: auto;
+      margin-top: 15px;
+    }
+    .proximity-matrix table {
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .proximity-matrix th, .proximity-matrix td {
+      border: 1px solid #ddd;
+      padding: 6px 10px;
+      text-align: center;
+    }
+    .proximity-matrix th {
+      background: var(--primary);
+      color: white;
+    }
+    .proximity-cell-close {
+      background: #c8e6c9;
+    }
+    .proximity-cell-medium {
+      background: #fff9c4;
+    }
+    .proximity-cell-far {
+      background: #ffcdd2;
+    }
+    .cluster-viz {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 15px;
+      color: white;
+    }
+    .cluster-term {
+      display: inline-block;
+      padding: 6px 12px;
+      margin: 4px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+    .cluster-seed {
+      background: #e91e63;
+    }
+    .cluster-close {
+      background: #4caf50;
+    }
+    .cluster-medium {
+      background: #ff9800;
+    }
+    .cluster-far {
+      background: #2196f3;
+    }
+  </style>
+</head>
+<body>
+  <header class="mobile-header">
+    <div class="mobile-header-inner">
+      <a href="index.html" class="logo">ELS Index Test</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Torah ELS Index Explorer</h1>
+    <p>Test the precomputed ELS index for instant word lookups and proximity analysis.</p>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator">
+      <div class="spinner"></div>
+      <div>Loading ELS Index...</div>
+      <div id="loadProgress" style="margin-top: 10px; font-size: 12px;"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" style="display: none;">
+
+      <!-- Index Stats -->
+      <section class="test-section">
+        <h2>Index Statistics</h2>
+        <div class="stats-grid" id="statsGrid"></div>
+      </section>
+
+      <!-- Word Lookup -->
+      <section class="test-section">
+        <h2>Word Lookup</h2>
+        <div class="input-row">
+          <input type="text" id="lookupWord" placeholder="Hebrew word (e.g., משה)" value="משה">
+          <button class="btn" onclick="doLookup()">Look Up</button>
+        </div>
+        <div id="lookupResults"></div>
+      </section>
+
+      <!-- Proximity Search -->
+      <section class="test-section">
+        <h2>Proximity Search</h2>
+        <p>Find all words near a specific Torah position:</p>
+        <div class="input-row">
+          <input type="number" id="proximityPos" placeholder="Position" value="50000">
+          <input type="number" id="proximityRadius" placeholder="Radius" value="500">
+          <button class="btn" onclick="doProximitySearch()">Search</button>
+        </div>
+        <div id="proximityResults"></div>
+      </section>
+
+      <!-- Pair Proximity -->
+      <section class="test-section">
+        <h2>Term Pair Proximity</h2>
+        <p>Find minimum distance between two words:</p>
+        <div class="input-row">
+          <input type="text" id="pairWord1" placeholder="Word 1" value="משה">
+          <input type="text" id="pairWord2" placeholder="Word 2" value="אהרן">
+          <button class="btn" onclick="doPairProximity()">Calculate</button>
+        </div>
+        <div id="pairResults"></div>
+      </section>
+
+      <!-- Cluster Discovery -->
+      <section class="test-section">
+        <h2>Cluster Discovery</h2>
+        <p>Discover term clusters around a seed word:</p>
+        <div class="input-row">
+          <input type="text" id="clusterSeed" placeholder="Seed word" value="אברהם">
+          <input type="number" id="clusterRadius" placeholder="Radius" value="1000">
+          <button class="btn" onclick="doClusterDiscovery()">Discover</button>
+        </div>
+        <div id="clusterResults"></div>
+      </section>
+
+      <!-- Proximity Matrix -->
+      <section class="test-section">
+        <h2>Proximity Matrix</h2>
+        <p>Compute proximity matrix for multiple words (comma-separated):</p>
+        <div class="input-row">
+          <input type="text" id="matrixWords" placeholder="Words" value="משה,אהרן,מרים,ישראל" style="min-width: 300px;">
+          <button class="btn" onclick="doProximityMatrix()">Compute</button>
+        </div>
+        <div id="matrixResults"></div>
+      </section>
+
+      <!-- Embedding Similarity -->
+      <section class="test-section">
+        <h2>ELS Embedding Similarity</h2>
+        <p>Find words with similar ELS distribution patterns:</p>
+        <div class="input-row">
+          <input type="text" id="embeddingWord" placeholder="Target word" value="תורה">
+          <button class="btn" onclick="doEmbeddingSimilarity()">Find Similar</button>
+        </div>
+        <div id="embeddingResults"></div>
+      </section>
+
+      <!-- Statistical Significance -->
+      <section class="test-section">
+        <h2>Statistical Significance</h2>
+        <p>Calculate observed vs expected occurrences:</p>
+        <div class="input-row">
+          <input type="text" id="sigWord" placeholder="Word" value="תורה">
+          <button class="btn" onclick="doSignificance()">Calculate</button>
+        </div>
+        <div id="sigResults"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module">
+    import { getElsIndexService, initElsIndex } from './engines/els-index.js';
+
+    let elsService;
+
+    async function init() {
+      try {
+        document.getElementById('loadProgress').textContent = 'Fetching index file...';
+
+        const metadata = await initElsIndex('data/els-index/els-index-100.json.gz');
+        elsService = getElsIndexService();
+
+        document.getElementById('loadingIndicator').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+
+        displayStats(metadata);
+
+      } catch (error) {
+        console.error('Init failed:', error);
+        document.getElementById('loadingIndicator').innerHTML =
+          `<div style="color: red;">Error: ${error.message}<br><br>
+          Make sure the ELS index file exists at data/els-index/els-index-100.json.gz</div>`;
+      }
+    }
+
+    function displayStats(metadata) {
+      const html = `
+        <div class="stat-box">
+          <div class="value">${metadata.total_words?.toLocaleString() || 'N/A'}</div>
+          <div class="label">Words Indexed</div>
+        </div>
+        <div class="stat-box">
+          <div class="value">${metadata.total_occurrences?.toLocaleString() || 'N/A'}</div>
+          <div class="label">Total Occurrences</div>
+        </div>
+        <div class="stat-box">
+          <div class="value">${metadata.skip_range ? `±${metadata.skip_range[1]}` : 'N/A'}</div>
+          <div class="label">Skip Range</div>
+        </div>
+        <div class="stat-box">
+          <div class="value">${metadata.torah_length?.toLocaleString() || 'N/A'}</div>
+          <div class="label">Torah Letters</div>
+        </div>
+      `;
+      document.getElementById('statsGrid').innerHTML = html;
+    }
+
+    window.doLookup = function() {
+      const word = document.getElementById('lookupWord').value.trim();
+      if (!word) return;
+
+      const occurrences = elsService.findWord(word);
+      const count = occurrences.length;
+
+      if (count === 0) {
+        document.getElementById('lookupResults').innerHTML =
+          `<div class="results"><p>No occurrences found for "${word}"</p></div>`;
+        return;
+      }
+
+      // Show first 20 occurrences
+      const sample = occurrences.slice(0, 20);
+      const html = `
+        <div class="results">
+          <p><strong>${word}</strong>: ${count.toLocaleString()} occurrences</p>
+          <p style="font-size: 12px; color: #666;">Showing first 20:</p>
+          ${sample.map(o => `
+            <div class="result-item">
+              <span>Position: ${o.pos.toLocaleString()}</span>
+              <span class="stat-badge">Skip: ${o.skip}</span>
+            </div>
+          `).join('')}
+          ${count > 20 ? `<p style="color: #666; font-size: 12px;">... and ${count - 20} more</p>` : ''}
+        </div>
+      `;
+      document.getElementById('lookupResults').innerHTML = html;
+    };
+
+    window.doProximitySearch = function() {
+      const pos = parseInt(document.getElementById('proximityPos').value);
+      const radius = parseInt(document.getElementById('proximityRadius').value);
+
+      const results = elsService.findNearby(pos, radius, { minWordLength: 3, maxResults: 30 });
+
+      if (results.length === 0) {
+        document.getElementById('proximityResults').innerHTML =
+          `<div class="results"><p>No words found within ${radius} characters of position ${pos}</p></div>`;
+        return;
+      }
+
+      const html = `
+        <div class="results">
+          <p>Found ${results.length} words near position ${pos.toLocaleString()}:</p>
+          ${results.map(r => `
+            <div class="result-item">
+              <span class="word-badge">${r.word}</span>
+              <span>
+                <span class="stat-badge">Distance: ${r.minDistance}</span>
+                <span class="stat-badge">${r.occurrences.length} nearby</span>
+              </span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('proximityResults').innerHTML = html;
+    };
+
+    window.doPairProximity = function() {
+      const word1 = document.getElementById('pairWord1').value.trim();
+      const word2 = document.getElementById('pairWord2').value.trim();
+
+      const result = elsService.pairProximity(word1, word2);
+
+      if (!result) {
+        document.getElementById('pairResults').innerHTML =
+          `<div class="results"><p>Could not find both words in index</p></div>`;
+        return;
+      }
+
+      const html = `
+        <div class="results">
+          <p><strong>Minimum distance between "${word1}" and "${word2}":</strong></p>
+          <p style="font-size: 24px; color: var(--primary); font-weight: bold;">
+            ${result.distance.toLocaleString()} characters
+          </p>
+          <p>
+            "${word1}" at position ${result.word1.pos.toLocaleString()} (skip ${result.word1.skip})<br>
+            "${word2}" at position ${result.word2.pos.toLocaleString()} (skip ${result.word2.skip})
+          </p>
+        </div>
+      `;
+      document.getElementById('pairResults').innerHTML = html;
+    };
+
+    window.doClusterDiscovery = function() {
+      const seed = document.getElementById('clusterSeed').value.trim();
+      const radius = parseInt(document.getElementById('clusterRadius').value);
+
+      const cluster = elsService.discoverCluster(seed, radius, { topN: 15, minWordLength: 3 });
+
+      if (!cluster) {
+        document.getElementById('clusterResults').innerHTML =
+          `<div class="results"><p>Could not find "${seed}" in index</p></div>`;
+        return;
+      }
+
+      const html = `
+        <div class="results">
+          <p><strong>Cluster around "${seed}"</strong></p>
+          <p>Center: position ${cluster.center.pos.toLocaleString()} (skip ${cluster.center.skip})</p>
+          <p>Centroid: position ${cluster.centroid.toLocaleString()} (shift: ${cluster.centroidShift > 0 ? '+' : ''}${cluster.centroidShift})</p>
+
+          <div class="cluster-viz">
+            <span class="cluster-term cluster-seed">${seed} (seed)</span>
+            ${cluster.words.map((w, i) => {
+              const cls = w.minDistance < 200 ? 'cluster-close' :
+                          w.minDistance < 500 ? 'cluster-medium' : 'cluster-far';
+              return `<span class="cluster-term ${cls}">${w.word} (${w.minDistance})</span>`;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      document.getElementById('clusterResults').innerHTML = html;
+    };
+
+    window.doProximityMatrix = function() {
+      const wordsStr = document.getElementById('matrixWords').value.trim();
+      const words = wordsStr.split(',').map(w => w.trim()).filter(w => w);
+
+      if (words.length < 2) {
+        document.getElementById('matrixResults').innerHTML =
+          `<div class="results"><p>Enter at least 2 words</p></div>`;
+        return;
+      }
+
+      const { matrix } = elsService.computeProximityMatrix(words);
+
+      // Build HTML table
+      let tableHtml = '<table><tr><th></th>';
+      for (const w of words) {
+        tableHtml += `<th>${w}</th>`;
+      }
+      tableHtml += '</tr>';
+
+      for (let i = 0; i < words.length; i++) {
+        tableHtml += `<tr><th>${words[i]}</th>`;
+        for (let j = 0; j < words.length; j++) {
+          const dist = matrix[i][j];
+          const cls = dist === 0 ? '' :
+                      dist < 500 ? 'proximity-cell-close' :
+                      dist < 2000 ? 'proximity-cell-medium' : 'proximity-cell-far';
+          const displayDist = dist === Infinity ? '∞' : dist.toLocaleString();
+          tableHtml += `<td class="${cls}">${displayDist}</td>`;
+        }
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</table>';
+
+      document.getElementById('matrixResults').innerHTML = `
+        <div class="proximity-matrix">
+          <p><strong>Proximity Matrix (distance in characters):</strong></p>
+          ${tableHtml}
+          <p style="font-size: 12px; margin-top: 10px;">
+            <span style="background: #c8e6c9; padding: 2px 8px;">< 500</span>
+            <span style="background: #fff9c4; padding: 2px 8px;">< 2000</span>
+            <span style="background: #ffcdd2; padding: 2px 8px;">> 2000</span>
+          </p>
+        </div>
+      `;
+    };
+
+    window.doEmbeddingSimilarity = function() {
+      const word = document.getElementById('embeddingWord').value.trim();
+
+      const similar = elsService.findSimilarByEmbedding(word, 15);
+
+      if (similar.length === 0) {
+        document.getElementById('embeddingResults').innerHTML =
+          `<div class="results"><p>No similar words found for "${word}"</p></div>`;
+        return;
+      }
+
+      const html = `
+        <div class="results">
+          <p><strong>Words with similar ELS distribution to "${word}":</strong></p>
+          ${similar.map(s => `
+            <div class="result-item">
+              <span class="word-badge">${s.word}</span>
+              <span class="stat-badge">Similarity: ${(s.similarity * 100).toFixed(1)}%</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('embeddingResults').innerHTML = html;
+    };
+
+    window.doSignificance = function() {
+      const word = document.getElementById('sigWord').value.trim();
+
+      const stats = elsService.significanceScore(word);
+      const occCount = elsService.getOccurrenceCount(word);
+
+      const html = `
+        <div class="results">
+          <p><strong>Statistical Analysis for "${word}":</strong></p>
+          <div class="stats-grid" style="margin-top: 15px;">
+            <div class="stat-box" style="background: ${stats.significant ? 'var(--success)' : '#999'};">
+              <div class="value">${stats.observed.toLocaleString()}</div>
+              <div class="label">Observed</div>
+            </div>
+            <div class="stat-box" style="background: #666;">
+              <div class="value">${stats.expected.toLocaleString()}</div>
+              <div class="label">Expected (random)</div>
+            </div>
+            <div class="stat-box" style="background: ${Math.abs(stats.zScore) > 2 ? 'var(--primary)' : '#999'};">
+              <div class="value">${stats.zScore > 0 ? '+' : ''}${stats.zScore}</div>
+              <div class="label">Z-Score</div>
+            </div>
+          </div>
+          <p style="margin-top: 15px;">
+            ${stats.significant
+              ? `<strong style="color: var(--success);">Statistically significant</strong> (|z| > 2)`
+              : `<span style="color: #666;">Not statistically significant</span>`}
+          </p>
+          ${stats.zScore > 2
+            ? `<p>Word appears ${(stats.observed / stats.expected).toFixed(1)}x more often than expected by chance.</p>`
+            : stats.zScore < -2
+              ? `<p>Word appears ${(stats.expected / stats.observed).toFixed(1)}x less often than expected by chance.</p>`
+              : ``}
+        </div>
+      `;
+      document.getElementById('sigResults').innerHTML = html;
+    };
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
