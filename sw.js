@@ -41,7 +41,7 @@ const urlsToCache = [
   './data/embeddings/hebrew-roots.json.gz',
 
   // ELS Index files (large - loaded on demand)
-  './data/els-index/els-index-20.json.gz',
+  './data/els-index/els-index-20-min3.json.gz',
   './data/els-index/els-index-50-min3.json.gz',
 
   // Torah character database - Koren Edition (Rips et al., 1994)
