@@ -283,7 +283,7 @@
       try {
         document.getElementById('loadProgress').textContent = 'Fetching index file...';
 
-        const metadata = await initElsIndex('data/els-index/els-index-50.json.gz');
+        const metadata = await initElsIndex('data/els-index/els-index-50-min3.json.gz');
         elsService = getElsIndexService();
 
         document.getElementById('loadingIndicator').style.display = 'none';
@@ -295,7 +295,7 @@
         console.error('Init failed:', error);
         document.getElementById('loadingIndicator').innerHTML =
           `<div style="color: red;">Error: ${error.message}<br><br>
-          Make sure the ELS index file exists at data/els-index/els-index-50.json.gz</div>`;
+          Make sure the ELS index file exists at data/els-index/els-index-50-min3.json.gz</div>`;
       }
     }
 

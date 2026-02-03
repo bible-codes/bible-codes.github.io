@@ -24,7 +24,7 @@ export class ElsIndexService {
    * @param {string} indexPath - Path to compressed index file
    * @returns {Promise<Object>} Metadata about loaded index
    */
-  async load(indexPath = 'data/els-index/els-index-50.json.gz') {
+  async load(indexPath = 'data/els-index/els-index-50-min3.json.gz') {
     if (this.loaded) {
       return this.metadata;
     }
