@@ -335,9 +335,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const patternColumn = firstLetterCol;
 
     // Calculate indices of all pattern letters
+    // Use actual skip value (with sign) - for negative skips, letters go backward
     const patternIndices = new Set();
     for (let i = 0; i < patternLen; i++) {
-      patternIndices.add(result.startIndex + (i * absSkip));
+      patternIndices.add(result.startIndex + (i * result.skip));
     }
 
     // Build the grid

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-analysis-suite-v4.3';
+const CACHE_NAME = 'bible-analysis-suite-v4.4';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -70,7 +70,7 @@ const urlsToCache = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v4.3...');
+  console.log('Service Worker: Installing v4.4...');
 
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -99,7 +99,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating v4.3...');
+  console.log('Service Worker: Activating v4.4...');
 
   const cacheWhitelist = [CACHE_NAME];
 

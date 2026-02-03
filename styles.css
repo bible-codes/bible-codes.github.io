@@ -1,190 +1,539 @@
-/* Base Reset and Styling */
-body {
-  background-color: #3F8EBA; /* Custom blue */
-  margin: 0;
-  font-family: Arial, sans-serif;
+/* ================================================
+   Bible Codes - Mobile-First Responsive Styles
+   PWA Optimized
+   ================================================ */
+
+/* CSS Custom Properties */
+:root {
+  --primary: #3F8EBA;
+  --primary-dark: #2D6A91;
+  --primary-light: #5BA7D0;
+  --secondary: #003366;
+  --accent: #ffc107;
+
+  --text-dark: #2c3e50;
+  --text-light: #ffffff;
+  --text-muted: #666666;
+
+  --bg-light: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-input: #f1f1f1;
+
+  --border: #dee2e6;
+  --border-light: #e9ecef;
+
+  --shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+
+  --radius: 8px;
+  --radius-sm: 4px;
+
+  /* Touch targets - minimum 44px per Apple HIG */
+  --touch-target: 44px;
+
+  /* Safe area for notched devices */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Base Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--safe-area-bottom);
+}
+
+/* Header */
 header {
-  background-color: #2D6A91; /* Slightly darker blue for header */
-  padding: 10px;
+  background-color: var(--primary-dark);
+  padding: 12px 16px;
   display: flex;
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
 }
 
 .logo-container {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .logo {
-  width: 50px;
-  height: 50px;
-  margin-right: 10px;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
 }
 
 .bible-codes-heading {
-  color: white;
-  font-size: 24px;
+  color: var(--text-light);
+  font-size: 1.25rem;
+  font-weight: 700;
   margin: 0;
 }
 
-/* Main Content Styling */
+/* Main Content */
 .main-content {
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Search Section */
 .search-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background-color: #f1f1f1;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  gap: 16px;
+  background-color: var(--bg-card);
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .input-container {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .input-label {
-  margin-bottom: 5px;
-  font-weight: bold;
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 0.875rem;
 }
 
 .st {
-  padding: 8px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 18px; /* Larger for Hebrew text */
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  min-height: var(--touch-target);
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.st:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(63, 142, 186, 0.2);
+}
+
+/* Range Container - Responsive Grid */
 .range-container {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: end;
 }
 
 .range-container label {
-  font-size: 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  display: block;
+  margin-bottom: 4px;
 }
 
 .range-container input {
-  padding: 5px;
-  font-size: 14px;
-  width: 60px;
+  padding: 10px 12px;
+  font-size: 16px;
+  min-height: var(--touch-target);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  background-color: var(--bg-card);
 }
 
+.range-container input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(63, 142, 186, 0.2);
+}
+
+.range-container > div {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Buttons */
 .btn {
-  padding: 10px;
-  font-size: 14px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
   border: none;
-  border-radius: 4px;
-  background-color: #3F8EBA;
-  color: white;
+  border-radius: var(--radius-sm);
+  background-color: var(--primary);
+  color: var(--text-light);
   cursor: pointer;
+  min-height: var(--touch-target);
+  transition: background-color 0.2s, transform 0.1s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  width: 100%;
 }
 
 .btn:hover {
-  background-color: #2D6A91;
+  background-color: var(--primary-dark);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Results Container */
+.results-container {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--bg-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-height: 50vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.results-container h3 {
+  margin: 0 0 12px 0;
+  color: var(--secondary);
+  font-size: 1rem;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.results-container h3 span {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 4px;
+}
+
+.results-list {
+  font-family: 'Courier New', monospace;
+  line-height: 1.6;
+}
+
+.result-item {
+  padding: 12px;
+  margin-bottom: 12px;
+  border-left: 4px solid var(--primary);
+  background-color: var(--bg-card);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.result-item:last-child {
+  margin-bottom: 0;
+}
+
+.result-item:hover,
+.result-item:active {
+  background-color: rgba(63, 142, 186, 0.1);
+}
+
+.result-group-header {
+  font-weight: 600;
+  margin: 16px 0 8px 0;
+  padding: 8px 12px;
+  background-color: var(--bg-light);
+  border-radius: var(--radius-sm);
 }
 
 /* Torah Section */
 .torah-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .torah-controls {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
 }
 
+.torah-controls label {
+  color: var(--text-light);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.torah-controls input {
+  padding: 10px 12px;
+  font-size: 16px;
+  min-height: var(--touch-target);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 120px;
+}
+
+.torah-controls .btn {
+  width: auto;
+  padding: 10px 20px;
+}
+
 .torah-box {
-  background-color: #f9f9f9;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 10px;
-  height: 300px;
+  background-color: var(--bg-card);
+  border: none;
+  border-radius: var(--radius);
+  padding: 16px;
+  height: 250px;
   overflow: auto;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  -webkit-overflow-scrolling: touch;
+  box-shadow: var(--shadow);
 }
 
 #torah-text {
-  font-family: "Courier New", Courier, monospace;
-  white-space: pre-wrap; /* Wrap text */
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  white-space: pre-wrap;
   word-wrap: break-word;
+  direction: rtl;
+  line-height: 1.8;
+  margin: 0;
 }
 
-/* Add these styles for the results container */
-.results-container {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 5px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.results-container h3 {
-  margin-top: 0;
-  color: #003366;
-  border-bottom: 1px solid #dee2e6;
-  padding-bottom: 10px;
-  margin-bottom: 15px;
-}
-
-.results-list {
-  font-family: monospace;
-  line-height: 1.5;
-}
-
-.result-item {
-  padding: 8px;
-  margin-bottom: 8px;
-  border-left: 3px solid #007bff;
-  background-color: rgba(0, 123, 255, 0.05);
-}
-
-.result-item:hover {
-  background-color: rgba(0, 123, 255, 0.1);
-}
-
+/* Loading Spinner */
 .loading-spinner {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(0, 123, 255, 0.3);
+  border: 3px solid rgba(63, 142, 186, 0.3);
   border-radius: 50%;
-  border-top-color: #007bff;
-  animation: spin 1s ease-in-out infinite;
+  border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
   margin-right: 10px;
+  vertical-align: middle;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+/* Offline Indicator */
 .offline-indicator {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 10px;
-  margin-top: 20px;
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 12px 16px;
+  margin-top: 16px;
   text-align: center;
-  border-radius: 5px;
-  font-weight: bold;
-  border-left: 5px solid #f5c6cb;
+  border-radius: var(--radius);
+  font-weight: 600;
+  border: 1px solid #ffc107;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.offline-indicator::before {
+  content: '⚠️';
 }
 
 .hidden {
-  display: none;
+  display: none !important;
+}
+
+/* Context highlight in results */
+.context-text {
+  background-color: var(--bg-light);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.context-text mark {
+  background-color: var(--accent);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* ================================================
+   Tablet Styles (768px+)
+   ================================================ */
+@media (min-width: 768px) {
+  .logo {
+    width: 50px;
+    height: 50px;
+  }
+
+  .bible-codes-heading {
+    font-size: 1.5rem;
+  }
+
+  .main-content {
+    padding: 24px;
+    gap: 24px;
+  }
+
+  .search-section {
+    padding: 24px;
+  }
+
+  .range-container {
+    grid-template-columns: auto 100px auto 100px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .range-container label {
+    margin-bottom: 0;
+  }
+
+  .range-container input {
+    width: 100px;
+  }
+
+  .btn {
+    width: auto;
+    min-width: 150px;
+  }
+
+  .torah-controls input {
+    width: 150px;
+  }
+
+  .torah-box {
+    height: 350px;
+  }
+
+  .results-container h3 span {
+    display: inline;
+    margin-top: 0;
+    margin-left: 8px;
+  }
+}
+
+/* ================================================
+   Desktop Styles (1024px+)
+   ================================================ */
+@media (min-width: 1024px) {
+  header {
+    padding: 16px 24px;
+  }
+
+  .main-content {
+    padding: 32px;
+    gap: 32px;
+  }
+
+  .search-section {
+    padding: 32px;
+  }
+
+  .st {
+    font-size: 20px;
+  }
+
+  #torah-text {
+    font-size: 16px;
+  }
+
+  .torah-box {
+    height: 400px;
+  }
+}
+
+/* ================================================
+   Accessibility & Reduced Motion
+   ================================================ */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: #000000;
+    --text-muted: #333333;
+  }
+
+  .btn {
+    border: 2px solid var(--text-light);
+  }
+}
+
+/* Dark mode support (if user prefers) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-light: #1a1a2e;
+    --bg-card: #16213e;
+    --bg-input: #1a1a2e;
+    --text-dark: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --border: #2d3748;
+    --border-light: #374151;
+  }
+
+  body {
+    background-color: #0f0f1a;
+  }
+
+  header {
+    background-color: #1a1a2e;
+  }
+
+  .st, .range-container input, .torah-controls input {
+    background-color: var(--bg-input);
+    color: var(--text-dark);
+  }
+
+  .results-container {
+    background-color: var(--bg-input);
+  }
+
+  .result-item {
+    background-color: var(--bg-card);
+  }
+
+  #torah-text {
+    color: var(--text-dark);
+  }
 }
