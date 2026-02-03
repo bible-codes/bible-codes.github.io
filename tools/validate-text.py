@@ -40,8 +40,12 @@ LENINGRAD_COUNTS = {
     'total': 305172
 }
 
-# SHA-256 hash of our canonical text (for integrity verification)
-CANONICAL_SHA256 = "aac5640a45c4448850d1d09ef25e42d105c73593f7edb0821c54165ff0d13860"
+# SHA-256 hashes of canonical texts (for integrity verification)
+LENINGRAD_SHA256 = "aac5640a45c4448850d1d09ef25e42d105c73593f7edb0821c54165ff0d13860"
+KOREN_SHA256 = "9692eb34eca2f7a10f6e828d04b3dac50d5b0b688bf1d74d6936a6bd2fb92be4"
+
+# For backward compatibility
+CANONICAL_SHA256 = LENINGRAD_SHA256
 
 
 def load_torah_from_db(data_dir):
