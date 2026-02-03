@@ -171,6 +171,7 @@
         <div class="checkbox-group">
           <strong>Search in:</strong>
           <label><input type="checkbox" id="srcBdb" checked> BDB (verified)</label>
+          <label><input type="checkbox" id="srcWiktionary" checked> Wiktionary (community)</label>
           <label><input type="checkbox" id="srcTanakh" checked> Tanakh (heuristic)</label>
         </div>
 
@@ -205,7 +206,7 @@
     async function init() {
       try {
         // Initialize dictionaries
-        const status = await initDictionaries(['bdb', 'tanakh']);
+        const status = await initDictionaries(['bdb', 'wiktionary', 'tanakh']);
         dictService = getDictionaryService();
 
         // Hide loading, show content
@@ -270,6 +271,7 @@
 
       const sources = [];
       if (document.getElementById('srcBdb').checked) sources.push('bdb');
+      if (document.getElementById('srcWiktionary').checked) sources.push('wiktionary');
       if (document.getElementById('srcTanakh').checked) sources.push('tanakh');
 
       const results = dictService.lookup(word, sources.length ? sources : null);
@@ -283,11 +285,12 @@
       const html = results.map(r => `
         <div class="result-card">
           <span class="source">${r.sourceName} (${r.source})</span>
+          ${r.era ? `<span class="source" style="background: #e8f4e8; margin-right: 5px;">${r.era}</span>` : ''}
           <div class="word">${r.word}</div>
           ${r.root ? `<div class="root">Root: ${r.root}</div>` : ''}
           ${r.pos ? `<div>POS: ${r.pos}</div>` : ''}
-          ${r.confidence ? `<div>Confidence: ${(r.confidence * 100).toFixed(0)}%</div>` : ''}
           ${r.binyan ? `<div>Binyan: ${r.binyan}</div>` : ''}
+          ${r.confidence ? `<div>Confidence: ${(r.confidence * 100).toFixed(0)}%</div>` : ''}
           ${r.definitions && r.definitions.length > 0 ? `
             <div class="definitions">
               <strong>Definitions:</strong>
@@ -297,6 +300,11 @@
           ${r.refs && r.refs.length > 0 ? `
             <div style="margin-top: 10px; font-size: 12px; color: #666;">
               Refs: ${r.refs.slice(0, 3).join(', ')}${r.refs.length > 3 ? '...' : ''}
+            </div>
+          ` : ''}
+          ${r.related && r.related.length > 0 ? `
+            <div style="margin-top: 10px; font-size: 12px;">
+              Related: ${r.related.slice(0, 5).join(', ')}
             </div>
           ` : ''}
         </div>
@@ -335,45 +343,55 @@
 
     function calculateComparison() {
       const bdbWords = dictService.getAllWords(['bdb']);
+      const wiktionaryWords = dictService.getAllWords(['wiktionary']);
       const tanakhWords = dictService.getAllWords(['tanakh']);
 
-      let onlyBdb = 0;
-      let onlyTanakh = 0;
-      let both = 0;
+      // Calculate unique total
+      const allWords = new Set([...bdbWords, ...wiktionaryWords, ...tanakhWords]);
 
-      for (const word of bdbWords) {
-        if (tanakhWords.has(word)) {
-          both++;
-        } else {
-          onlyBdb++;
-        }
-      }
+      // Calculate overlaps
+      let inAll = 0;
+      let bdbAndWikt = 0;
+      let bdbAndTanakh = 0;
+      let wiktAndTanakh = 0;
 
-      for (const word of tanakhWords) {
-        if (!bdbWords.has(word)) {
-          onlyTanakh++;
-        }
+      for (const word of allWords) {
+        const inBdb = bdbWords.has(word);
+        const inWikt = wiktionaryWords.has(word);
+        const inTanakh = tanakhWords.has(word);
+
+        if (inBdb && inWikt && inTanakh) inAll++;
+        else if (inBdb && inWikt) bdbAndWikt++;
+        else if (inBdb && inTanakh) bdbAndTanakh++;
+        else if (inWikt && inTanakh) wiktAndTanakh++;
       }
 
       const html = `
         <div class="stats-grid">
           <div class="stat-box" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-            <div class="value">${onlyBdb.toLocaleString()}</div>
-            <div class="label">BDB Only</div>
+            <div class="value">${bdbWords.size.toLocaleString()}</div>
+            <div class="label">BDB</div>
           </div>
-          <div class="stat-box" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
-            <div class="value">${both.toLocaleString()}</div>
-            <div class="label">In Both</div>
+          <div class="stat-box" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+            <div class="value">${wiktionaryWords.size.toLocaleString()}</div>
+            <div class="label">Wiktionary</div>
           </div>
           <div class="stat-box" style="background: linear-gradient(135deg, #ee0979, #ff6a00);">
-            <div class="value">${onlyTanakh.toLocaleString()}</div>
-            <div class="label">Tanakh Only</div>
+            <div class="value">${tanakhWords.size.toLocaleString()}</div>
+            <div class="label">Tanakh</div>
+          </div>
+          <div class="stat-box" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+            <div class="value">${allWords.size.toLocaleString()}</div>
+            <div class="label">TOTAL UNIQUE</div>
           </div>
         </div>
         <p style="margin-top: 15px; color: #666;">
-          BDB provides ${bdbWords.size.toLocaleString()} verified Biblical Hebrew entries.<br>
-          Tanakh extraction found ${tanakhWords.size.toLocaleString()} unique word forms.<br>
-          <strong>${both.toLocaleString()}</strong> words appear in both (can cross-verify roots).
+          <strong>Overlap Analysis:</strong><br>
+          • In all 3 sources: ${inAll.toLocaleString()} (highest confidence)<br>
+          • BDB + Wiktionary: ${bdbAndWikt.toLocaleString()}<br>
+          • BDB + Tanakh: ${bdbAndTanakh.toLocaleString()}<br>
+          • Wiktionary + Tanakh: ${wiktAndTanakh.toLocaleString()}<br><br>
+          <strong>Total unique words: ${allWords.size.toLocaleString()}</strong>
         </p>
       `;
 

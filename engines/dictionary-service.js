@@ -22,23 +22,30 @@ export class DictionaryService {
    * Available dictionary sources
    */
   static SOURCES = {
-    tanakh: {
-      name: 'Tanakh Extracted',
-      file: 'data/embeddings/hebrew-roots.json.gz',
-      description: 'Words extracted from Tanakh with heuristic root analysis',
-      license: 'N/A (derived)',
-      priority: 2,  // Lower priority (heuristic)
-    },
     bdb: {
       name: 'Brown-Driver-Briggs',
       file: 'data/dictionaries/openscriptures-bdb.json.gz',
       description: 'Classic Biblical Hebrew lexicon with verified roots',
       license: 'CC-BY-SA',
-      priority: 1,  // Higher priority (verified)
+      priority: 1,  // Highest priority (academic, verified)
+    },
+    wiktionary: {
+      name: 'Hebrew Wiktionary',
+      file: 'data/dictionaries/hebrew-wiktionary.json.gz',
+      description: 'Community-sourced Hebrew dictionary with roots, definitions, era markers',
+      license: 'CC-BY-SA 3.0',
+      priority: 2,  // High priority (verified roots, definitions)
+    },
+    tanakh: {
+      name: 'Tanakh Extracted',
+      file: 'data/embeddings/hebrew-roots.json.gz',
+      description: 'Words extracted from Tanakh with heuristic root analysis',
+      license: 'N/A (derived)',
+      priority: 3,  // Lower priority (heuristic)
     },
     // Future sources:
-    // wiktionary: { ... }
     // wikipedia: { ... }
+    // strong: { ... }
   };
 
   /**
@@ -146,6 +153,23 @@ export class DictionaryService {
           bdbId: info.bdb_id,
           refs: info.refs || [],
           source: 'bdb',
+        });
+      }
+    } else if (source === 'wiktionary') {
+      // Wiktionary format: { source: {...}, entries: { word: { root, pos, definitions, era, ... } } }
+      const dictEntries = data.entries || data;
+      for (const [word, info] of Object.entries(dictEntries)) {
+        entries.set(word, {
+          word,
+          root: info.root,
+          roots: info.roots,  // May have multiple roots
+          pos: info.pos,
+          binyan: info.binyan,
+          definitions: info.definitions || [],
+          era: info.era,  // biblical, rabbinic, medieval, modern
+          refs: info.refs || [],
+          related: info.related || [],
+          source: 'wiktionary',
         });
       }
     }
