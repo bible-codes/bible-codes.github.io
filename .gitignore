@@ -1,6 +1,7 @@
 # Uncompressed data files (too large, can be regenerated)
 data/*.json
 !data/precomputed-terms.json
+!data/torah-verse-index.json
 
 # Build artifacts
 __pycache__/

@@ -111,13 +111,36 @@
       color: #e0e0e0;
       border-radius: 3px;
       transition: all 0.2s;
+      cursor: pointer;
     }
 
-    .matrix-cell.highlighted {
+    .matrix-cell:hover {
+      transform: scale(1.1);
+      z-index: 10;
+    }
+
+    /* Term 1 highlighting - Yellow */
+    .matrix-cell.highlighted,
+    .matrix-cell.term1 {
       background: #ffc107;
       color: #000;
       font-weight: bold;
       box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+    }
+
+    /* Term 2 highlighting - Cyan/Blue */
+    .matrix-cell.term2 {
+      background: #00bcd4;
+      color: #000;
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+    }
+
+    /* Both terms overlap - Purple */
+    .matrix-cell.term1.term2 {
+      background: #9c27b0;
+      color: #fff;
+      box-shadow: 0 0 15px rgba(156, 39, 176, 0.7);
     }
 
     .matrix-cell.context {
@@ -194,6 +217,7 @@
       margin-top: 15px;
       color: white;
       font-size: 14px;
+      flex-wrap: wrap;
     }
 
     .legend-item {
@@ -208,8 +232,16 @@
       border-radius: 3px;
     }
 
-    .legend-color.search-term {
+    .legend-color.term1 {
       background: #ffc107;
+    }
+
+    .legend-color.term2 {
+      background: #00bcd4;
+    }
+
+    .legend-color.both {
+      background: #9c27b0;
     }
 
     .legend-color.context {
@@ -220,19 +252,155 @@
       background: #2d2d44;
     }
 
-    /* Row numbers */
-    .matrix-row-wrapper {
-      display: contents;
+    /* Multi-term search styles */
+    .multi-term-section {
+      margin-top: 16px;
+      padding: 16px;
+      background: #e3f2fd;
+      border-radius: 8px;
+      border-left: 4px solid #2196f3;
     }
 
-    .matrix-row-num {
-      color: #888;
-      font-size: 12px;
+    .multi-term-toggle {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      padding-right: 8px;
-      min-width: 50px;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .multi-term-toggle input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+
+    .multi-term-toggle label {
+      font-weight: 600;
+      color: #1565c0;
+    }
+
+    .multi-term-inputs {
+      display: none;
+    }
+
+    .multi-term-inputs.active {
+      display: block;
+    }
+
+    .proximity-container {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .proximity-container label {
+      font-size: 14px;
+      color: #333;
+    }
+
+    .proximity-container input {
+      width: 100px;
+      padding: 8px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    /* Proximity results section */
+    .proximity-results {
+      margin-top: 20px;
+      padding: 16px;
+      background: #fff3e0;
+      border-radius: 8px;
+      border-left: 4px solid #ff9800;
+    }
+
+    .proximity-results h4 {
+      margin: 0 0 12px 0;
+      color: #e65100;
+    }
+
+    .proximity-pair {
+      padding: 12px;
+      margin-bottom: 10px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #4caf50;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .proximity-pair:hover {
+      background: #e8f5e9;
+      transform: translateX(-3px);
+    }
+
+    .proximity-pair .distance {
+      font-weight: bold;
+      color: #2e7d32;
+    }
+
+    .proximity-pair .terms {
+      display: flex;
+      gap: 20px;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    .proximity-pair .term-info {
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .proximity-pair .term-info.t1 {
+      background: #fff8e1;
+      border: 1px solid #ffc107;
+    }
+
+    .proximity-pair .term-info.t2 {
+      background: #e0f7fa;
+      border: 1px solid #00bcd4;
+    }
+
+    /* Verse attribution styles */
+    .verse-attribution {
+      margin-top: 8px;
+      padding: 8px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .verse-attribution .verse-item {
+      display: inline-block;
+      margin: 2px 4px;
+      padding: 2px 6px;
+      background: #e3f2fd;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+
+    /* Matrix verse info tooltip */
+    .matrix-cell[data-verse]:hover::after {
+      content: attr(data-verse);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .matrix-cell {
+      position: relative;
     }
 
     /* Mobile-specific matrix styles */
@@ -278,6 +446,11 @@
         flex-direction: column;
         gap: 10px;
       }
+
+      .proximity-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
     }
   </style>
 
@@ -314,8 +487,35 @@
     <!-- Search Input Section -->
     <section class="search-section">
       <div class="input-container">
-        <label for="st1" class="input-label">Search Term (Hebrew)</label>
-        <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="Enter a search term">
+        <label for="st1" class="input-label">Search Term 1 (Hebrew)</label>
+        <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="Enter first search term">
+      </div>
+
+      <!-- Multi-term search section -->
+      <div class="multi-term-section">
+        <div class="multi-term-toggle">
+          <input type="checkbox" id="multi-term-enabled">
+          <label for="multi-term-enabled">Enable Multi-Term Proximity Search</label>
+        </div>
+
+        <div class="multi-term-inputs" id="multi-term-inputs">
+          <div class="input-container">
+            <label for="st2" class="input-label">Search Term 2 (Hebrew)</label>
+            <input dir="rtl" type="text" name="st2" id="st2" class="st" placeholder="Enter second search term">
+          </div>
+
+          <div class="proximity-container">
+            <div>
+              <label for="max-distance">Max Distance (characters):</label>
+              <input type="number" id="max-distance" value="1000" min="1" inputmode="numeric">
+            </div>
+            <div>
+              <label>
+                <input type="checkbox" id="same-skip-only"> Same skip value only
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="range-container">
@@ -333,6 +533,12 @@
       </div>
 
       <button class="btn" id="search-btn">Search</button>
+
+      <!-- Proximity Results Container (for multi-term search) -->
+      <div id="proximity-results-container" class="proximity-results" style="display: none;">
+        <h4>🔗 Proximity Pairs Found</h4>
+        <div id="proximity-results"></div>
+      </div>
 
       <!-- Results Container -->
       <div id="search-results-container" class="results-container">
@@ -367,14 +573,22 @@
       <div class="matrix-grid" id="matrix-grid"></div>
     </div>
 
-    <div class="matrix-legend">
+    <div class="matrix-legend" id="matrix-legend">
       <div class="legend-item">
-        <div class="legend-color search-term"></div>
-        <span>Search Term (vertical)</span>
+        <div class="legend-color term1"></div>
+        <span id="legend-term1">Term 1</span>
+      </div>
+      <div class="legend-item" id="legend-term2-item" style="display: none;">
+        <div class="legend-color term2"></div>
+        <span id="legend-term2">Term 2</span>
+      </div>
+      <div class="legend-item" id="legend-both-item" style="display: none;">
+        <div class="legend-color both"></div>
+        <span>Overlap</span>
       </div>
       <div class="legend-item">
         <div class="legend-color context"></div>
-        <span>Context Row</span>
+        <span>Context Column</span>
       </div>
       <div class="legend-item">
         <div class="legend-color regular"></div>
