@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dictionary Service Test</title>
+  <link rel="stylesheet" href="css/mobile-optimized.css">
+  <style>
+    .test-section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      color: var(--primary);
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+    }
+    .status-box {
+      background: #f5f5f5;
+      border-radius: 4px;
+      padding: 15px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .source-card {
+      display: inline-block;
+      background: #e8f4f8;
+      border-radius: 6px;
+      padding: 10px 15px;
+      margin: 5px;
+      border-left: 4px solid var(--primary);
+    }
+    .source-card.loaded {
+      border-left-color: var(--success);
+      background: #e8f8e8;
+    }
+    .lookup-input {
+      width: 100%;
+      max-width: 300px;
+      padding: 12px;
+      font-size: 18px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    .lookup-input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+    .result-card {
+      background: #f9f9f9;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 10px 0;
+      border-right: 4px solid var(--primary);
+    }
+    .result-card .source {
+      font-size: 12px;
+      color: #666;
+      background: #eee;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .result-card .word {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+    .result-card .root {
+      font-size: 18px;
+      color: var(--success);
+    }
+    .result-card .definitions {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+    }
+    .result-card .definition {
+      margin: 5px 0;
+      padding-right: 10px;
+      border-right: 2px solid #ccc;
+    }
+    .checkbox-group {
+      margin: 10px 0;
+    }
+    .checkbox-group label {
+      margin-left: 15px;
+      cursor: pointer;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .stat-box {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-box .value {
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .stat-box .label {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    #loadingIndicator {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <header class="mobile-header">
+    <div class="mobile-header-inner">
+      <a href="index.html" class="logo">Dictionary Test</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>Hebrew Dictionary Service Test</h1>
+    <p>Testing multi-source dictionary with separate provenance tracking.</p>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator">
+      <div class="spinner"></div>
+      <div>Loading dictionaries...</div>
+    </div>
+
+    <!-- Main Content (hidden until loaded) -->
+    <div id="mainContent" style="display: none;">
+
+      <!-- Status Section -->
+      <section class="test-section">
+        <h2>Dictionary Sources</h2>
+        <div id="sourcesContainer"></div>
+        <div class="stats-grid" id="statsGrid"></div>
+      </section>
+
+      <!-- Lookup Section -->
+      <section class="test-section">
+        <h2>Word Lookup</h2>
+        <input type="text" id="lookupInput" class="lookup-input" placeholder="Enter Hebrew word..." value="אבד">
+
+        <div class="checkbox-group">
+          <strong>Search in:</strong>
+          <label><input type="checkbox" id="srcBdb" checked> BDB (verified)</label>
+          <label><input type="checkbox" id="srcTanakh" checked> Tanakh (heuristic)</label>
+        </div>
+
+        <button id="lookupBtn" class="btn" style="padding: 10px 20px;">Look Up</button>
+
+        <div id="lookupResults"></div>
+      </section>
+
+      <!-- Search Section -->
+      <section class="test-section">
+        <h2>Search by Root</h2>
+        <input type="text" id="rootInput" class="lookup-input" placeholder="Enter root (e.g., אבד)..." value="אבד">
+        <button id="searchRootBtn" class="btn" style="padding: 10px 20px;">Find Words with Root</button>
+        <div id="rootResults"></div>
+      </section>
+
+      <!-- Comparison Section -->
+      <section class="test-section">
+        <h2>Source Comparison</h2>
+        <p>Words unique to each source vs. overlap:</p>
+        <div id="comparisonResults"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module">
+    import { getDictionaryService, initDictionaries } from './engines/dictionary-service.js';
+
+    let dictService;
+
+    async function init() {
+      try {
+        // Initialize dictionaries
+        const status = await initDictionaries(['bdb', 'tanakh']);
+        dictService = getDictionaryService();
+
+        // Hide loading, show content
+        document.getElementById('loadingIndicator').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+
+        // Display status
+        displayStatus(status);
+
+        // Set up event listeners
+        document.getElementById('lookupBtn').addEventListener('click', doLookup);
+        document.getElementById('lookupInput').addEventListener('keypress', e => {
+          if (e.key === 'Enter') doLookup();
+        });
+
+        document.getElementById('searchRootBtn').addEventListener('click', doRootSearch);
+        document.getElementById('rootInput').addEventListener('keypress', e => {
+          if (e.key === 'Enter') doRootSearch();
+        });
+
+        // Initial lookup
+        doLookup();
+
+        // Calculate comparison
+        calculateComparison();
+
+      } catch (error) {
+        console.error('Init failed:', error);
+        document.getElementById('loadingIndicator').innerHTML =
+          `<div style="color: red;">Error: ${error.message}</div>`;
+      }
+    }
+
+    function displayStatus(status) {
+      // Sources
+      const sourcesHtml = Object.entries(status.sources).map(([id, info]) => `
+        <div class="source-card loaded">
+          <strong>${info.name}</strong><br>
+          <small>${info.count.toLocaleString()} entries</small><br>
+          <small>License: ${info.license}</small>
+        </div>
+      `).join('');
+      document.getElementById('sourcesContainer').innerHTML = sourcesHtml;
+
+      // Stats
+      const statsHtml = `
+        <div class="stat-box">
+          <div class="value">${status.totalWords.toLocaleString()}</div>
+          <div class="label">Total Words</div>
+        </div>
+        <div class="stat-box">
+          <div class="value">${Object.keys(status.sources).length}</div>
+          <div class="label">Sources Loaded</div>
+        </div>
+      `;
+      document.getElementById('statsGrid').innerHTML = statsHtml;
+    }
+
+    function doLookup() {
+      const word = document.getElementById('lookupInput').value.trim();
+      if (!word) return;
+
+      const sources = [];
+      if (document.getElementById('srcBdb').checked) sources.push('bdb');
+      if (document.getElementById('srcTanakh').checked) sources.push('tanakh');
+
+      const results = dictService.lookup(word, sources.length ? sources : null);
+
+      if (results.length === 0) {
+        document.getElementById('lookupResults').innerHTML =
+          '<p style="color: #666;">No results found in selected sources.</p>';
+        return;
+      }
+
+      const html = results.map(r => `
+        <div class="result-card">
+          <span class="source">${r.sourceName} (${r.source})</span>
+          <div class="word">${r.word}</div>
+          ${r.root ? `<div class="root">Root: ${r.root}</div>` : ''}
+          ${r.pos ? `<div>POS: ${r.pos}</div>` : ''}
+          ${r.confidence ? `<div>Confidence: ${(r.confidence * 100).toFixed(0)}%</div>` : ''}
+          ${r.binyan ? `<div>Binyan: ${r.binyan}</div>` : ''}
+          ${r.definitions && r.definitions.length > 0 ? `
+            <div class="definitions">
+              <strong>Definitions:</strong>
+              ${r.definitions.map(d => `<div class="definition">${d}</div>`).join('')}
+            </div>
+          ` : ''}
+          ${r.refs && r.refs.length > 0 ? `
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+              Refs: ${r.refs.slice(0, 3).join(', ')}${r.refs.length > 3 ? '...' : ''}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+
+      document.getElementById('lookupResults').innerHTML = html;
+    }
+
+    function doRootSearch() {
+      const root = document.getElementById('rootInput').value.trim();
+      if (!root) return;
+
+      const results = dictService.search({ root, limit: 20 });
+
+      if (results.length === 0) {
+        document.getElementById('rootResults').innerHTML =
+          '<p style="color: #666;">No words found with this root.</p>';
+        return;
+      }
+
+      const html = `
+        <p>Found ${results.length} words with root <strong>${root}</strong>:</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          ${results.map(r => `
+            <div style="background: #f0f0f0; padding: 8px 12px; border-radius: 4px;">
+              <strong>${r.word}</strong>
+              <small style="color: #666;">(${r.source})</small>
+              ${r.pos ? `<br><small>${r.pos}</small>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      document.getElementById('rootResults').innerHTML = html;
+    }
+
+    function calculateComparison() {
+      const bdbWords = dictService.getAllWords(['bdb']);
+      const tanakhWords = dictService.getAllWords(['tanakh']);
+
+      let onlyBdb = 0;
+      let onlyTanakh = 0;
+      let both = 0;
+
+      for (const word of bdbWords) {
+        if (tanakhWords.has(word)) {
+          both++;
+        } else {
+          onlyBdb++;
+        }
+      }
+
+      for (const word of tanakhWords) {
+        if (!bdbWords.has(word)) {
+          onlyTanakh++;
+        }
+      }
+
+      const html = `
+        <div class="stats-grid">
+          <div class="stat-box" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+            <div class="value">${onlyBdb.toLocaleString()}</div>
+            <div class="label">BDB Only</div>
+          </div>
+          <div class="stat-box" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+            <div class="value">${both.toLocaleString()}</div>
+            <div class="label">In Both</div>
+          </div>
+          <div class="stat-box" style="background: linear-gradient(135deg, #ee0979, #ff6a00);">
+            <div class="value">${onlyTanakh.toLocaleString()}</div>
+            <div class="label">Tanakh Only</div>
+          </div>
+        </div>
+        <p style="margin-top: 15px; color: #666;">
+          BDB provides ${bdbWords.size.toLocaleString()} verified Biblical Hebrew entries.<br>
+          Tanakh extraction found ${tanakhWords.size.toLocaleString()} unique word forms.<br>
+          <strong>${both.toLocaleString()}</strong> words appear in both (can cross-verify roots).
+        </p>
+      `;
+
+      document.getElementById('comparisonResults').innerHTML = html;
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
