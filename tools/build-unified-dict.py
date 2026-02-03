@@ -26,8 +26,9 @@ import re
 # Source priorities (lower = better)
 SOURCE_PRIORITY = {
     'bdb': 1,
-    'wiktionary': 2,
-    'tanakh': 3,
+    'strongs': 2,  # Strong's has verified data, same era as BDB
+    'wiktionary': 3,
+    'tanakh': 4,
 }
 
 # Hebrew letters for validation
@@ -372,6 +373,7 @@ def main():
     # Source files
     source_files = {
         'bdb': Path('data/dictionaries/openscriptures-bdb.json.gz'),
+        'strongs': Path('data/dictionaries/strongs-hebrew.json.gz'),
         'wiktionary': Path('data/dictionaries/hebrew-wiktionary.json.gz'),
         'tanakh': Path('data/embeddings/hebrew-roots.json.gz'),
     }

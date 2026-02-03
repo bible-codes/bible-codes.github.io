@@ -38,6 +38,13 @@ export class DictionaryService {
       license: 'CC-BY-SA',
       priority: 1,  // Highest priority (academic, verified)
     },
+    strongs: {
+      name: "Strong's Hebrew Concordance",
+      file: 'data/dictionaries/strongs-hebrew.json.gz',
+      description: "Strong's Hebrew dictionary with numbered entries and KJV definitions",
+      license: 'Public Domain',
+      priority: 2,  // High priority (verified, cross-referenced)
+    },
     wiktionary: {
       name: 'Hebrew Wiktionary',
       file: 'data/dictionaries/hebrew-wiktionary.json.gz',
@@ -180,6 +187,22 @@ export class DictionaryService {
           bdbId: info.bdb_id,
           refs: info.refs || [],
           source: 'bdb',
+        });
+      }
+    } else if (source === 'strongs') {
+      // Strong's format: { source: {...}, entries: { word: { word, strong_id, root, pos, definitions, ... } } }
+      const dictEntries = data.entries || data;
+      for (const [word, info] of Object.entries(dictEntries)) {
+        entries.set(word, {
+          word,
+          root: info.root,
+          pos: info.pos,
+          definitions: info.definitions || [],
+          strongId: info.strong_id || info.strong_ids,
+          lemmaPointed: info.lemma_pointed,
+          transliteration: info.transliteration,
+          derivation: info.derivation,
+          source: 'strongs',
         });
       }
     } else if (source === 'wiktionary') {

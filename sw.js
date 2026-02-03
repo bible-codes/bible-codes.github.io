@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-analysis-suite-v5.2';
+const CACHE_NAME = 'bible-analysis-suite-v5.3';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -35,6 +35,7 @@ const urlsToCache = [
   './data/dictionaries/unified/hebrew-unified.json.gz',
   './data/dictionaries/unified/inflection-map.json.gz',
   './data/dictionaries/openscriptures-bdb.json.gz',
+  './data/dictionaries/strongs-hebrew.json.gz',
   './data/dictionaries/hebrew-wiktionary.json.gz',
   './data/embeddings/hebrew-roots.json.gz',
 
@@ -87,7 +88,7 @@ const urlsToCache = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v5.2...');
+  console.log('Service Worker: Installing v5.3...');
 
   event.waitUntil(
     caches.open(CACHE_NAME)
