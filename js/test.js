@@ -182,7 +182,24 @@ document.addEventListener('DOMContentLoaded', () => {
       // Create a header for this skip value
       const skipHeader = document.createElement('div');
       skipHeader.classList.add('result-group-header');
-      skipHeader.textContent = `Skip ${skip} (${skipResults.length} match${skipResults.length !== 1 ? 'es' : ''})`;
+
+      // Special labeling for open text (skip ±1)
+      if (skip === '1') {
+        skipHeader.innerHTML = `<strong>Open Text (Forward)</strong> - Normal sequential reading (${skipResults.length} match${skipResults.length !== 1 ? 'es' : ''})`;
+        skipHeader.style.backgroundColor = '#fffbea'; // Light yellow background
+        skipHeader.style.border = '1px solid #f59e0b';
+        skipHeader.style.padding = '8px';
+        skipHeader.style.borderRadius = '4px';
+      } else if (skip === '-1') {
+        skipHeader.innerHTML = `<strong>Open Text (Backward)</strong> - Reverse sequential reading (${skipResults.length} match${skipResults.length !== 1 ? 'es' : ''})`;
+        skipHeader.style.backgroundColor = '#e8f5e9'; // Light green background
+        skipHeader.style.border = '1px solid #4caf50';
+        skipHeader.style.padding = '8px';
+        skipHeader.style.borderRadius = '4px';
+      } else {
+        skipHeader.textContent = `Skip ${skip} (${skipResults.length} match${skipResults.length !== 1 ? 'es' : ''})`;
+      }
+
       resultContainer.appendChild(skipHeader);
 
       // Display each result

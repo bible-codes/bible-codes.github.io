@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bidirectional ELS Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      direction: ltr;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+    }
+    .sequence {
+      background: #fff;
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 3px solid #007bff;
+      direction: rtl;
+    }
+    .forward { border-left-color: #28a745; }
+    .backward { border-left-color: #dc3545; }
+    .positions {
+      font-size: 10px;
+      color: #666;
+    }
+    h2 { color: #333; }
+    h3 { color: #666; }
+    .result {
+      background: #fffbea;
+      padding: 5px;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bidirectional ELS Test</h1>
+  <p>Testing if positive and negative skips extract different sequences</p>
+
+  <div id="output"></div>
+
+  <script>
+    // Simple test text (using English for clarity, but logic is same for Hebrew)
+    const testText = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // Positions 0-25
+
+    function extractSequence(text, skip, classOffset) {
+      const absSkip = Math.abs(skip);
+      let sequenceText = '';
+      let sequencePositions = [];
+
+      if (skip > 0) {
+        // Forward
+        for (let i = classOffset; i < text.length; i += absSkip) {
+          sequenceText += text[i];
+          sequencePositions.push(i);
+        }
+      } else {
+        // Backward - find highest position first
+        let startPos = classOffset;
+        while (startPos + absSkip < text.length) {
+          startPos += absSkip;
+        }
+        // Extract backward
+        for (let i = startPos; i >= 0; i -= absSkip) {
+          sequenceText += text[i];
+          sequencePositions.push(i);
+        }
+      }
+
+      return { sequenceText, sequencePositions };
+    }
+
+    function runTest(skip) {
+      const absSkip = Math.abs(skip);
+      const output = document.getElementById('output');
+
+      const section = document.createElement('div');
+      section.className = 'test-section';
+      section.innerHTML = `<h2>Skip Value: ${skip}</h2>`;
+
+      // Test first 3 equivalence classes
+      for (let classOffset = 0; classOffset < Math.min(3, absSkip); classOffset++) {
+        const { sequenceText, sequencePositions } = extractSequence(testText, skip, classOffset);
+
+        const classDiv = document.createElement('div');
+        classDiv.className = skip > 0 ? 'sequence forward' : 'sequence backward';
+        classDiv.innerHTML = `
+          <h3>Equivalence Class ${classOffset}:</h3>
+          <div><strong>Sequence:</strong> ${sequenceText}</div>
+          <div class="positions"><strong>Positions:</strong> [${sequencePositions.join(', ')}]</div>
+        `;
+        section.appendChild(classDiv);
+      }
+
+      output.appendChild(section);
+    }
+
+    // Test skip +5 vs -5
+    runTest(+5);
+    runTest(-5);
+
+    // Test with actual Hebrew text
+    const hebrewTestSection = document.createElement('div');
+    hebrewTestSection.className = 'test-section';
+    hebrewTestSection.innerHTML = '<h2>Hebrew Test: "זבידה"</h2>';
+
+    // Simulate search
+    const hebrewInfo = document.createElement('div');
+    hebrewInfo.innerHTML = `
+      <p><strong>Test Pattern:</strong> "זבידה" (5 characters)</p>
+      <p><strong>Expected behavior:</strong></p>
+      <ul>
+        <li>Skip +50: Extract positions 0, 50, 100, 150, 200, ... (forward)</li>
+        <li>Skip -50: Extract positions (highest), (highest-50), (highest-100), ... (backward)</li>
+        <li>These should produce DIFFERENT sequences</li>
+      </ul>
+      <p><strong>If seeing duplicates:</strong> Check browser console for actual extraction</p>
+    `;
+    hebrewTestSection.appendChild(hebrewInfo);
+    document.getElementById('output').appendChild(hebrewTestSection);
+
+    // Now test with actual search algorithms
+    console.log('=== Testing with English Text ===');
+    console.log('Text:', testText);
+    console.log('\nSkip +5, Class 0:');
+    console.log(extractSequence(testText, +5, 0));
+    console.log('\nSkip -5, Class 0:');
+    console.log(extractSequence(testText, -5, 0));
+    console.log('\n=== Are they different? ===');
+    const forward = extractSequence(testText, +5, 0);
+    const backward = extractSequence(testText, -5, 0);
+    console.log('Forward === Backward?', forward.sequenceText === backward.sequenceText);
+    console.log('Expected: false (should be different)');
+  </script>
+
+  <div class="test-section" style="background: #fff3cd; border-color: #ffc107;">
+    <h2>🔍 Diagnostic Instructions</h2>
+    <ol>
+      <li>Open browser console (F12)</li>
+      <li>Look for "=== Testing with English Text ===" section</li>
+      <li>Compare forward vs backward sequences</li>
+      <li>Check "Forward === Backward?" result</li>
+      <li>Expected: false (sequences should be different)</li>
+    </ol>
+  </div>
+</body>
+</html>

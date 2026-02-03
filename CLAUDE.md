@@ -350,12 +350,51 @@ All engines run **100% client-side** with **no network dependency**. Heavy opera
 - **Performance**: Fast for single verse, medium for book-wide
 
 ### ELS Engine ⚡ **Web Worker Required**
-- Operates on `chars.id` (global position)
-- Uses only `base_char` (consonantal text)
-- Skip distance range scanning
-- **Implementation**: Dedicated Web Worker for non-blocking search
-- **Performance**: Medium-slow (full scan), benefits from precomputed hashes
-- **Optimization**: Pre-indexed common skip distances, chunked processing
+
+**Implementation Status**: Functional in `js/search-algorithms.js` (currently runs on main thread, Web Worker version planned)
+
+**Skip Value Conventions** (this implementation):
+- **ELS = 0**: Open text (plain sequential reading) - included and labeled distinctly
+- **ELS = ±1**: Excluded (redundant with ELS=0)
+- **|ELS| ≥ 2**: True equidistant letter sequences (per Rips et al. 1994)
+
+**Algorithm Details**:
+
+1. **Forward Search (skip > 0)**:
+   - Iterate each equivalence class (0 to skip-1)
+   - Extract sequence: positions p, p+d, p+2d, ... (forward)
+   - Apply KMP and Boyer-Moore algorithms
+   - Convert sequence positions back to text indices
+
+2. **Backward Search (skip < 0)**:
+   - Start from highest position in each equivalence class
+   - Extract sequence: positions p, p-|d|, p-2|d|, ... (backward)
+   - Apply KMP and Boyer-Moore algorithms
+   - Convert sequence positions back to text indices
+
+3. **Open Text (skip = 0)**:
+   - Direct KMP search on full text
+   - Labeled as "Open Text (ELS=0)" in results
+   - Provides reference context for true ELS findings
+
+**Current Implementation**:
+- Uses consonantal text only (`base_char`)
+- KMP (Knuth-Morris-Pratt) for efficient pattern matching
+- Boyer-Moore for additional coverage
+- Duplicate detection and merging
+- Precomputed hash support for common terms
+
+**Performance**:
+- Open text (skip=0): Fast (O(n) via KMP)
+- Single skip value: Medium (O(n/skip) per equivalence class)
+- Full range (-100 to +100): Medium-slow (~200 skip values × full scan)
+- Benefits from precomputed hash tables for common phrases
+
+**Optimization Strategies**:
+- Precomputed indices for common skip distances
+- Web Worker implementation (planned) for non-blocking UI
+- Chunked processing with progress updates
+- Hash-based early exit for known patterns
 
 ### Text Search Engine ⚡ **Web Worker Recommended**
 - Keyword/phrase search

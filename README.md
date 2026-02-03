@@ -117,9 +117,28 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
 - **Compressed JSON**: Efficient storage and transfer
 
 ### Search Algorithms
-- **KMP & Boyer-Moore**: Optimized string matching
+- **KMP & Boyer-Moore**: Optimized string matching with bidirectional support
 - **Hash-Based Lookups**: Fast ELS pattern detection
 - **Indexed Queries**: Efficient database operations
+
+#### ELS (Equidistant Letter Sequence) Implementation
+
+**Skip Value Conventions (Corrected):**
+- **ELS = 0**: Meaningless (same position repeated) - excluded
+- **ELS = +1**: Open text forward (normal reading) - included, clearly labeled
+- **ELS = -1**: Open text backward (reverse reading) - included, clearly labeled
+- **|ELS| ≥ 2**: True equidistant letter sequences
+
+**Bidirectional Search:**
+- **Positive skip (+d)**: Extract positions p, p+d, p+2d, ... (forward direction)
+- **Negative skip (-d)**: Extract positions p, p-d, p-2d, ... (backward direction)
+
+This implementation follows the academic standard established by Witztum, Rips, and Rosenberg (1994) in "Equidistant Letter Sequences in the Book of Genesis" (*Statistical Science*), properly handling both forward and backward ELS patterns while including open text occurrences for context.
+
+**Algorithm Details:**
+1. **Forward Search (skip > 0)**: Iterate through each equivalence class (0 to skip-1), extract sequence at positions startPos, startPos+skip, startPos+2×skip, ..., then apply KMP/Boyer-Moore
+2. **Backward Search (skip < 0)**: Start from highest position in each equivalence class, extract backward at positions startPos, startPos-skip, startPos-2×skip, ..., then apply KMP/Boyer-Moore
+3. **Open Text (skip = 0)**: Direct KMP search on full text, labeled distinctly in results
 
 ---
 
@@ -149,13 +168,43 @@ This enables:
 ### File Structure
 ```
 /
-├── index.html              # Main dashboard
-├── bible-codes.html        # ELS search tool
-├── CLAUDE.md               # Implementation plan
-├── data/                   # Text and precomputed data
-├── engines/                # Search and analysis engines
-├── ui/                     # UI components
-└── torah-codes/            # Python reference implementation
+├── index.html                  # Main dashboard
+├── bible-codes.html            # ELS search tool
+├── text-search.html            # Hebrew text search
+├── gematria.html               # Gematria calculator
+├── acronym.html                # Notarikon/acronym tool
+├── tsirufim.html               # Semantic permutations
+├── matrix-view.html            # Matrix visualization
+├── book-view.html              # Traditional reader
+├── CLAUDE.md                   # Implementation plan & algorithm details
+├── README.md                   # Project documentation
+│
+├── data/                       # Torah text and precomputed data
+│   ├── torahNoSpaces.txt       # Raw Torah text (consonantal)
+│   ├── precomputed-terms.json  # ELS hash tables
+│   ├── chars/                  # Character-level database (39 books)
+│   ├── words/                  # Word-level data
+│   └── verses/                 # Verse-level data
+│
+├── engines/                    # Search and analysis engines
+│   ├── search.js               # Text search engine
+│   ├── gematria.js             # Gematria calculations
+│   ├── acronym.js              # Acronym/notarikon engine
+│   ├── roots.js                # Hebrew root extraction
+│   ├── matrix.js               # Matrix visualization
+│   └── tsirufim/               # Semantic permutation suite
+│
+├── db/                         # Database layer
+│   ├── schema.js               # IndexedDB schema
+│   ├── loader.js               # Data loading utilities
+│   └── query.js                # Database queries
+│
+├── js/                         # Core JavaScript
+│   ├── test.js                 # ELS main logic
+│   ├── load-torah.js           # Torah text loader
+│   └── search-algorithms.js    # KMP & Boyer-Moore implementations
+│
+└── torah-codes/                # Python reference implementation
 ```
 
 ---

@@ -251,6 +251,9 @@
         <input type="number" id="min-range" value="-100">
         <label for="max-range">Max Skip:</label>
         <input type="number" id="max-range" value="100">
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">
+          Skip values: 0 = meaningless (excluded), ±1 = open text (forward/backward), |skip|≥2 = true ELS
+        </div>
       </div>
 
       <button class="btn" id="search-btn">Search</button>
@@ -319,6 +322,9 @@
   <script src="js/test.js" defer></script>
   <script src="js/load-torah.js" defer></script>
   <script src="js/search-algorithms.js" defer></script>
+
+  <!-- PWA Install Prompt -->
+  <script src="js/pwa-install.js"></script>
 </body>
 
 </html>

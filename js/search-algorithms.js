@@ -72,10 +72,11 @@ function computeLPSArray(pattern) {
 }
 
 /**
- * Boyer-Moore search algorithm for efficient string matching
+ * Boyer-Moore search algorithm for efficient string matching with ELS
+ * Implements proper bidirectional search per Rips et al. (1994)
  * @param {string} text - The text to search in
  * @param {string} pattern - The pattern to search for
- * @param {number} skip - Skip value (for ELS)
+ * @param {number} skip - Skip value (positive = forward, negative = backward)
  * @return {Array} Array of result messages
  */
 function boyerMooreSearch(text, pattern, skip) {
@@ -86,57 +87,96 @@ function boyerMooreSearch(text, pattern, skip) {
     return results;
   }
 
-  // Use absolute skip value for iteration
   const absSkip = Math.abs(skip);
-  const direction = skip > 0 ? 'right' : 'left';
+  const badCharTable = buildBadCharTable(pattern);
+  const goodSuffixTable = buildGoodSuffixTable(pattern);
 
-  // Skip analysis doesn't work the same way with ELS search, 
-  // so we adapt the algorithm for ELS purposes
+  if (skip > 0) {
+    // Forward skip: positions p, p+d, p+2d, ...
+    for (let startPos = 0; startPos < absSkip; startPos++) {
+      let sequenceText = '';
+      let sequencePositions = [];
 
-  for (let startPos = 0; startPos < absSkip; startPos++) {
-    // For each possible starting position within the skip range
-    let sequenceText = '';
-    
-    // Extract characters at skip distance
-    for (let i = startPos; i < text.length; i += absSkip) {
-      sequenceText += text[i];
-    }
-    
-    // Now search for pattern in this extracted sequence
-    const badCharTable = buildBadCharTable(pattern);
-    const goodSuffixTable = buildGoodSuffixTable(pattern);
-    
-    let i = 0;
-    while (i <= sequenceText.length - pattern.length) {
-      let j = pattern.length - 1;
-      
-      // Check pattern from right to left
-      while (j >= 0 && pattern[j] === sequenceText[i + j]) {
-        j--;
+      // Extract forward sequence
+      for (let i = startPos; i < text.length; i += absSkip) {
+        sequenceText += text[i];
+        sequencePositions.push(i);
       }
-      
-      // If pattern was found
-      if (j < 0) {
-        results.push({
-          algorithm: 'Boyer-Moore',
-          pattern: pattern,
-          skip: skip,
-          startIndex: startPos + (i * absSkip),
-          endIndex: startPos + ((i + pattern.length - 1) * absSkip),
-          message: `Found "${pattern}" with skip ${skip} ${direction} starting at index ${startPos + (i * absSkip)}`
-        });
-        
-        // Move to the next position
-        i += (pattern.length >= 2) ? goodSuffixTable[0] : 1;
-      } else {
-        // Use maximum of bad character and good suffix rules
-        const badCharShift = Math.max(1, j - badCharTable[sequenceText.charCodeAt(i + j)]);
-        const goodSuffixShift = goodSuffixTable[j];
-        i += Math.max(badCharShift, goodSuffixShift);
+
+      // Boyer-Moore search in the extracted sequence
+      let i = 0;
+      while (i <= sequenceText.length - pattern.length) {
+        let j = pattern.length - 1;
+
+        while (j >= 0 && pattern[j] === sequenceText[i + j]) {
+          j--;
+        }
+
+        if (j < 0) {
+          results.push({
+            algorithm: 'Boyer-Moore-ELS',
+            pattern: pattern,
+            skip: skip,
+            startIndex: sequencePositions[i],
+            endIndex: sequencePositions[i + pattern.length - 1],
+            message: `Found "${pattern}" with skip ${skip} (forward) starting at index ${sequencePositions[i]}`
+          });
+
+          i += (pattern.length >= 2) ? goodSuffixTable[0] : 1;
+        } else {
+          const badCharShift = Math.max(1, j - badCharTable[sequenceText.charCodeAt(i + j)]);
+          const goodSuffixShift = goodSuffixTable[j];
+          i += Math.max(badCharShift, goodSuffixShift);
+        }
+      }
+    }
+  } else {
+    // Backward skip: positions p, p-d, p-2d, ...
+    for (let classOffset = 0; classOffset < absSkip; classOffset++) {
+      let sequenceText = '';
+      let sequencePositions = [];
+
+      // Find the highest starting position in this equivalence class
+      let startPos = classOffset;
+      while (startPos + absSkip < text.length) {
+        startPos += absSkip;
+      }
+
+      // Extract backward sequence
+      for (let i = startPos; i >= 0; i -= absSkip) {
+        sequenceText += text[i];
+        sequencePositions.push(i);
+      }
+
+      // Boyer-Moore search in the extracted sequence
+      let i = 0;
+      while (i <= sequenceText.length - pattern.length) {
+        let j = pattern.length - 1;
+
+        while (j >= 0 && pattern[j] === sequenceText[i + j]) {
+          j--;
+        }
+
+        if (j < 0) {
+          results.push({
+            algorithm: 'Boyer-Moore-ELS',
+            pattern: pattern,
+            skip: skip,
+            startIndex: sequencePositions[i],
+            endIndex: sequencePositions[i + pattern.length - 1],
+            message: `Found "${pattern}" with skip ${skip} (backward) starting at index ${sequencePositions[i]}`
+          });
+
+          i += (pattern.length >= 2) ? goodSuffixTable[0] : 1;
+        } else {
+          const badCharShift = Math.max(1, j - badCharTable[sequenceText.charCodeAt(i + j)]);
+          const goodSuffixShift = goodSuffixTable[j];
+          i += Math.max(badCharShift, goodSuffixShift);
+        }
       }
     }
   }
-  
+
   return results;
 }
 
@@ -250,6 +290,17 @@ async function fetchPrecomputedResults(term, minSkip, maxSkip) {
 
 /**
  * Perform ELS search with specified skip range
+ *
+ * Skip Value Definitions (corrected interpretation):
+ * - skip = 0: Meaningless (same position repeated: p, p, p...) - EXCLUDED
+ * - skip = +1: Open text forward (positions p, p+1, p+2...) - INCLUDED, labeled
+ * - skip = -1: Open text backward (positions p, p-1, p-2...) - INCLUDED, labeled
+ * - |skip| >= 2: True ELS (Equidistant Letter Sequences) per Rips et al. (1994)
+ *
+ * Note: Academic standard (Rips et al. 1994) requires |d| > 1 for true ELS,
+ * which excludes both ±1 (open text). However, we include them as "open text"
+ * for reference, clearly labeled to distinguish from true hidden codes.
+ *
  * @param {string} term - Search term
  * @param {string} text - Text to search in
  * @param {number} minSkip - Minimum skip value
@@ -259,84 +310,185 @@ async function fetchPrecomputedResults(term, minSkip, maxSkip) {
  */
 async function performELSSearch(term, text, minSkip, maxSkip, usePrecomputedHashes = true) {
   const results = [];
-  
+
   // First try to use precomputed hashes if available
   if (usePrecomputedHashes) {
     try {
       const precomputedResults = await fetchPrecomputedResults(term, minSkip, maxSkip);
       if (precomputedResults && precomputedResults.length > 0) {
         console.log(`Found ${precomputedResults.length} precomputed results for "${term}"`);
-        return precomputedResults; // Return early if we found precomputed results
+        // Filter out skip=0 (meaningless), keep ±1 (open text) and |skip|>=2
+        return precomputedResults.filter(r => r.skip !== 0);
       }
     } catch (error) {
       console.log('Error with precomputed hashes, falling back to dynamic search:', error);
     }
   }
-  
+
   // For each skip value in the range
   for (let skip = minSkip; skip <= maxSkip; skip++) {
-    // Skip 0 is a special case - just direct text search
+    // Skip 0 is meaningless (same position repeated) - EXCLUDE
     if (skip === 0) {
-      results.push(...kmpSearch(text, term, 0));
-    } else {
-      // For non-zero skips, use both algorithms for best results
-      const kmpResults = kmpSearchWithSkip(text, term, skip);
-      const bmResults = boyerMooreSearch(text, term, skip);
-      
-      // Merge results, removing duplicates
-      const combinedResults = [...kmpResults];
-      
-      // Only add Boyer-Moore results that don't overlap with KMP results
-      for (const bmResult of bmResults) {
-        if (!combinedResults.some(kr => kr.startIndex === bmResult.startIndex)) {
-          combinedResults.push(bmResult);
-        }
-      }
-      
-      results.push(...combinedResults);
+      continue;
     }
+
+    // Handle skip ±1 (open text - forward/backward reading)
+    if (Math.abs(skip) === 1) {
+      // Use direct search for open text (more efficient than ELS extraction)
+      if (skip === 1) {
+        // Forward reading (normal text)
+        const openTextResults = kmpSearch(text, term, 0);
+        openTextResults.forEach(result => {
+          result.algorithm = 'Open Text (forward)';
+          result.skip = 1;
+          result.isOpenText = true;
+        });
+        results.push(...openTextResults);
+      } else {
+        // Backward reading (reverse text) - skip = -1
+        // Need to reverse the text and search
+        const reversedText = text.split('').reverse().join('');
+        const reverseResults = kmpSearch(reversedText, term, 0);
+        reverseResults.forEach(result => {
+          result.algorithm = 'Open Text (backward)';
+          result.skip = -1;
+          result.isOpenText = true;
+          // Convert reversed indices back to original text positions
+          result.startIndex = text.length - 1 - result.startIndex;
+          result.endIndex = text.length - 1 - result.endIndex;
+          // Swap start/end since we're going backward
+          [result.startIndex, result.endIndex] = [result.endIndex, result.startIndex];
+        });
+        results.push(...reverseResults);
+      }
+      continue;
+    }
+
+    // True ELS: |skip| >= 2
+    const kmpResults = kmpSearchWithSkip(text, term, skip);
+    const bmResults = boyerMooreSearch(text, term, skip);
+
+    // Merge results, removing duplicates
+    const combinedResults = [...kmpResults];
+
+    // Only add Boyer-Moore results that don't overlap with KMP results
+    for (const bmResult of bmResults) {
+      if (!combinedResults.some(kr => kr.startIndex === bmResult.startIndex)) {
+        combinedResults.push(bmResult);
+      }
+    }
+
+    results.push(...combinedResults);
   }
-  
+
   return results;
 }
 
 /**
  * KMP search adapted for ELS with skip
+ * Implements proper bidirectional search per Rips et al. (1994)
  * @param {string} text - The text to search in
  * @param {string} pattern - The pattern to search for
- * @param {number} skip - Skip value
+ * @param {number} skip - Skip value (positive = forward, negative = backward)
  * @return {Array} Array of result objects
  */
 function kmpSearchWithSkip(text, pattern, skip) {
   const results = [];
   const absSkip = Math.abs(skip);
-  const direction = skip > 0 ? 'right' : 'left';
-  
-  for (let startPos = 0; startPos < absSkip; startPos++) {
-    // Create a sequence with the given skip
-    let sequenceText = '';
-    for (let i = startPos; i < text.length; i += absSkip) {
-      sequenceText += text[i];
+
+  if (skip > 0) {
+    // Forward skip: positions p, p+d, p+2d, ...
+    // Iterate through each equivalence class (0 to absSkip-1)
+    for (let startPos = 0; startPos < absSkip; startPos++) {
+      let sequenceText = '';
+      let sequencePositions = [];
+
+      // Extract forward sequence
+      for (let i = startPos; i < text.length; i += absSkip) {
+        sequenceText += text[i];
+        sequencePositions.push(i);
+      }
+
+      // Search in this sequence
+      const kmpResults = kmpSearch(sequenceText, pattern, 0);
+
+      // Convert sequence positions back to original text positions
+      for (const result of kmpResults) {
+        results.push({
+          algorithm: 'KMP-ELS',
+          pattern: pattern,
+          skip: skip,
+          startIndex: sequencePositions[result.startIndex],
+          endIndex: sequencePositions[result.endIndex],
+          message: `Found "${pattern}" with skip ${skip} (forward) starting at index ${sequencePositions[result.startIndex]}`
+        });
+      }
     }
-    
-    // Use KMP to search in this sequence
-    const kmpResults = kmpSearch(sequenceText, pattern, 0); // skip is 0 because we're already skipping in the sequence
-    
-    // Convert sequence positions back to original text positions
-    for (const result of kmpResults) {
-      results.push({
-        algorithm: 'KMP-ELS',
-        pattern: pattern,
-        skip: skip,
-        startIndex: startPos + (result.startIndex * absSkip),
-        endIndex: startPos + (result.endIndex * absSkip),
-        message: `Found "${pattern}" with skip ${skip} ${direction} starting at index ${startPos + (result.startIndex * absSkip)}`
-      });
+  } else {
+    // Backward skip: positions p, p-d, p-2d, ...
+    // Iterate through equivalence classes, but starting from high positions
+    for (let classOffset = 0; classOffset < absSkip; classOffset++) {
+      let sequenceText = '';
+      let sequencePositions = [];
+
+      // Find the highest starting position in this equivalence class
+      // Class i contains positions: i, i+absSkip, i+2*absSkip, ...
+      // Start from the highest position in this class
+      let startPos = classOffset;
+      while (startPos + absSkip < text.length) {
+        startPos += absSkip;
+      }
+
+      // Extract backward sequence from this starting position
+      for (let i = startPos; i >= 0; i -= absSkip) {
+        sequenceText += text[i];
+        sequencePositions.push(i);
+      }
+
+      // Search in this sequence
+      const kmpResults = kmpSearch(sequenceText, pattern, 0);
+
+      // Convert sequence positions back to original text positions
+      for (const result of kmpResults) {
+        results.push({
+          algorithm: 'KMP-ELS',
+          pattern: pattern,
+          skip: skip,
+          startIndex: sequencePositions[result.startIndex],
+          endIndex: sequencePositions[result.endIndex],
+          message: `Found "${pattern}" with skip ${skip} (backward) starting at index ${sequencePositions[result.startIndex]}`
+        });
+      }
     }
   }
-  
+
   return results;
 }
+
+/**
+ * Implementation Notes:
+ *
+ * Skip Value Convention (CORRECTED):
+ * - ELS = 0: Meaningless (positions p, p, p... = same char repeated) - EXCLUDED
+ * - ELS = +1: Open text forward (positions p, p+1, p+2...) - INCLUDED, labeled
+ * - ELS = -1: Open text backward (positions p, p-1, p-2...) - INCLUDED, labeled
+ * - |ELS| >= 2: True equidistant letter sequences - INCLUDED
+ *
+ * Open text (ELS=±1) is included in results but clearly labeled as "Open Text (forward/backward)"
+ * to distinguish from true hidden ELS codes. Forward (+1) finds normal text, backward (-1)
+ * finds reverse patterns.
+ *
+ * Bidirectional Search:
+ * - Positive skip (+d): Extract positions p, p+d, p+2d, ... (forward)
+ * - Negative skip (-d): Extract positions p, p-d, p-2d, ... (backward)
+ * This properly implements the Rips et al. (1994) definition where positive and
+ * negative skips yield different sequences.
+ *
+ * Academic Note:
+ * Rips et al. (1994) technically requires |d| > 1, excluding ±1 as "open text."
+ * We include them for completeness but label them clearly to avoid confusion with
+ * true hidden codes (|skip| >= 2).
+ */
 
 // Export functions to global scope
 window.searchAlgorithms = {

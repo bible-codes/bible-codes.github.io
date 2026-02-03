@@ -70,9 +70,8 @@ async function performELSSearch(params) {
             throw new Error('Search term cannot be empty');
         }
 
-        if (minSkip === 0 || maxSkip === 0) {
-            throw new Error('Skip distance cannot be zero');
-        }
+        // Note: Skip 0 and ±1 are filtered out in the search loop
+        // They are not errors, just excluded per academic standard
 
         // Open IndexedDB
         const db = await self.openDB();
@@ -100,16 +99,25 @@ async function performELSSearch(params) {
 
         // Perform search across skip range
         const allMatches = [];
-        const totalSkips = Math.abs(maxSkip - minSkip) + 1;
+
+        // Calculate total skips
+        // Skip 0 is meaningless (same position repeated) - exclude
+        // Skip ±1 are open text (forward/backward) - could include but typically excluded in worker
+        // For now, exclude all skip values with |skip| < 2
+        let skipValues = [];
+        for (let skip = minSkip; skip <= maxSkip; skip++) {
+            if (Math.abs(skip) < 2) continue; // Exclude 0 and ±1 (open text handled separately)
+            skipValues.push(skip);
+        }
+
+        const totalSkips = skipValues.length;
         let skipsProcessed = 0;
 
-        for (let skip = minSkip; skip <= maxSkip; skip++) {
+        for (const skip of skipValues) {
             if (searchCancelled) {
                 self.postMessage({ type: 'cancelled' });
                 return;
             }
-
-            if (skip === 0) continue; // Skip zero
 
             const matches = findELSMatches(chars, term, skip);
             allMatches.push(...matches);
@@ -209,64 +217,133 @@ async function loadCharacterData(db, book, chapter, startPosition, endPosition) 
 
 /**
  * Find all ELS matches for a given term and skip distance
+ * Implements proper bidirectional search per Rips et al. (1994)
+ *
+ * Skip conventions:
+ * - skip > 0: Forward search (positions p, p+d, p+2d, ...)
+ * - skip < 0: Backward search (positions p, p-d, p-2d, ...)
+ * - skip = 0, ±1: Should be filtered out before calling this function
  */
 function findELSMatches(chars, term, skip) {
     const matches = [];
     const termLength = term.length;
+    const absSkip = Math.abs(skip);
 
-    // Calculate search bounds
-    const maxStartPos = chars.length - (termLength - 1) * Math.abs(skip);
+    if (skip > 0) {
+        // Forward search
+        const maxStartPos = chars.length - (termLength - 1) * skip;
 
-    if (maxStartPos < 0) {
-        return matches; // Term too long for this text
-    }
-
-    // Search for matches
-    for (let startIdx = 0; startIdx < maxStartPos; startIdx++) {
-        if (searchCancelled) break;
-
-        let match = true;
-        const positions = [];
-
-        for (let i = 0; i < termLength; i++) {
-            const charIdx = startIdx + (i * skip);
-
-            if (charIdx < 0 || charIdx >= chars.length) {
-                match = false;
-                break;
-            }
-
-            const char = chars[charIdx];
-            if (char.baseChar !== term[i]) {
-                match = false;
-                break;
-            }
-
-            positions.push({
-                globalId: char.id,
-                book: char.book,
-                chapter: char.chapter,
-                verse: char.verse,
-                verseCharIndex: char.verseCharIndex,
-                letter: char.baseChar
-            });
+        if (maxStartPos < 0) {
+            return matches; // Term too long for this text with this skip
         }
 
-        if (match) {
-            matches.push({
-                term: term,
-                skip: skip,
-                startPosition: chars[startIdx].id,
-                endPosition: chars[startIdx + (termLength - 1) * skip].id,
-                positions: positions,
-                startBook: positions[0].book,
-                startChapter: positions[0].chapter,
-                startVerse: positions[0].verse,
-                endBook: positions[positions.length - 1].book,
-                endChapter: positions[positions.length - 1].chapter,
-                endVerse: positions[positions.length - 1].verse,
-                spanLength: Math.abs(chars[startIdx + (termLength - 1) * skip].id - chars[startIdx].id)
-            });
+        for (let startIdx = 0; startIdx <= maxStartPos; startIdx++) {
+            if (searchCancelled) break;
+
+            let match = true;
+            const positions = [];
+
+            // Extract forward sequence: startIdx, startIdx+skip, startIdx+2*skip, ...
+            for (let i = 0; i < termLength; i++) {
+                const charIdx = startIdx + (i * skip);
+
+                if (charIdx >= chars.length) {
+                    match = false;
+                    break;
+                }
+
+                const char = chars[charIdx];
+                if (char.baseChar !== term[i]) {
+                    match = false;
+                    break;
+                }
+
+                positions.push({
+                    globalId: char.id,
+                    book: char.book,
+                    chapter: char.chapter,
+                    verse: char.verse,
+                    verseCharIndex: char.verseCharIndex,
+                    letter: char.baseChar
+                });
+            }
+
+            if (match) {
+                const endIdx = startIdx + (termLength - 1) * skip;
+                matches.push({
+                    term: term,
+                    skip: skip,
+                    startPosition: chars[startIdx].id,
+                    endPosition: chars[endIdx].id,
+                    positions: positions,
+                    startBook: positions[0].book,
+                    startChapter: positions[0].chapter,
+                    startVerse: positions[0].verse,
+                    endBook: positions[positions.length - 1].book,
+                    endChapter: positions[positions.length - 1].chapter,
+                    endVerse: positions[positions.length - 1].verse,
+                    spanLength: Math.abs(chars[endIdx].id - chars[startIdx].id)
+                });
+            }
+        }
+
+    } else {
+        // Backward search (skip < 0)
+        // Must start from positions that have enough room to go backward
+        const minStartPos = (termLength - 1) * absSkip;
+
+        if (minStartPos >= chars.length) {
+            return matches; // Term too long for this text with this skip
+        }
+
+        for (let startIdx = minStartPos; startIdx < chars.length; startIdx++) {
+            if (searchCancelled) break;
+
+            let match = true;
+            const positions = [];
+
+            // Extract backward sequence: startIdx, startIdx-absSkip, startIdx-2*absSkip, ...
+            for (let i = 0; i < termLength; i++) {
+                const charIdx = startIdx - (i * absSkip);
+
+                if (charIdx < 0) {
+                    match = false;
+                    break;
+                }
+
+                const char = chars[charIdx];
+                if (char.baseChar !== term[i]) {
+                    match = false;
+                    break;
+                }
+
+                positions.push({
+                    globalId: char.id,
+                    book: char.book,
+                    chapter: char.chapter,
+                    verse: char.verse,
+                    verseCharIndex: char.verseCharIndex,
+                    letter: char.baseChar
+                });
+            }
+
+            if (match) {
+                const endIdx = startIdx - (termLength - 1) * absSkip;
+                matches.push({
+                    term: term,
+                    skip: skip,
+                    startPosition: chars[startIdx].id,
+                    endPosition: chars[endIdx].id,
+                    positions: positions,
+                    startBook: positions[0].book,
+                    startChapter: positions[0].chapter,
+                    startVerse: positions[0].verse,
+                    endBook: positions[positions.length - 1].book,
+                    endChapter: positions[positions.length - 1].chapter,
+                    endVerse: positions[positions.length - 1].verse,
+                    spanLength: Math.abs(chars[endIdx].id - chars[startIdx].id)
+                });
+            }
         }
     }
 
