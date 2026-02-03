@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-analysis-suite-v5.1';
+const CACHE_NAME = 'bible-analysis-suite-v5.2';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -14,6 +14,7 @@ const urlsToCache = [
   './book-view.html',
   './test-db.html',
   './test-roots.html',
+  './test-dictionaries.html',
 
   // Stylesheets
   './styles.css',
@@ -29,6 +30,13 @@ const urlsToCache = [
   // Core data
   './data/torahNoSpaces.txt',
   './data/precomputed-terms.json',
+
+  // Dictionary data (offline Hebrew dictionary support)
+  './data/dictionaries/unified/hebrew-unified.json.gz',
+  './data/dictionaries/unified/inflection-map.json.gz',
+  './data/dictionaries/openscriptures-bdb.json.gz',
+  './data/dictionaries/hebrew-wiktionary.json.gz',
+  './data/embeddings/hebrew-roots.json.gz',
 
   // Torah character database - Koren Edition (Rips et al., 1994)
   // 304,805 letters with proper final forms
@@ -62,6 +70,7 @@ const urlsToCache = [
   './engines/root-integration.js',
   './engines/matrix.js',
   './engines/letter-analysis.js',
+  './engines/dictionary-service.js',
 
   // Tsirufim modules
   './engines/tsirufim/permutations.js',
@@ -78,7 +87,7 @@ const urlsToCache = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v5.1...');
+  console.log('Service Worker: Installing v5.2...');
 
   event.waitUntil(
     caches.open(CACHE_NAME)
