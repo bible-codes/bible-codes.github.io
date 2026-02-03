@@ -487,7 +487,196 @@ pages/
 
 ---
 
-## 8. Future Extensions
+## 8. Advanced Concept: 3D/N-D ELS Matrix Space
+
+### 8.1 The "Pages in a Book" Model
+
+When viewing an ELS result as a matrix (the main search term appearing vertically), each **skip value defines a different "page"** - a unique 2D arrangement of the same Torah text.
+
+```
+Skip = 50:          Skip = 51:          Skip = 52:
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Page 50     │     │ Page 51     │     │ Page 52     │
+│             │     │             │     │             │
+│   מ         │     │   מ         │     │   מ         │
+│   ש         │     │   ש         │     │   ש         │
+│   ה         │     │   ה         │     │   ה         │
+│             │     │             │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘
+    ↑                   ↑                   ↑
+    Different 2D arrangements of the SAME Torah text
+```
+
+### 8.2 3D ELS Coordinate System
+
+Every ELS occurrence exists in a 3D space:
+
+```
+Dimensions:
+- X: Position in Torah (0 to 304,804)
+- Y: Position within matrix row (0 to matrix_width - 1)
+- Z: Skip value (-1000 to +1000)
+
+3D Coordinate of an occurrence:
+(position, position % matrix_width, skip)
+```
+
+### 8.3 Multi-Page Cluster Discovery
+
+Words can cluster across multiple "pages" (skip values):
+
+```javascript
+// 3D proximity calculation
+function proximity3D(occ1, occ2, skipWeight = 100) {
+  const posDist = Math.abs(occ1.pos - occ2.pos);
+  const skipDist = Math.abs(occ1.skip - occ2.skip);
+
+  // Skip differences are weighted differently than position differences
+  // (nearby skips might indicate intentional encoding)
+  return Math.sqrt(posDist ** 2 + (skipDist * skipWeight) ** 2);
+}
+
+// Find clusters across all skip values
+function findClusters3D(centerPos, centerSkip, radius3D) {
+  const clusters = [];
+
+  for (const [word, occurrences] of Object.entries(elsIndex)) {
+    for (const occ of occurrences) {
+      const dist = proximity3D(
+        { pos: centerPos, skip: centerSkip },
+        { pos: occ.pos, skip: occ.skip }
+      );
+
+      if (dist <= radius3D) {
+        clusters.push({
+          word,
+          pos: occ.pos,
+          skip: occ.skip,
+          distance3D: dist
+        });
+      }
+    }
+  }
+
+  return clusters;
+}
+```
+
+### 8.4 N-Dimensional Centroid
+
+When multiple search terms define a matrix, the **centroid can be computed in N dimensions**:
+
+```javascript
+// N-dimensional centroid across multiple terms and skip values
+function computeNDCentroid(terms, skipRange) {
+  const points = [];
+
+  for (const term of terms) {
+    const occs = elsIndex[term] || [];
+    for (const { pos, skip } of occs) {
+      if (skip >= skipRange[0] && skip <= skipRange[1]) {
+        points.push({
+          pos,
+          skip,
+          term,
+          weight: 1 / occs.length  // Rare terms weighted more
+        });
+      }
+    }
+  }
+
+  if (points.length === 0) return null;
+
+  // Weighted centroid in 2D (pos, skip) space
+  let weightedPos = 0, weightedSkip = 0, totalWeight = 0;
+
+  for (const p of points) {
+    weightedPos += p.pos * p.weight;
+    weightedSkip += p.skip * p.weight;
+    totalWeight += p.weight;
+  }
+
+  return {
+    pos: Math.round(weightedPos / totalWeight),
+    skip: Math.round(weightedSkip / totalWeight),
+    pointCount: points.length,
+    termCount: terms.length
+  };
+}
+```
+
+### 8.5 Dynamic Matrix View Based on 3D Centroid
+
+As the centroid shifts in 3D space, the **optimal matrix view** changes:
+
+```javascript
+// Find optimal matrix parameters for a cluster
+function findOptimalMatrix(cluster3D) {
+  // Centroid in 3D space
+  const centroid = computeNDCentroid(cluster3D.terms, cluster3D.skipRange);
+
+  // The "optimal page" (skip value) is at the centroid
+  const optimalSkip = centroid.skip;
+
+  // The center position is at the position centroid
+  const optimalCenter = centroid.pos;
+
+  // Matrix width is determined by the optimal skip
+  const matrixWidth = Math.abs(optimalSkip);
+
+  return {
+    centerPosition: optimalCenter,
+    skip: optimalSkip,
+    matrixWidth: matrixWidth,
+    // Matrix row/column of center
+    centerRow: Math.floor(optimalCenter / matrixWidth),
+    centerCol: optimalCenter % matrixWidth
+  };
+}
+```
+
+### 8.6 Visualization: 3D Term Cloud
+
+The 3D ELS space can be visualized as a term cloud:
+
+```
+        Skip Axis (Z)
+             ↑
+             │   ● אברהם (50, 12345)
+             │       ● שרה (52, 12400)
+             │   ● יצחק (49, 12380)
+             │
+             └──────────────────→ Position Axis (X)
+            /
+           /
+          ↙ Row Axis (Y)
+
+Each point = (position, row_in_matrix, skip)
+Terms cluster in 3D = significant encoding pattern
+```
+
+### 8.7 Implementation Phases for 3D Features
+
+**Phase 1** (Current): 2D index with position + skip
+- Store (pos, skip) for each occurrence
+- 2D proximity calculations
+
+**Phase 2**: 3D proximity metrics
+- Add 3D distance functions
+- Weight skip dimension appropriately
+
+**Phase 3**: N-D centroid computation
+- Multi-term weighted centroids
+- Dynamic matrix view optimization
+
+**Phase 4**: 3D visualization
+- WebGL term cloud
+- Interactive rotation/zoom
+- Cluster highlighting
+
+---
+
+## 9. Future Extensions
 
 1. **Expanded Skip Range**: Build indices for ±500 or ±1000
 2. **Phrase Index**: Precompute 2-3 word phrases
