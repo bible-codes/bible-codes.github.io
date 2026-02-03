@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-analysis-suite-v4.5';
+const CACHE_NAME = 'bible-analysis-suite-v4.6';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -29,7 +29,13 @@ const urlsToCache = [
   // Core data
   './data/torahNoSpaces.txt',
   './data/precomputed-terms.json',
-  './data/torah-verse-index.json',
+
+  // Torah character database (for verse attribution)
+  './data/genesis-chars.json.gz',
+  './data/exodus-chars.json.gz',
+  './data/leviticus-chars.json.gz',
+  './data/numbers-chars.json.gz',
+  './data/deuteronomy-chars.json.gz',
 
   // Core JavaScript
   './js/test.js',
@@ -71,7 +77,7 @@ const urlsToCache = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v4.5...');
+  console.log('Service Worker: Installing v4.6...');
 
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -100,7 +106,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating v4.5...');
+  console.log('Service Worker: Activating v4.6...');
 
   const cacheWhitelist = [CACHE_NAME];
 

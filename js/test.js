@@ -33,58 +33,73 @@ document.addEventListener('DOMContentLoaded', () => {
   let torahText = ""; // Global variable to hold the Torah text
   let currentResult = null; // Currently displayed result in matrix
   let currentResult2 = null; // Second term result for proximity view
-  let verseIndex = null; // Verse boundary index for attribution
+  let charDatabase = null; // Character database for verse attribution
 
-  // ==================== VERSE BOUNDARY DATA ====================
-  // Torah verse boundaries (cumulative character counts)
-  // This maps character positions to book/chapter/verse
-  // Generated from the Torah text structure
+  // ==================== CHARACTER DATABASE ====================
+  // Canonical character-level database from Leningrad Codex
+  // Each character has: id, book, chapter, verse, base_char, etc.
+  // Source of truth for all text operations
 
-  // Load verse index on startup
-  loadVerseIndex();
+  const BOOK_NAMES = {
+    1: 'Genesis', 2: 'Exodus', 3: 'Leviticus', 4: 'Numbers', 5: 'Deuteronomy'
+  };
 
-  async function loadVerseIndex() {
+  const TORAH_BOOKS = ['genesis', 'exodus', 'leviticus', 'numbers', 'deuteronomy'];
+
+  // Load character database on startup
+  loadCharacterDatabase();
+
+  async function loadCharacterDatabase() {
     try {
-      const response = await fetch('data/torah-verse-index.json');
-      if (response.ok) {
-        verseIndex = await response.json();
-        console.log('Verse index loaded successfully');
+      console.log('Loading character database...');
+      const allChars = [];
+
+      for (const book of TORAH_BOOKS) {
+        const response = await fetch(`data/${book}-chars.json.gz`);
+        if (!response.ok) continue;
+
+        // Decompress gzipped JSON
+        const blob = await response.blob();
+        const ds = new DecompressionStream('gzip');
+        const decompressed = blob.stream().pipeThrough(ds);
+        const text = await new Response(decompressed).text();
+        const chars = JSON.parse(text);
+
+        allChars.push(...chars);
+      }
+
+      if (allChars.length > 0) {
+        charDatabase = allChars;
+        console.log(`Character database loaded: ${charDatabase.length.toLocaleString()} characters`);
       }
     } catch (error) {
-      console.log('Verse index not available, verse attribution disabled');
+      console.log('Character database not available, verse attribution disabled:', error.message);
     }
   }
 
   /**
    * Get verse reference for a character position
-   * @param {number} charIndex - Global character index
+   * @param {number} charIndex - Global character index (0-based)
    * @returns {string} Verse reference like "Genesis 1:1" or null if not available
    */
   function getVerseForPosition(charIndex) {
-    if (!verseIndex || !verseIndex.verses) return null;
+    if (!charDatabase || charIndex < 0 || charIndex >= charDatabase.length) return null;
 
-    // Binary search for the verse containing this character
-    const verses = verseIndex.verses;
-    let left = 0;
-    let right = verses.length - 1;
+    const char = charDatabase[charIndex];
+    if (!char) return null;
 
-    while (left < right) {
-      const mid = Math.floor((left + right + 1) / 2);
-      if (verses[mid].start <= charIndex) {
-        left = mid;
-      } else {
-        right = mid - 1;
-      }
-    }
+    const bookName = BOOK_NAMES[char.book] || `Book ${char.book}`;
+    return `${bookName} ${char.chapter}:${char.verse}`;
+  }
 
-    if (left >= 0 && left < verses.length) {
-      const verse = verses[left];
-      if (charIndex >= verse.start && charIndex < verse.end) {
-        return `${verse.book} ${verse.chapter}:${verse.verse}`;
-      }
-    }
-
-    return null;
+  /**
+   * Get full character info for a position
+   * @param {number} charIndex - Global character index
+   * @returns {Object} Character object with all metadata
+   */
+  function getCharacterInfo(charIndex) {
+    if (!charDatabase || charIndex < 0 || charIndex >= charDatabase.length) return null;
+    return charDatabase[charIndex];
   }
 
   /**
@@ -470,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <br><strong>Algorithm:</strong> ${result.algorithm}
           <br><strong>Starting at:</strong> index ${result.startIndex.toLocaleString()}
           <br><strong>Context:</strong> <span dir="rtl" class="context-text">${getTextContext(torahText, result)}</span>
-          ${verseIndex ? `<div class="verse-attribution"><strong>Verses:</strong> ${verseList}</div>` : ''}
+          ${charDatabase ? `<div class="verse-attribution"><strong>Verses:</strong> ${verseList}</div>` : ''}
           <div class="view-matrix-hint">Click to view matrix</div>
         `;
 
