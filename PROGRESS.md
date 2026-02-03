@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-03 (Koren Text Verification, Multi-Term Search, Verse Attribution)
+**Last Updated**: 2026-02-03 (Matrix Discovery Plan, PWA Install Banner, Documentation)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,59 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Latest Session: 2026-02-03
+## Current Session: 2026-02-03 (Part 2)
+
+### Matrix Term Discovery - PLANNED ✅
+
+A comprehensive plan has been created for discovering additional ELS terms within a matrix region with statistical significance calculations based on WRR (Witztum, Rips, Rosenberg, 1994) methodology.
+
+**Plan Document**: `docs/MATRIX-DISCOVERY-PLAN.md`
+
+**Key Features**:
+- Dictionary-based term search (Hebrew words, biblical names, places, dates)
+- Statistical significance calculation (expected vs. observed occurrences)
+- Letter frequency analysis based on Torah letter frequencies
+- Proximity calculations between discovered terms
+- Control text comparison for P-value calculation
+- Multi-term matrix visualization
+
+**Dictionary Resources**:
+- **Hebrew Dictionary**: 56,118 words (existing in `data/embeddings/hebrew-roots.json.gz`)
+- **Biblical Names**: ~500 names (to be created)
+- **Place Names**: ~200 places (to be created)
+- **Hebrew Dates**: Generated programmatically
+
+**Phases** (19-28 hours total estimated):
+1. Foundation (letter frequencies, expected occurrence calc)
+2. Dictionary Data (biblical names, places, dates)
+3. Discovery Engine (constrained ELS search)
+4. Statistical Analysis (Poisson-based significance)
+5. User Interface (discovery panel, results display)
+6. Testing & Refinement
+
+### PWA Install Banner ✅
+
+Improved PWA install visibility with a prominent top banner on first visit:
+- Full-width gradient banner at top of page
+- Clear "Install This App" messaging
+- Install and Dismiss buttons
+- Remembers dismissal for returning users
+- Responsive design for mobile and desktop
+- Smooth slide animations
+
+**File**: `js/pwa-install.js` (enhanced with banner functionality)
+
+### Tool Status Update ✅
+
+Updated index.html to reflect current tool status:
+- **🔴 Active**: Torah Codes (ELS) - only fully production-ready tool
+- **🟡 Planned**: All other tools (Text Search, Gematria, Acronyms, Tsirufim, etc.)
+
+This accurately represents the current state where ELS is the primary focus and other tools are in development/planning stages.
+
+---
+
+## Previous Session: 2026-02-03 (Part 1)
 
 ### Torah Text Standardization ✅
 

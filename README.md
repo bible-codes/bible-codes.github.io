@@ -13,15 +13,24 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
 
 ## 🎯 Current Features
 
-### 🔴 Active Tools (10 Tools)
+### 🔴 Active Tool
 
 - **ELS Bible Codes Search** ([bible-codes.html](https://bible-codes.github.io/bible-codes.html))
   - Equidistant Letter Sequence (ELS) searches
   - **Text**: Koren Edition (exact 304,805 letters used by Rips et al., 1994)
-  - **NEW: Multi-term proximity search** - find two terms close together
-  - **NEW: Verse attribution** - shows which verses contribute each letter
+  - **Multi-term proximity search** - find two terms close together
+  - **Verse attribution** - shows which verses contribute each letter
   - Clickable matrix view with dual-term highlighting
   - Precomputed hashes for common phrases
+  - **SHA-256 Verified**: `b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226`
+
+### 🟡 Planned Tools (In Development)
+
+- **Matrix Term Discovery** (NEW)
+  - Discover additional ELS terms within a matrix region
+  - Dictionary-based search (56,118 Hebrew words + biblical names/places)
+  - Statistical significance calculation (WRR methodology)
+  - See `docs/MATRIX-DISCOVERY-PLAN.md` for full specification
 
 - **Hebrew Text Search** ([text-search.html](https://bible-codes.github.io/text-search.html))
   - Advanced pattern matching with regex support
@@ -41,38 +50,38 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
   - Book-wide analysis
   - Multiple extraction methods
 
-- **Tsirufim - Semantic Permutations** ([tsirufim.html](https://bible-codes.github.io/tsirufim.html)) 🆕
+- **Tsirufim - Semantic Permutations** ([tsirufim.html](https://bible-codes.github.io/tsirufim.html))
   - Advanced Hebrew letter permutation analysis
   - ML-powered semantic clustering (HDBSCAN)
   - D3.js interactive visualization
   - 56K+ word dictionary validation
 
-- **Matrix View** ([matrix-view.html](https://bible-codes.github.io/matrix-view.html)) 🆕
+- **Matrix View** ([matrix-view.html](https://bible-codes.github.io/matrix-view.html))
   - Rectangular character grid visualization
   - Configurable dimensions and starting position
   - ELS search within matrix
   - Export to text file
 
-- **Book View** ([book-view.html](https://bible-codes.github.io/book-view.html)) 🆕
+- **Book View** ([book-view.html](https://bible-codes.github.io/book-view.html))
   - Traditional book-style Hebrew reader
   - Chapter/verse navigation
   - Toggle niqqud and cantillation marks
   - All 39 books of Tanach
 
-- **Root Extraction** ([test-roots.html](https://bible-codes.github.io/test-roots.html)) 🆕
+- **Root Extraction** ([test-roots.html](https://bible-codes.github.io/test-roots.html))
   - Hebrew root identification (triliteral/quadriliteral)
   - 56K word dictionary
   - Binyan detection and confidence scoring
 
-### 🟢 Planned Features
 - **Letter & Word Analysis** - Character-level statistical analysis (engine complete)
 - **Cantillation Viewer** - Taamim analysis including alternate traditions
 - **Cross-Reference Index** - Links to Talmud, Midrash, and Zohar citations
 
-### 🌐 New Features
+### 🌐 Platform Features
 - **Hebrew/English Toggle** - Switch language on index page (EN/עב button)
-- **PWA Installable** - Install as standalone app on any device
+- **PWA Installable** - Install as standalone app on any device with prominent install banner
 - **Fully Offline** - All tools work without internet
+- **56K Hebrew Dictionary** - Local dictionary for word validation and root extraction
 
 ---
 
@@ -179,13 +188,23 @@ This enables:
 ├── book-view.html              # Traditional reader
 ├── CLAUDE.md                   # Implementation plan & algorithm details
 ├── README.md                   # Project documentation
+├── PROGRESS.md                 # Implementation progress tracking
 │
 ├── data/                       # Torah text and precomputed data
-│   ├── torahNoSpaces.txt       # Raw Torah text (consonantal)
+│   ├── torahNoSpaces.txt       # Raw Torah text (304,805 letters)
 │   ├── precomputed-terms.json  # ELS hash tables
-│   ├── chars/                  # Character-level database (39 books)
-│   ├── words/                  # Word-level data
-│   └── verses/                 # Verse-level data
+│   ├── *-chars.json.gz         # Character-level database (5 Torah books)
+│   ├── *-words.json.gz         # Word-level data
+│   ├── *-verses.json.gz        # Verse-level data
+│   └── embeddings/             # Dictionary and embeddings
+│       └── hebrew-roots.json.gz  # 56K Hebrew word dictionary
+│
+├── docs/                       # Documentation
+│   └── MATRIX-DISCOVERY-PLAN.md  # Matrix term discovery specification
+│
+├── tools/                      # Build and validation tools
+│   ├── build-koren-database.py   # Build char database from Koren text
+│   └── validate-text.py          # Validate Torah text integrity
 │
 ├── engines/                    # Search and analysis engines
 │   ├── search.js               # Text search engine
@@ -193,17 +212,22 @@ This enables:
 │   ├── acronym.js              # Acronym/notarikon engine
 │   ├── roots.js                # Hebrew root extraction
 │   ├── matrix.js               # Matrix visualization
-│   └── tsirufim/               # Semantic permutation suite
+│   ├── letter-analysis.js      # Letter frequency analysis
+│   └── tsirufim/               # Semantic permutation suite (5 modules)
 │
 ├── db/                         # Database layer
 │   ├── schema.js               # IndexedDB schema
 │   ├── loader.js               # Data loading utilities
-│   └── query.js                # Database queries
+│   ├── query.js                # Database queries
+│   ├── dictionary-schema.js    # Dictionary DB schema
+│   └── dictionary-loader.js    # Dictionary loading
 │
 ├── js/                         # Core JavaScript
 │   ├── test.js                 # ELS main logic
 │   ├── load-torah.js           # Torah text loader
-│   └── search-algorithms.js    # KMP & Boyer-Moore implementations
+│   ├── search-algorithms.js    # KMP & Boyer-Moore implementations
+│   ├── i18n.js                 # Internationalization (Hebrew/English)
+│   └── pwa-install.js          # PWA install prompt
 │
 └── torah-codes/                # Python reference implementation
 ```
@@ -269,6 +293,6 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-*Last Updated: 2026-02-02*
+*Last Updated: 2026-02-03*
 
 Thank you for exploring the Hebrew Bible Analysis Suite!
