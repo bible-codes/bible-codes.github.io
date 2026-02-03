@@ -190,13 +190,9 @@ def find_words_at_skip(args):
     return skip, dict(results)
 
 
-def build_index_parallel(torah, trie, skip_range, max_word_length=10, num_workers=None):
-    """Build ELS index using parallel processing"""
-    if num_workers is None:
-        num_workers = max(1, mp.cpu_count() - 1)
-
-    print(f"\nBuilding ELS index (skip range: {skip_range[0]} to {skip_range[1]})...")
-    print(f"  Using {num_workers} parallel workers")
+def build_index_optimized(torah, trie, skip_range, max_word_length=10, min_word_length=2):
+    """Build ELS index with optimized single-process approach"""
+    print(f"\nBuilding ELS index (skip range: {skip_range[0]} to {skip_range[1]}, min word len: {min_word_length})...")
 
     # Prepare skip values (exclude 0)
     skips = [s for s in range(skip_range[0], skip_range[1] + 1) if s != 0]
@@ -205,29 +201,47 @@ def build_index_parallel(torah, trie, skip_range, max_word_length=10, num_worker
     # Index: word -> list of (position, skip) tuples
     index = defaultdict(list)
 
-    # Process in parallel
-    args_list = [(torah, trie, skip, max_word_length) for skip in skips]
+    import time
+    start_time = time.time()
 
-    completed = 0
-    with mp.Pool(num_workers) as pool:
-        for skip, results in pool.imap_unordered(find_words_at_skip, args_list):
-            completed += 1
+    for i, skip in enumerate(skips):
+        # Process this skip value
+        torah_len = len(torah)
 
-            # Merge results
-            for word, positions in results.items():
-                for pos in positions:
-                    index[word].append((pos, skip))
+        for start in range(torah_len):
+            # Walk trie while extracting letters
+            node = trie.root
+            pos = start
+            depth = 0
 
-            # Progress update
-            if completed % 10 == 0 or completed == total_skips:
-                pct = completed / total_skips * 100
-                total_occs = sum(len(v) for v in index.values())
-                print(f"  Progress: {completed}/{total_skips} skips ({pct:.1f}%), "
-                      f"{len(index):,} words, {total_occs:,} occurrences", end='\r')
+            while node and 0 <= pos < torah_len and depth < max_word_length:
+                letter = torah[pos]
+                if letter not in node.children:
+                    break
+                node = node.children[letter]
+
+                if node.is_word and len(node.word) >= min_word_length:
+                    index[node.word].append((start, skip))
+
+                pos += skip
+                depth += 1
+
+        # Progress update every skip
+        if (i + 1) % 5 == 0 or i + 1 == total_skips:
+            elapsed = time.time() - start_time
+            pct = (i + 1) / total_skips * 100
+            rate = (i + 1) / elapsed if elapsed > 0 else 0
+            eta = (total_skips - i - 1) / rate if rate > 0 else 0
+            total_occs = sum(len(v) for v in index.values())
+            print(f"  Progress: {i+1}/{total_skips} skips ({pct:.1f}%), "
+                  f"{len(index):,} words, {total_occs:,} occs, "
+                  f"ETA: {eta/60:.1f}min", end='\r')
+            sys.stdout.flush()
 
     print()  # Newline after progress
 
     # Sort occurrences by position for each word
+    print("  Sorting occurrences...")
     for word in index:
         index[word].sort(key=lambda x: (x[0], x[1]))
 
@@ -336,6 +350,8 @@ def main():
                         help='Use sequential processing (slower, for debugging)')
     parser.add_argument('--max-word-length', type=int, default=10,
                         help='Maximum word length to search')
+    parser.add_argument('--min-word-length', type=int, default=2,
+                        help='Minimum word length to index (3+ recommended for smaller files)')
 
     args = parser.parse_args()
 
@@ -360,10 +376,8 @@ def main():
     # Build index
     skip_range = (-args.skip_range, args.skip_range)
 
-    if args.sequential:
-        index = build_index_sequential(torah, trie, skip_range, args.max_word_length)
-    else:
-        index = build_index_parallel(torah, trie, skip_range, args.max_word_length)
+    # Use optimized single-process approach (more memory efficient)
+    index = build_index_optimized(torah, trie, skip_range, args.max_word_length, args.min_word_length)
 
     # Statistics
     stats = compute_statistics(index)
