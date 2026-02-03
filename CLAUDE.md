@@ -353,10 +353,27 @@ All engines run **100% client-side** with **no network dependency**. Heavy opera
 
 **Implementation Status**: Functional in `js/search-algorithms.js` (currently runs on main thread, Web Worker version planned)
 
+**Text Source**: Koren Edition (exact text used by Rips et al., 1994)
+- **Total Letters**: 304,805
+- **Final Letters**: 20,106 (ך ם ן ף ץ)
+- **SHA-256**: `b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226`
+- **Validation**: Run `python3 tools/validate-text.py data/`
+
 **Skip Value Conventions** (this implementation):
 - **ELS = 0**: Open text (plain sequential reading) - included and labeled distinctly
 - **ELS = ±1**: Excluded (redundant with ELS=0)
 - **|ELS| ≥ 2**: True equidistant letter sequences (per Rips et al. 1994)
+
+**Multi-Term Proximity Search** (NEW):
+- Search for two terms simultaneously
+- Find pairs within specified distance
+- Same-skip filter option
+- Dual-term matrix visualization (yellow/cyan/purple)
+
+**Verse Attribution** (NEW):
+- Character database provides book/chapter/verse for each position
+- O(1) lookup via array index
+- Displayed in search results and matrix tooltips
 
 **Algorithm Details**:
 

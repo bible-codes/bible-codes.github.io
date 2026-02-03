@@ -17,10 +17,11 @@ Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-base
 
 - **ELS Bible Codes Search** ([bible-codes.html](https://bible-codes.github.io/bible-codes.html))
   - Equidistant Letter Sequence (ELS) searches
-  - **NEW: Clickable matrix view** - click any result to see vertical display
+  - **Text**: Koren Edition (exact 304,805 letters used by Rips et al., 1994)
+  - **NEW: Multi-term proximity search** - find two terms close together
+  - **NEW: Verse attribution** - shows which verses contribute each letter
+  - Clickable matrix view with dual-term highlighting
   - Precomputed hashes for common phrases
-  - Dynamic search for custom inputs
-  - Skip distance analysis
 
 - **Hebrew Text Search** ([text-search.html](https://bible-codes.github.io/text-search.html))
   - Advanced pattern matching with regex support

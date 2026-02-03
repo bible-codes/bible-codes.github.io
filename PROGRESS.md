@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-02 (PWA Fixes, i18n, ELS Matrix View)
+**Last Updated**: 2026-02-03 (Koren Text Verification, Multi-Term Search, Verse Attribution)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,53 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Latest Session: 2026-02-02
+## Latest Session: 2026-02-03
+
+### Torah Text Standardization ✅
+
+#### Koren Edition (Rips et al., 1994) - VERIFIED
+- **Total Letters**: 304,805 ✓
+- **Final Letters (ךםןףץ)**: 20,106 ✓
+- **Genesis 1:1**: בראשיתבראאלהיםאתהשמיםואתהארץ ✓
+- **SHA-256**: `b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226`
+- **Form**: Ketiv (written form)
+- **Status**: EXACT text used by Rips - VERIFIED AND DEPLOYED
+
+**Validation Tool**: `python3 tools/validate-text.py data/`
+
+#### Multi-Term Proximity Search ✅
+- **Feature**: Search for two Hebrew terms simultaneously
+- **Proximity Pairs**: Find occurrences close together in text
+- **Distance Metrics**: Calculates minimum distance between patterns
+- **Same-Skip Filter**: Option to only match pairs with same |skip|
+- **Dual-Term Matrix**: Shows both terms with different colors
+  - Yellow: Term 1
+  - Cyan: Term 2
+  - Purple: Overlap
+
+#### Verse Attribution ✅
+- **Feature**: Shows which verses contribute each letter in ELS result
+- **Implementation**: Character database lookup by position
+- **Display**: Lists verses in search results
+- **Matrix**: Hover shows verse reference for each cell
+
+#### Architecture Improvements ✅
+- **Character Database**: Single source of truth (Koren edition)
+- **O(1) Lookup**: Direct array index for verse attribution
+- **PWA Caching**: Service worker v5.0 caches all Torah data
+- **Removed**: Leningrad Codex (not needed for Torah codes research)
+
+#### Files Changed
+- `data/torahNoSpaces.txt` - 304,805 letters (Koren)
+- `data/*-chars.json.gz` - Character DB with finals
+- `tools/build-koren-database.py` - Builds from ASCII source
+- `tools/validate-text.py` - Comprehensive validation
+- `js/test.js` - Multi-term search, verse attribution
+- `bible-codes.html` - Proximity UI, dual-term matrix
+
+---
+
+## Previous Session: 2026-02-02
 
 ### PWA Fixes & Internationalization
 
