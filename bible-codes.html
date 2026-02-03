@@ -252,31 +252,15 @@
       background: #2d2d44;
     }
 
-    /* Text source selection styles */
-    .text-source-section {
+    /* Text source info */
+    .text-source-info-static {
       margin-top: 16px;
-      padding: 12px 16px;
-      background: #f3e5f5;
+      padding: 10px 16px;
+      background: #e8f5e9;
       border-radius: 8px;
-      border-left: 4px solid #9c27b0;
-    }
-
-    .text-source-select {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 16px;
-      border: 2px solid #ce93d8;
-      border-radius: 4px;
-      background: white;
-      margin-top: 8px;
-      min-height: 44px;
-    }
-
-    .text-source-info {
-      font-size: 12px;
-      color: #7b1fa2;
-      margin-top: 8px;
-      font-style: italic;
+      border-left: 4px solid #4caf50;
+      font-size: 13px;
+      color: #2e7d32;
     }
 
     /* Multi-term search styles */
@@ -545,16 +529,9 @@
         </div>
       </div>
 
-      <!-- Text Source Selection -->
-      <div class="text-source-section">
-        <label for="text-source" class="input-label">Text Source:</label>
-        <select id="text-source" class="text-source-select">
-          <option value="koren" selected>Koren Edition (Rips) - 304,805 letters</option>
-          <option value="leningrad">Leningrad Codex - 305,172 letters</option>
-        </select>
-        <div class="text-source-info" id="text-source-info">
-          Koren: Exact text used by Rips et al. (1994)
-        </div>
+      <!-- Text Source Info -->
+      <div class="text-source-info-static">
+        Text: Koren Edition (Rips et al., 1994) - 304,805 letters
       </div>
 
       <div class="range-container">

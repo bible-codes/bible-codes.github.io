@@ -2,16 +2,13 @@
 """
 Torah Text Validation Tool
 
-Validates the Torah/Tanach text against known reference standards.
+Validates the Torah text against the Koren edition used by Rips et al. (1994).
 
-Sources:
-- Our DB: Leningrad Codex (oldest complete Hebrew Bible manuscript, 1008 CE)
-- Rips et al.: Koren Edition (used in original Torah codes research)
-
-The ~367 character difference between Leningrad and Koren is due to:
-- Qere/Ketiv variations (written vs read forms)
-- Plene/defective spelling differences (מלא/חסר)
-- Minor textual variants between manuscript traditions
+Expected:
+- Total letters: 304,805
+- Proper final forms (ך ם ן ף ץ)
+- Ketiv (written) form
+- SHA-256: b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226
 """
 
 import gzip
@@ -20,8 +17,8 @@ import hashlib
 import os
 import sys
 
-# Reference counts from various editions
-KOREN_COUNTS = {
+# Expected counts per book (Koren/Rips edition)
+EXPECTED_COUNTS = {
     'genesis': 78064,
     'exodus': 63529,
     'leviticus': 44790,
@@ -30,22 +27,8 @@ KOREN_COUNTS = {
     'total': 304805
 }
 
-# Our Leningrad-based counts (for validation that DB hasn't changed)
-LENINGRAD_COUNTS = {
-    'genesis': 78143,
-    'exodus': 63595,
-    'leviticus': 44812,
-    'numbers': 63588,
-    'deuteronomy': 55034,
-    'total': 305172
-}
-
-# SHA-256 hashes of canonical texts (for integrity verification)
-LENINGRAD_SHA256 = "aac5640a45c4448850d1d09ef25e42d105c73593f7edb0821c54165ff0d13860"
-KOREN_SHA256 = "9692eb34eca2f7a10f6e828d04b3dac50d5b0b688bf1d74d6936a6bd2fb92be4"
-
-# For backward compatibility
-CANONICAL_SHA256 = LENINGRAD_SHA256
+# SHA-256 hash of canonical Koren text
+CANONICAL_SHA256 = "b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226"
 
 
 def load_torah_from_db(data_dir):
@@ -72,10 +55,11 @@ def validate_text(data_dir=None):
 
     results = {
         'valid': True,
-        'source': 'Leningrad Codex',
+        'source': 'Koren Edition (Rips et al., 1994)',
         'books': {},
         'total': {},
         'hash': {},
+        'finals': {},
         'warnings': []
     }
 
@@ -85,32 +69,27 @@ def validate_text(data_dir=None):
     # Validate each book
     for book, text in book_texts.items():
         actual = len(text)
-        expected_leningrad = LENINGRAD_COUNTS[book]
-        expected_koren = KOREN_COUNTS[book]
+        expected = EXPECTED_COUNTS[book]
 
         results['books'][book] = {
             'actual': actual,
-            'expected_leningrad': expected_leningrad,
-            'expected_koren': expected_koren,
-            'matches_leningrad': actual == expected_leningrad,
-            'diff_from_koren': actual - expected_koren
+            'expected': expected,
+            'matches': actual == expected,
         }
 
-        if actual != expected_leningrad:
+        if actual != expected:
             results['valid'] = False
-            results['warnings'].append(f"{book}: count mismatch (expected {expected_leningrad}, got {actual})")
+            results['warnings'].append(f"{book}: count mismatch (expected {expected}, got {actual})")
 
     # Validate total
     actual_total = len(full_text)
     results['total'] = {
         'actual': actual_total,
-        'expected_leningrad': LENINGRAD_COUNTS['total'],
-        'expected_koren': KOREN_COUNTS['total'],
-        'matches_leningrad': actual_total == LENINGRAD_COUNTS['total'],
-        'diff_from_koren': actual_total - KOREN_COUNTS['total']
+        'expected': EXPECTED_COUNTS['total'],
+        'matches': actual_total == EXPECTED_COUNTS['total'],
     }
 
-    if actual_total != LENINGRAD_COUNTS['total']:
+    if actual_total != EXPECTED_COUNTS['total']:
         results['valid'] = False
 
     # Validate hash
@@ -123,7 +102,33 @@ def validate_text(data_dir=None):
 
     if sha256 != CANONICAL_SHA256:
         results['valid'] = False
-        results['warnings'].append(f"SHA-256 mismatch - text may have been modified")
+        results['warnings'].append("SHA-256 mismatch - text may have been modified")
+
+    # Check final letters
+    finals = 'ךםןףץ'
+    finals_count = sum(1 for c in full_text if c in finals)
+    results['finals'] = {
+        'total': finals_count,
+        'expected_min': 20000,  # Approximately 20,106 in correct text
+        'has_finals': finals_count > 0
+    }
+
+    if finals_count == 0:
+        results['valid'] = False
+        results['warnings'].append("No final letters found - text may be corrupted")
+
+    # Check first verse
+    expected_gen1_1 = 'בראשיתבראאלהיםאתהשמיםואתהארץ'
+    actual_gen1_1 = full_text[:28]
+    results['first_verse'] = {
+        'actual': actual_gen1_1,
+        'expected': expected_gen1_1,
+        'matches': actual_gen1_1 == expected_gen1_1
+    }
+
+    if actual_gen1_1 != expected_gen1_1:
+        results['valid'] = False
+        results['warnings'].append("Genesis 1:1 mismatch")
 
     return results, full_text
 
@@ -139,26 +144,38 @@ def print_report(results):
 
     print("Book-by-Book Analysis:")
     print("-" * 70)
-    print(f"{'Book':<15} {'Actual':>10} {'Leningrad':>10} {'Koren':>10} {'Status':<10}")
+    print(f"{'Book':<15} {'Actual':>10} {'Expected':>10} {'Status':<10}")
     print("-" * 70)
 
     for book, data in results['books'].items():
-        status = "✓" if data['matches_leningrad'] else "✗"
-        diff = f"+{data['diff_from_koren']}" if data['diff_from_koren'] > 0 else str(data['diff_from_koren'])
-        print(f"{book.title():<15} {data['actual']:>10,} {data['expected_leningrad']:>10,} {data['expected_koren']:>10,} {status} ({diff} vs Koren)")
+        status = "✓" if data['matches'] else "✗"
+        print(f"{book.title():<15} {data['actual']:>10,} {data['expected']:>10,} {status}")
 
     print("-" * 70)
     t = results['total']
-    status = "✓" if t['matches_leningrad'] else "✗"
-    diff = f"+{t['diff_from_koren']}" if t['diff_from_koren'] > 0 else str(t['diff_from_koren'])
-    print(f"{'TOTAL':<15} {t['actual']:>10,} {t['expected_leningrad']:>10,} {t['expected_koren']:>10,} {status} ({diff} vs Koren)")
+    status = "✓" if t['matches'] else "✗"
+    print(f"{'TOTAL':<15} {t['actual']:>10,} {t['expected']:>10,} {status}")
+
+    print()
+    print("Final Letters:")
+    print("-" * 70)
+    f = results['finals']
+    print(f"Count: {f['total']:,} {'✓' if f['has_finals'] else '✗'}")
+
+    print()
+    print("First Verse (Genesis 1:1):")
+    print("-" * 70)
+    fv = results['first_verse']
+    print(f"Actual:   {fv['actual']}")
+    print(f"Expected: {fv['expected']}")
+    print(f"Match: {'✓' if fv['matches'] else '✗'}")
 
     print()
     print("Hash Verification:")
     print("-" * 70)
     h = results['hash']
     print(f"SHA-256: {h['actual']}")
-    print(f"Status:  {'✓ Matches canonical' if h['matches'] else '✗ MISMATCH - text modified!'}")
+    print(f"Status:  {'✓ Matches canonical' if h['matches'] else '✗ MISMATCH!'}")
 
     if results['warnings']:
         print()
@@ -166,10 +183,6 @@ def print_report(results):
         for w in results['warnings']:
             print(f"  ⚠ {w}")
 
-    print()
-    print("Note: Our text uses the Leningrad Codex. Rips et al. used the Koren edition.")
-    print(f"      Difference: +{results['total']['diff_from_koren']} characters")
-    print("      For exact Rips replication, the Koren text would be needed.")
     print("=" * 70)
 
 

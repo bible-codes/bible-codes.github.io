@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-analysis-suite-v4.7';
+const CACHE_NAME = 'bible-analysis-suite-v5.0';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -30,20 +30,13 @@ const urlsToCache = [
   './data/torahNoSpaces.txt',
   './data/precomputed-terms.json',
 
-  // Torah character database - Leningrad Codex (default)
+  // Torah character database - Koren Edition (Rips et al., 1994)
+  // 304,805 letters with proper final forms
   './data/genesis-chars.json.gz',
   './data/exodus-chars.json.gz',
   './data/leviticus-chars.json.gz',
   './data/numbers-chars.json.gz',
   './data/deuteronomy-chars.json.gz',
-
-  // Torah character database - Koren (Rips edition)
-  './data/koren-torahNoSpaces.txt',
-  './data/koren-genesis-chars.json.gz',
-  './data/koren-exodus-chars.json.gz',
-  './data/koren-leviticus-chars.json.gz',
-  './data/koren-numbers-chars.json.gz',
-  './data/koren-deuteronomy-chars.json.gz',
 
   // Core JavaScript
   './js/test.js',

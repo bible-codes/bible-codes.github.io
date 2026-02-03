@@ -34,29 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentResult = null; // Currently displayed result in matrix
   let currentResult2 = null; // Second term result for proximity view
   let charDatabase = null; // Character database for verse attribution
-  let currentTextSource = 'koren'; // Default to Koren (Rips edition)
 
-  // ==================== TEXT SOURCE CONFIGURATION ====================
-  // Supports two authoritative texts:
-  // - Koren: Exact text used by Rips et al. (1994) - 304,805 letters
-  // - Leningrad: Oldest complete manuscript (1008 CE) - 305,172 letters
-
-  const TEXT_SOURCES = {
-    koren: {
-      name: 'Koren Edition (Rips)',
-      textFile: 'data/koren-torahNoSpaces.txt',
-      charDbPrefix: 'data/koren-',
-      letterCount: 304805,
-      description: 'Exact text used by Rips et al. (1994)'
-    },
-    leningrad: {
-      name: 'Leningrad Codex',
-      textFile: 'data/torahNoSpaces.txt',
-      charDbPrefix: 'data/',
-      letterCount: 305172,
-      description: 'Oldest complete Hebrew Bible manuscript (1008 CE)'
-    }
-  };
+  // ==================== TEXT CONFIGURATION ====================
+  // Using Koren Edition - exact text used by Rips et al. (1994)
+  // 304,805 letters with proper final forms (ך ם ן ף ץ)
+  // SHA-256: b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226
 
   const BOOK_NAMES = {
     1: 'Genesis', 2: 'Exodus', 3: 'Leviticus', 4: 'Numbers', 5: 'Deuteronomy'
@@ -64,42 +46,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const TORAH_BOOKS = ['genesis', 'exodus', 'leviticus', 'numbers', 'deuteronomy'];
 
-  // Text source selector
-  const textSourceSelect = document.getElementById('text-source');
-  const textSourceInfo = document.getElementById('text-source-info');
-
-  if (textSourceSelect) {
-    textSourceSelect.addEventListener('change', async () => {
-      const newSource = textSourceSelect.value;
-      if (newSource !== currentTextSource) {
-        currentTextSource = newSource;
-        const source = TEXT_SOURCES[currentTextSource];
-        textSourceInfo.textContent = `${source.name}: ${source.description}`;
-
-        // Reload text and database
-        await loadTorahText();
-        await loadCharacterDatabase();
-
-        // Clear any existing results
-        resultContainer.innerHTML = '';
-        proximityResultsContainer.style.display = 'none';
-      }
-    });
-  }
-
   // Load Torah text and character database on startup
   loadTorahText();
   loadCharacterDatabase();
 
   async function loadTorahText() {
-    const source = TEXT_SOURCES[currentTextSource];
     try {
-      const response = await fetch(source.textFile);
+      const response = await fetch('data/torahNoSpaces.txt');
       if (!response.ok) {
         throw new Error(`Failed to load text file: ${response.status}`);
       }
       torahText = await response.text();
-      console.log(`Torah text loaded (${currentTextSource}): ${torahText.length.toLocaleString()} characters`);
+      console.log(`Torah text loaded (Koren/Rips): ${torahText.length.toLocaleString()} characters`);
     } catch (error) {
       console.error('Error loading Torah text:', error);
       resultContainer.textContent = 'Error: Failed to fetch the Torah text. Please ensure the file exists.';
@@ -107,14 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadCharacterDatabase() {
-    const source = TEXT_SOURCES[currentTextSource];
     try {
-      console.log(`Loading character database (${currentTextSource})...`);
+      console.log('Loading character database...');
       const allChars = [];
 
       for (const book of TORAH_BOOKS) {
-        const url = `${source.charDbPrefix}${book}-chars.json.gz`;
-        const response = await fetch(url);
+        const response = await fetch(`data/${book}-chars.json.gz`);
         if (!response.ok) continue;
 
         // Decompress gzipped JSON
