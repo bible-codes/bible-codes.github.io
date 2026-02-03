@@ -5,15 +5,17 @@
  * Each dictionary is kept separate by source for provenance tracking.
  *
  * Sources:
+ * - unified: Merged dictionary (82K words) with provenance from all sources
  * - tanakh: Words extracted from Tanakh text (56K words, heuristic roots)
  * - bdb: Brown-Driver-Briggs lexicon (6.9K verified Biblical Hebrew)
- * - wiktionary: Hebrew Wiktionary (planned)
+ * - wiktionary: Hebrew Wiktionary (27K words with era markers)
  * - wikipedia: Hebrew Wikipedia vocabulary (planned)
  */
 
 export class DictionaryService {
   constructor() {
     this.dictionaries = new Map();
+    this.inflectionMap = null;
     this.initialized = false;
     this.loadingPromises = new Map();
   }
@@ -22,6 +24,13 @@ export class DictionaryService {
    * Available dictionary sources
    */
   static SOURCES = {
+    unified: {
+      name: 'Unified Hebrew Dictionary',
+      file: 'data/dictionaries/unified/hebrew-unified.json.gz',
+      description: 'Merged dictionary (82K words) with provenance tracking from BDB, Wiktionary, and Tanakh',
+      license: 'Mixed (CC-BY-SA for most sources)',
+      priority: 0,  // Top priority (merged, deduplicated, best roots)
+    },
     bdb: {
       name: 'Brown-Driver-Briggs',
       file: 'data/dictionaries/openscriptures-bdb.json.gz',
@@ -128,7 +137,25 @@ export class DictionaryService {
     // Normalize data structure (different sources have different formats)
     const entries = new Map();
 
-    if (source === 'tanakh') {
+    if (source === 'unified') {
+      // Unified format: { source: {...}, entries: { word: { word, root, pos, sources, era, definitions, ... } } }
+      const dictEntries = data.entries || data;
+      for (const [word, info] of Object.entries(dictEntries)) {
+        entries.set(word, {
+          word,
+          root: info.root,
+          pos: info.pos,
+          definitions: info.definitions || [],
+          era: info.era,  // biblical, rabbinic, medieval, modern
+          type: info.type,  // native, foreign, proper_noun
+          refs: info.refs || [],
+          related: info.related || [],
+          binyan: info.binyan,
+          originalSources: info.sources || [],  // Provenance: which dictionaries had this word
+          source: 'unified',
+        });
+      }
+    } else if (source === 'tanakh') {
       // Tanakh format: { word: { root, binyan, pos, confidence, metadata } }
       for (const [word, info] of Object.entries(data)) {
         entries.set(word, {
@@ -388,6 +415,97 @@ export class DictionaryService {
       loaded: this.dictionaries.has(id),
       count: this.dictionaries.get(id)?.entries.size || 0,
     }));
+  }
+
+  /**
+   * Load inflection map for lemma lookups
+   */
+  async loadInflectionMap() {
+    if (this.inflectionMap) {
+      return this.inflectionMap;
+    }
+
+    const response = await fetch('data/dictionaries/unified/inflection-map.json.gz');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch inflection map: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const ds = new DecompressionStream('gzip');
+    const decompressedStream = blob.stream().pipeThrough(ds);
+    const text = await new Response(decompressedStream).text();
+    const data = JSON.parse(text);
+
+    this.inflectionMap = data.mappings || data;
+    console.log(`  ✓ Inflection map: ${Object.keys(this.inflectionMap).length} mappings`);
+
+    return this.inflectionMap;
+  }
+
+  /**
+   * Get lemma for an inflected word
+   * @param {string} word - Inflected word form
+   * @returns {Object|null} { lemma, root } or null if not found
+   */
+  getLemma(word) {
+    if (!this.inflectionMap) {
+      return null;
+    }
+
+    const mapping = this.inflectionMap[word];
+    if (mapping) {
+      return {
+        lemma: mapping.lemma,
+        root: mapping.root,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Get all inflected forms for a root
+   * @param {string} root - Hebrew root
+   * @returns {string[]} Array of inflected forms
+   */
+  getInflections(root) {
+    if (!this.inflectionMap) {
+      return [];
+    }
+
+    const inflections = [];
+    for (const [word, mapping] of Object.entries(this.inflectionMap)) {
+      if (mapping.root === root) {
+        inflections.push(word);
+      }
+    }
+
+    return inflections;
+  }
+
+  /**
+   * Search by era (biblical, rabbinic, medieval, modern)
+   * Requires unified dictionary to be loaded
+   * @param {string} era - Era to filter by
+   * @param {number} limit - Maximum results
+   * @returns {Object[]} Matching entries
+   */
+  searchByEra(era, limit = 100) {
+    const dict = this.dictionaries.get('unified');
+    if (!dict) {
+      console.warn('searchByEra requires unified dictionary');
+      return [];
+    }
+
+    const results = [];
+    for (const [word, entry] of dict.entries) {
+      if (entry.era === era) {
+        results.push(entry);
+        if (results.length >= limit) break;
+      }
+    }
+
+    return results;
   }
 }
 

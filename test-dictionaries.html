@@ -170,9 +170,10 @@
 
         <div class="checkbox-group">
           <strong>Search in:</strong>
-          <label><input type="checkbox" id="srcBdb" checked> BDB (verified)</label>
-          <label><input type="checkbox" id="srcWiktionary" checked> Wiktionary (community)</label>
-          <label><input type="checkbox" id="srcTanakh" checked> Tanakh (heuristic)</label>
+          <label><input type="checkbox" id="srcUnified" checked> Unified (82K, merged)</label>
+          <label><input type="checkbox" id="srcBdb"> BDB (verified)</label>
+          <label><input type="checkbox" id="srcWiktionary"> Wiktionary (community)</label>
+          <label><input type="checkbox" id="srcTanakh"> Tanakh (heuristic)</label>
         </div>
 
         <button id="lookupBtn" class="btn" style="padding: 10px 20px;">Look Up</button>
@@ -186,6 +187,19 @@
         <input type="text" id="rootInput" class="lookup-input" placeholder="Enter root (e.g., אבד)..." value="אבד">
         <button id="searchRootBtn" class="btn" style="padding: 10px 20px;">Find Words with Root</button>
         <div id="rootResults"></div>
+      </section>
+
+      <!-- Era Search Section -->
+      <section class="test-section">
+        <h2>Search by Era</h2>
+        <p>Browse words by historical period (from unified dictionary):</p>
+        <div class="checkbox-group">
+          <button id="eraBiblical" class="btn" style="padding: 8px 15px; margin: 5px;">Biblical</button>
+          <button id="eraRabbinic" class="btn" style="padding: 8px 15px; margin: 5px;">Rabbinic</button>
+          <button id="eraMedieval" class="btn" style="padding: 8px 15px; margin: 5px;">Medieval</button>
+          <button id="eraModern" class="btn" style="padding: 8px 15px; margin: 5px;">Modern</button>
+        </div>
+        <div id="eraResults"></div>
       </section>
 
       <!-- Comparison Section -->
@@ -205,9 +219,12 @@
 
     async function init() {
       try {
-        // Initialize dictionaries
-        const status = await initDictionaries(['bdb', 'wiktionary', 'tanakh']);
+        // Initialize dictionaries (including unified)
+        const status = await initDictionaries(['unified', 'bdb', 'wiktionary', 'tanakh']);
         dictService = getDictionaryService();
+
+        // Also load inflection map
+        await dictService.loadInflectionMap();
 
         // Hide loading, show content
         document.getElementById('loadingIndicator').style.display = 'none';
@@ -226,6 +243,12 @@
         document.getElementById('rootInput').addEventListener('keypress', e => {
           if (e.key === 'Enter') doRootSearch();
         });
+
+        // Era search buttons
+        document.getElementById('eraBiblical').addEventListener('click', () => doEraSearch('biblical'));
+        document.getElementById('eraRabbinic').addEventListener('click', () => doEraSearch('rabbinic'));
+        document.getElementById('eraMedieval').addEventListener('click', () => doEraSearch('medieval'));
+        document.getElementById('eraModern').addEventListener('click', () => doEraSearch('modern'));
 
         // Initial lookup
         doLookup();
@@ -270,11 +293,15 @@
       if (!word) return;
 
       const sources = [];
+      if (document.getElementById('srcUnified').checked) sources.push('unified');
       if (document.getElementById('srcBdb').checked) sources.push('bdb');
       if (document.getElementById('srcWiktionary').checked) sources.push('wiktionary');
       if (document.getElementById('srcTanakh').checked) sources.push('tanakh');
 
       const results = dictService.lookup(word, sources.length ? sources : null);
+
+      // Also check inflection map for lemma
+      const lemmaInfo = dictService.getLemma(word);
 
       if (results.length === 0) {
         document.getElementById('lookupResults').innerHTML =
@@ -282,15 +309,33 @@
         return;
       }
 
-      const html = results.map(r => `
+      // Show lemma info if available
+      let lemmaHtml = '';
+      if (lemmaInfo) {
+        lemmaHtml = `
+          <div style="background: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+            <strong>Inflection Mapping:</strong> This is an inflected form of lemma
+            <strong style="color: var(--primary);">${lemmaInfo.lemma}</strong>
+            (root: <strong style="color: var(--success);">${lemmaInfo.root}</strong>)
+          </div>
+        `;
+      }
+
+      const html = lemmaHtml + results.map(r => `
         <div class="result-card">
           <span class="source">${r.sourceName} (${r.source})</span>
           ${r.era ? `<span class="source" style="background: #e8f4e8; margin-right: 5px;">${r.era}</span>` : ''}
+          ${r.type && r.type !== 'native' ? `<span class="source" style="background: #f8e8e8; margin-right: 5px;">${r.type}</span>` : ''}
           <div class="word">${r.word}</div>
           ${r.root ? `<div class="root">Root: ${r.root}</div>` : ''}
           ${r.pos ? `<div>POS: ${r.pos}</div>` : ''}
           ${r.binyan ? `<div>Binyan: ${r.binyan}</div>` : ''}
           ${r.confidence ? `<div>Confidence: ${(r.confidence * 100).toFixed(0)}%</div>` : ''}
+          ${r.originalSources && r.originalSources.length > 0 ? `
+            <div style="margin-top: 8px; font-size: 12px;">
+              <strong>Found in:</strong> ${r.originalSources.join(', ')}
+            </div>
+          ` : ''}
           ${r.definitions && r.definitions.length > 0 ? `
             <div class="definitions">
               <strong>Definitions:</strong>
@@ -341,13 +386,47 @@
       document.getElementById('rootResults').innerHTML = html;
     }
 
+    function doEraSearch(era) {
+      const results = dictService.searchByEra(era, 30);
+
+      if (results.length === 0) {
+        document.getElementById('eraResults').innerHTML =
+          `<p style="color: #666;">No ${era} words found.</p>`;
+        return;
+      }
+
+      const eraLabels = {
+        biblical: 'Biblical (תנ"ך)',
+        rabbinic: 'Rabbinic (חז"ל)',
+        medieval: 'Medieval (ימה"ב)',
+        modern: 'Modern (חדשה)'
+      };
+
+      const html = `
+        <p>Found ${results.length} <strong>${eraLabels[era]}</strong> words (showing sample):</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          ${results.map(r => `
+            <div style="background: #f0f0f0; padding: 8px 12px; border-radius: 4px; cursor: pointer;"
+                 onclick="document.getElementById('lookupInput').value='${r.word}'; document.querySelector('#lookupBtn').click();">
+              <strong>${r.word}</strong>
+              ${r.root ? `<br><small style="color: var(--success);">שורש: ${r.root}</small>` : ''}
+              ${r.pos ? `<br><small style="color: #666;">${r.pos}</small>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      document.getElementById('eraResults').innerHTML = html;
+    }
+
     function calculateComparison() {
+      const unifiedWords = dictService.getAllWords(['unified']);
       const bdbWords = dictService.getAllWords(['bdb']);
       const wiktionaryWords = dictService.getAllWords(['wiktionary']);
       const tanakhWords = dictService.getAllWords(['tanakh']);
 
-      // Calculate unique total
-      const allWords = new Set([...bdbWords, ...wiktionaryWords, ...tanakhWords]);
+      // Calculate unique total from individual sources
+      const allIndividual = new Set([...bdbWords, ...wiktionaryWords, ...tanakhWords]);
 
       // Calculate overlaps
       let inAll = 0;
@@ -355,7 +434,7 @@
       let bdbAndTanakh = 0;
       let wiktAndTanakh = 0;
 
-      for (const word of allWords) {
+      for (const word of allIndividual) {
         const inBdb = bdbWords.has(word);
         const inWikt = wiktionaryWords.has(word);
         const inTanakh = tanakhWords.has(word);
@@ -368,6 +447,10 @@
 
       const html = `
         <div class="stats-grid">
+          <div class="stat-box" style="background: linear-gradient(135deg, #00b09b, #96c93d);">
+            <div class="value">${unifiedWords.size.toLocaleString()}</div>
+            <div class="label">UNIFIED (merged)</div>
+          </div>
           <div class="stat-box" style="background: linear-gradient(135deg, #667eea, #764ba2);">
             <div class="value">${bdbWords.size.toLocaleString()}</div>
             <div class="label">BDB</div>
@@ -380,18 +463,15 @@
             <div class="value">${tanakhWords.size.toLocaleString()}</div>
             <div class="label">Tanakh</div>
           </div>
-          <div class="stat-box" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
-            <div class="value">${allWords.size.toLocaleString()}</div>
-            <div class="label">TOTAL UNIQUE</div>
-          </div>
         </div>
         <p style="margin-top: 15px; color: #666;">
-          <strong>Overlap Analysis:</strong><br>
+          <strong>Overlap Analysis (individual sources):</strong><br>
           • In all 3 sources: ${inAll.toLocaleString()} (highest confidence)<br>
           • BDB + Wiktionary: ${bdbAndWikt.toLocaleString()}<br>
           • BDB + Tanakh: ${bdbAndTanakh.toLocaleString()}<br>
           • Wiktionary + Tanakh: ${wiktAndTanakh.toLocaleString()}<br><br>
-          <strong>Total unique words: ${allWords.size.toLocaleString()}</strong>
+          <strong>Unified dictionary:</strong> ${unifiedWords.size.toLocaleString()} unique words (deduplicated superset)<br>
+          <strong>Inflection mappings:</strong> ~50,000 (linking inflected forms to lemmas)
         </p>
       `;
 
