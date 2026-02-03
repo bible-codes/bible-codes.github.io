@@ -1,13 +1,22 @@
 # Unified Hebrew Dictionary System - Technical Plan
 
+## Current Status: 70% Complete ✅
+
+**Unified Dictionary Built**: 82,151 entries with provenance tracking
+**Inflection Mapping**: 50,037 inflected forms linked to lemmas
+**Era Classification**: Biblical (9,340), Modern (19,602), Rabbinic (2,022), Medieval (39)
+**Total PWA Size**: ~5.3 MB compressed (works 100% offline)
+
+---
+
 ## Overview
 
 Create a comprehensive offline Hebrew dictionary for the PWA that:
-1. Merges multiple sources into a unified superset
-2. Maps inflected forms to their roots
-3. Tracks provenance (source dictionaries)
-4. Categorizes words by era/type (Biblical, Rabbinic, Modern, Foreign)
-5. Works 100% offline after initial download
+1. ✅ Merges multiple sources into a unified superset
+2. ✅ Maps inflected forms to their roots
+3. ✅ Tracks provenance (source dictionaries)
+4. ✅ Categorizes words by era/type (Biblical, Rabbinic, Modern, Foreign)
+5. ✅ Works 100% offline after initial download
 
 ---
 
@@ -18,11 +27,12 @@ Create a comprehensive offline Hebrew dictionary for the PWA that:
 |--------|-------|-------|-------------|--------|
 | Tanakh Extracted | 56,118 | Heuristic | No | ✅ Done |
 | BDB (Open Scriptures) | 6,893 | Verified | Yes | ✅ Done |
+| Hebrew Wiktionary | 27,598 | 9,105 verified | Yes | ✅ Done |
+| **Unified (merged)** | **82,151** | **62,779 (76%)** | Yes | ✅ Done |
 
 ### 1.2 To Be Added
 | Source | Est. Words | Roots | Definitions | Priority |
 |--------|-----------|-------|-------------|----------|
-| Hebrew Wiktionary | ~50,000 | Yes | Yes | 🔴 HIGH |
 | Hebrew Wikipedia | ~500,000 | No | No | 🟡 MEDIUM |
 | Strong's Concordance | ~8,674 | Yes | Yes | 🟡 MEDIUM |
 | Even-Shoshan Dict | ~80,000 | Yes | Yes | 🟢 LOW (licensing) |
@@ -324,58 +334,67 @@ data/
 ### 6.2 Runtime Files (PWA)
 ```
 data/dictionaries/
-├── hebrew-unified.json.gz      # ~2-5 MB compressed
-├── inflection-map.json.gz      # ~1-2 MB compressed
-└── metadata.json               # ~1 KB
+├── unified/
+│   ├── hebrew-unified.json.gz      # 2,324 KB (82K entries)
+│   └── inflection-map.json.gz      # 263 KB (50K mappings)
+├── openscriptures-bdb.json.gz      # 115 KB (6.9K entries)
+└── hebrew-wiktionary.json.gz       # 1,872 KB (27K entries)
+data/embeddings/
+└── hebrew-roots.json.gz            # ~700 KB (56K entries)
 ```
 
-### 6.3 Estimated Sizes
-| File | Entries | Uncompressed | Compressed |
-|------|---------|--------------|------------|
-| Unified Dictionary | ~100K | ~50 MB | ~5 MB |
-| Inflection Map | ~200K | ~20 MB | ~2 MB |
-| **Total PWA Data** | - | ~70 MB | **~7 MB** |
+### 6.3 Actual Sizes (Achieved)
+| File | Entries | Compressed |
+|------|---------|------------|
+| Unified Dictionary | 82,151 | 2,324 KB |
+| Inflection Map | 50,037 | 263 KB |
+| BDB | 6,893 | 115 KB |
+| Wiktionary | 27,598 | 1,872 KB |
+| Tanakh Roots | 56,118 | ~700 KB |
+| **Total PWA Dictionary Data** | - | **~5.3 MB** |
 
 ---
 
 ## 7. Implementation Phases
 
-### Phase 1: Wiktionary Integration (4-6 hours)
-- [ ] Download Hebrew Wiktionary dump
-- [ ] Parse wiki markup, extract structured data
-- [ ] Build wiktionary dictionary file
-- [ ] Test and validate
+### Phase 1: Wiktionary Integration ✅ COMPLETE
+- [x] Download Hebrew Wiktionary dump (79MB uncompressed)
+- [x] Parse wiki markup, extract structured data
+- [x] Build wiktionary dictionary file (27,598 entries)
+- [x] Test and validate
 
-### Phase 2: Wikipedia Vocabulary (2-3 hours)
+### Phase 2: Wikipedia Vocabulary 🔴 PENDING
 - [ ] Download Hebrew Wikipedia dump
 - [ ] Tokenize and extract unique Hebrew words
 - [ ] Filter (remove numbers, foreign, short)
 - [ ] Build wikipedia word list
 
-### Phase 3: Strong's Concordance (2-3 hours)
+### Phase 3: Strong's Concordance 🔴 PENDING
 - [ ] Find/download Strong's Hebrew data
 - [ ] Parse and structure
 - [ ] Merge with BDB for verse references
 
-### Phase 4: Merge & Deduplicate (3-4 hours)
-- [ ] Implement merge algorithm
-- [ ] Build unified dictionary
-- [ ] Generate inflection map
-- [ ] Classify era/type
+### Phase 4: Merge & Deduplicate ✅ COMPLETE
+- [x] Implement merge algorithm (tools/build-unified-dict.py)
+- [x] Build unified dictionary (82,151 entries)
+- [x] Generate inflection map (50,037 mappings)
+- [x] Classify era/type (biblical, rabbinic, medieval, modern)
 
-### Phase 5: Client Integration (2-3 hours)
-- [ ] Update dictionary-service.js
-- [ ] Add unified dictionary loader
-- [ ] Implement search across unified data
-- [ ] Update test page
+### Phase 5: Client Integration ✅ COMPLETE
+- [x] Update dictionary-service.js with unified source
+- [x] Add unified dictionary loader
+- [x] Implement search across unified data
+- [x] Add era-based search (searchByEra)
+- [x] Add inflection map support (getLemma, getInflections)
+- [x] Update test page (test-dictionaries.html)
 
-### Phase 6: PWA Optimization (2-3 hours)
-- [ ] Optimize file sizes
-- [ ] Update service worker caching
-- [ ] Test offline functionality
-- [ ] Performance testing
+### Phase 6: PWA Optimization ✅ COMPLETE
+- [x] Optimize file sizes (~5.3MB total compressed)
+- [x] Update service worker caching (v5.2)
+- [x] Test offline functionality
+- [ ] Performance testing (ongoing)
 
-**Total Estimated: 15-22 hours**
+**Completed: ~70% | Remaining: Wikipedia + Strong's**
 
 ---
 
