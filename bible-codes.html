@@ -1132,14 +1132,23 @@
       }
 
       let html = `<div class="results"><h3>${title} (${results.length})</h3>`;
+      html += '<p style="font-size:12px;color:var(--gray);margin-bottom:10px;">Click word to search in ELS index, or + to add as search term</p>';
       html += '<div class="results-scrollable">';
       results.forEach(r => {
         const def = r.definition || r.gloss || r.meaning || '';
         const srcBadge = r.source ? `<span style="background:#ddd;padding:2px 6px;border-radius:3px;font-size:11px;">${r.source}</span>` : '';
-        html += `<div style="padding:12px;border-bottom:1px solid var(--border);">
+        const inIndex = elsService?.hasWord(r.word);
+        const indexBadge = inIndex ? '<span style="background:#d4edda;color:#2e7d32;padding:2px 6px;border-radius:3px;font-size:11px;">in index</span>' : '';
+        html += `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;"
+                     onmouseover="this.style.background='var(--blue-light)'"
+                     onmouseout="this.style.background='transparent'">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:20px;font-weight:bold;color:var(--blue);">${r.word}</span>
-            ${srcBadge}
+            <span style="font-size:20px;font-weight:bold;color:var(--blue);" onclick="searchWordInELS('${r.word}')">${r.word}</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="btn btn-small" onclick="event.stopPropagation();addWordToSearch('${r.word}')" title="Add to search terms">+</button>
+              ${indexBadge}
+              ${srcBadge}
+            </div>
           </div>
           ${def ? `<div style="color:var(--gray);margin-top:4px;">${def.substring(0, 200)}${def.length > 200 ? '...' : ''}</div>` : ''}
           ${r.root ? `<div style="font-size:12px;color:#888;margin-top:4px;">Root: ${r.root}</div>` : ''}
@@ -1148,6 +1157,49 @@
       html += '</div></div>';
       document.getElementById('dictResults').innerHTML = html;
     }
+
+    window.searchWordInELS = function(word) {
+      // Switch to index mode
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
+      document.querySelector('.mode-tab[data-mode="index"]').classList.add('active');
+      document.getElementById('index-mode').classList.add('active');
+
+      // Set the word as first term and search
+      const container = document.getElementById('termEntries');
+      container.innerHTML = `<div class="term-entry">
+        <input type="text" class="term-input" value="${word}" dir="rtl">
+        <button class="remove-btn" onclick="removeTerm(this)">&times;</button>
+      </div>`;
+
+      // Run search
+      if (elsService) {
+        const occs = elsService.findWord(word);
+        currentResults = {
+          terms: [word],
+          termData: { [word]: { occurrences: occs, count: occs.length } },
+          proximityPairs: [],
+          timestamp: new Date().toISOString()
+        };
+        displayIndexResults(currentResults);
+      }
+    };
+
+    window.addWordToSearch = function(word) {
+      // Switch to index mode if not already
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
+      document.querySelector('.mode-tab[data-mode="index"]').classList.add('active');
+      document.getElementById('index-mode').classList.add('active');
+
+      // Add word as new term
+      const container = document.getElementById('termEntries');
+      const n = container.querySelectorAll('.term-entry').length + 1;
+      const div = document.createElement('div');
+      div.className = 'term-entry';
+      div.innerHTML = `<input type="text" class="term-input" value="${word}" dir="rtl"><button class="remove-btn" onclick="removeTerm(this)">&times;</button>`;
+      container.appendChild(div);
+    };
 
     // ============= INIT ON LOAD =============
     init();
