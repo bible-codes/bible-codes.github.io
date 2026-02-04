@@ -1,22 +1,319 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-  <meta name="theme-color" content="#2D6A91">
+  <meta name="theme-color" content="#1e5aa8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Bible Codes">
-  <meta name="description" content="Search for Equidistant Letter Sequences (ELS) in the Hebrew Bible - Torah Codes finder">
+  <meta name="apple-mobile-web-app-title" content="ELS Search">
+  <meta name="description" content="Search for Equidistant Letter Sequences (ELS) in the Hebrew Bible">
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-  <link rel="stylesheet" href="styles.css">
-  <title>Bible Codes - ELS Search</title>
   <link rel="manifest" href="manifest.json">
-
+  <title>ELS Search - Torah Codes</title>
   <style>
-    /* Matrix Modal Styles */
+    :root {
+      --blue: #1e5aa8;
+      --blue-light: #e8f0f8;
+      --blue-dark: #174a8a;
+      --gray: #555;
+      --gray-light: #f5f5f5;
+      --border: #ccc;
+      --green: #2e7d32;
+      --red: #c62828;
+      --orange: #e65100;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-light);
+      color: #333;
+      line-height: 1.5;
+    }
+    .header {
+      background: var(--blue);
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header a { color: white; text-decoration: none; }
+    .header img { width: 32px; height: 32px; }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+    /* Mode Tabs */
+    .mode-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+      background: white;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      background: white;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray);
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .mode-tab:not(:last-child) { border-left: 1px solid var(--border); }
+    .mode-tab:hover { background: var(--blue-light); }
+    .mode-tab.active {
+      background: var(--blue);
+      color: white;
+    }
+    .mode-tab .mode-desc {
+      font-size: 11px;
+      font-weight: normal;
+      opacity: 0.8;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* Sections */
+    .section {
+      background: white;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+    .section h2 {
+      color: var(--blue);
+      font-size: 16px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section p { margin-bottom: 12px; color: var(--gray); font-size: 14px; }
+
+    /* Mode content */
+    .mode-content { display: none; }
+    .mode-content.active { display: block; }
+
+    /* Form elements */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    input[type="text"], input[type="number"] {
+      padding: 10px 12px;
+      font-size: 16px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      min-width: 120px;
+    }
+    input:focus { border-color: var(--blue); outline: none; }
+    .btn {
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: var(--blue-dark); }
+    .btn:active { transform: scale(0.98); }
+    .btn-secondary { background: var(--gray); }
+    .btn-success { background: var(--green); }
+    .btn-danger { background: var(--red); }
+    .btn-small { padding: 8px 12px; font-size: 13px; }
+
+    /* Term entries */
+    .term-entries { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+    .term-entry { display: flex; gap: 10px; align-items: center; }
+    .term-entry input { flex: 1; }
+    .term-entry .remove-btn {
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    /* Results */
+    .results {
+      background: #fafafa;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 15px;
+      border: 1px solid var(--border);
+    }
+    .results h3 { color: var(--blue); margin-bottom: 10px; font-size: 15px; }
+    .results-scrollable { max-height: 500px; overflow-y: auto; }
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .results-table th, .results-table td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: right;
+    }
+    .results-table th {
+      background: var(--blue);
+      color: white;
+      position: sticky;
+      top: 0;
+    }
+    .results-table tr:nth-child(even) { background: #f5f5f5; }
+    .results-table tr:hover { background: var(--blue-light); }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: var(--blue);
+      color: white;
+      padding: 14px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .stat-box .value { font-size: 20px; font-weight: bold; }
+    .stat-box .label { font-size: 11px; opacity: 0.9; }
+
+    /* Proximity matrix */
+    .proximity-matrix { overflow-x: auto; margin-top: 15px; }
+    .proximity-matrix table { border-collapse: collapse; font-size: 13px; width: 100%; }
+    .proximity-matrix th, .proximity-matrix td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: center;
+    }
+    .proximity-matrix th { background: var(--blue); color: white; }
+    .cell-close { background: #d4edda; }
+    .cell-medium { background: #fff3cd; }
+    .cell-far { background: #f8d7da; }
+
+    /* Clickable rows */
+    .clickable-row { cursor: pointer; transition: background 0.15s; }
+    .clickable-row:hover { background: #d0e4f7 !important; }
+    .clickable-row.selected { background: var(--blue) !important; color: white; }
+    .clickable-row.selected td { color: white; }
+
+    /* Matrix view */
+    .matrix-view {
+      margin-top: 20px;
+      padding: 20px;
+      background: #2a2a3d;
+      border-radius: 6px;
+      color: white;
+    }
+    .matrix-view h3 { color: #8bb8e8; margin-bottom: 10px; }
+    .matrix-view .hint { color: #999; font-size: 13px; }
+    .els-matrix {
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      line-height: 1.8;
+      direction: rtl;
+      background: #1a1a28;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre;
+      margin: 15px 0;
+    }
+    .els-matrix .hl1 { background: var(--red); color: white; padding: 2px; border-radius: 2px; }
+    .els-matrix .hl2 { background: var(--green); color: white; padding: 2px; border-radius: 2px; }
+    .els-matrix .hl-both { background: var(--orange); color: white; padding: 2px; border-radius: 2px; }
+    .matrix-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .matrix-stat {
+      background: #3a3a4d;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .matrix-stat .value { font-size: 16px; font-weight: bold; color: #8bb8e8; }
+    .matrix-stat .label { font-size: 10px; color: #999; }
+
+    /* Save/Load panel */
+    .save-panel {
+      background: var(--blue-light);
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #c8dae8;
+    }
+    .saved-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+    }
+    .saved-item .name { font-weight: bold; color: var(--blue); }
+    .saved-item .meta { font-size: 11px; color: #666; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: #666; }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #eee;
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Action buttons */
+    .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+
+    /* Scan mode specific */
+    .range-row {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+    .range-row label { display: flex; align-items: center; gap: 6px; }
+    .range-row input[type="number"] { width: 80px; }
+    .result-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .result-item:hover { background: var(--blue-light); }
+    .result-item .term { font-weight: bold; color: var(--blue); font-size: 18px; }
+    .result-item .info { font-size: 13px; color: var(--gray); margin-top: 4px; }
+
+    /* Matrix modal for scan mode */
     .matrix-modal {
       display: none;
       position: fixed;
@@ -24,20 +321,12 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0,0,0,0.85);
       z-index: 1000;
-      overflow-x: hidden;
-      overflow-y: auto;
+      overflow: auto;
       padding: 10px;
-      box-sizing: border-box;
     }
-
-    .matrix-modal.active {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
+    .matrix-modal.active { display: flex; flex-direction: column; align-items: center; }
     .matrix-modal-header {
       display: flex;
       justify-content: space-between;
@@ -47,579 +336,821 @@
       margin-bottom: 15px;
       color: white;
     }
-
-    .matrix-modal-title {
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    .matrix-modal-info {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
-    .matrix-close-btn {
-      background: #dc3545;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      min-height: 44px;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .matrix-close-btn:hover {
-      background: #c82333;
-    }
-
-    .matrix-close-btn:active {
-      transform: scale(0.98);
-    }
-
+    .matrix-modal-title { font-size: 18px; font-weight: bold; }
     .matrix-container {
       background: #1a1a2e;
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 20px;
       overflow: auto;
-      -webkit-overflow-scrolling: touch;
       max-width: 100vw;
       max-height: calc(100vh - 150px);
-      width: 100%;
     }
-
     .matrix-grid {
       display: grid;
       gap: 2px;
       direction: rtl;
       font-family: 'Courier New', monospace;
       font-size: 18px;
-      line-height: 1;
       min-width: max-content;
     }
-
     .matrix-cell {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: #2d2d44;
       color: #e0e0e0;
       border-radius: 3px;
-      transition: all 0.2s;
-      cursor: pointer;
     }
-
-    .matrix-cell:hover {
-      transform: scale(1.1);
-      z-index: 10;
-    }
-
-    /* Term 1 highlighting - Yellow */
-    .matrix-cell.highlighted,
-    .matrix-cell.term1 {
-      background: #ffc107;
-      color: #000;
-      font-weight: bold;
-      box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
-    }
-
-    /* Term 2 highlighting - Cyan/Blue */
-    .matrix-cell.term2 {
-      background: #00bcd4;
-      color: #000;
-      font-weight: bold;
-      box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
-    }
-
-    /* Both terms overlap - Purple */
-    .matrix-cell.term1.term2 {
-      background: #9c27b0;
-      color: #fff;
-      box-shadow: 0 0 15px rgba(156, 39, 176, 0.7);
-    }
-
-    .matrix-cell.context {
-      background: #3d5a80;
-      color: #fff;
-    }
-
-    .matrix-controls {
-      display: flex;
-      gap: 15px;
-      align-items: center;
-      margin-bottom: 15px;
-      flex-wrap: wrap;
-      color: white;
-    }
-
-    .matrix-controls label {
-      font-size: 14px;
-    }
-
-    .matrix-controls input {
-      width: 70px;
-      padding: 8px 10px;
-      border-radius: 4px;
-      border: 1px solid #555;
-      background: #333;
-      color: white;
-      font-size: 16px;
-      min-height: 40px;
-    }
-
-    .matrix-controls button {
-      padding: 10px 20px;
-      border-radius: 5px;
-      border: none;
-      background: #3F8EBA;
-      color: white;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 600;
-      min-height: 44px;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .matrix-controls button:hover {
-      background: #2D6A91;
-    }
-
-    .matrix-controls button:active {
-      transform: scale(0.98);
-    }
-
-    .result-item.clickable {
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .result-item.clickable:hover {
-      background-color: rgba(0, 123, 255, 0.2);
-      transform: translateX(-3px);
-    }
-
-    .result-item .view-matrix-hint {
-      font-size: 12px;
-      color: #007bff;
-      margin-top: 5px;
-      opacity: 0.8;
-    }
-
+    .matrix-cell.term1 { background: #ffc107; color: #000; font-weight: bold; }
+    .matrix-cell.term2 { background: #00bcd4; color: #000; font-weight: bold; }
+    .matrix-cell.term1.term2 { background: #9c27b0; color: #fff; }
     .matrix-legend {
       display: flex;
-      gap: 20px;
+      gap: 15px;
       margin-top: 15px;
       color: white;
-      font-size: 14px;
-      flex-wrap: wrap;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .legend-color {
-      width: 20px;
-      height: 20px;
-      border-radius: 3px;
-    }
-
-    .legend-color.term1 {
-      background: #ffc107;
-    }
-
-    .legend-color.term2 {
-      background: #00bcd4;
-    }
-
-    .legend-color.both {
-      background: #9c27b0;
-    }
-
-    .legend-color.context {
-      background: #3d5a80;
-    }
-
-    .legend-color.regular {
-      background: #2d2d44;
-    }
-
-    /* Text source info */
-    .text-source-info-static {
-      margin-top: 16px;
-      padding: 10px 16px;
-      background: #e8f5e9;
-      border-radius: 8px;
-      border-left: 4px solid #4caf50;
       font-size: 13px;
-      color: #2e7d32;
-    }
-
-    /* Multi-term search styles */
-    .multi-term-section {
-      margin-top: 16px;
-      padding: 16px;
-      background: #e3f2fd;
-      border-radius: 8px;
-      border-left: 4px solid #2196f3;
-    }
-
-    .multi-term-toggle {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .multi-term-toggle input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-    }
-
-    .multi-term-toggle label {
-      font-weight: 600;
-      color: #1565c0;
-    }
-
-    .multi-term-inputs {
-      display: none;
-    }
-
-    .multi-term-inputs.active {
-      display: block;
-    }
-
-    .proximity-container {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-top: 12px;
       flex-wrap: wrap;
     }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-color { width: 18px; height: 18px; border-radius: 3px; }
+    .legend-color.t1 { background: #ffc107; }
+    .legend-color.t2 { background: #00bcd4; }
+    .legend-color.both { background: #9c27b0; }
 
-    .proximity-container label {
-      font-size: 14px;
-      color: #333;
-    }
-
-    .proximity-container input {
-      width: 100px;
-      padding: 8px;
-      border: 2px solid #ddd;
-      border-radius: 4px;
-      font-size: 16px;
-    }
-
-    /* Proximity results section */
-    .proximity-results {
-      margin-top: 20px;
-      padding: 16px;
-      background: #fff3e0;
-      border-radius: 8px;
-      border-left: 4px solid #ff9800;
-    }
-
-    .proximity-results h4 {
-      margin: 0 0 12px 0;
-      color: #e65100;
-    }
-
-    .proximity-pair {
-      padding: 12px;
-      margin-bottom: 10px;
-      background: white;
-      border-radius: 6px;
-      border-left: 4px solid #4caf50;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .proximity-pair:hover {
+    /* Info text */
+    .info-text {
       background: #e8f5e9;
-      transform: translateX(-3px);
-    }
-
-    .proximity-pair .distance {
-      font-weight: bold;
-      color: #2e7d32;
-    }
-
-    .proximity-pair .terms {
-      display: flex;
-      gap: 20px;
-      margin-top: 8px;
-      font-size: 14px;
-    }
-
-    .proximity-pair .term-info {
-      padding: 4px 8px;
       border-radius: 4px;
+      padding: 10px 14px;
+      border-right: 3px solid var(--green);
+      font-size: 13px;
+      color: var(--green);
+      margin-bottom: 15px;
     }
 
-    .proximity-pair .term-info.t1 {
-      background: #fff8e1;
-      border: 1px solid #ffc107;
-    }
-
-    .proximity-pair .term-info.t2 {
-      background: #e0f7fa;
-      border: 1px solid #00bcd4;
-    }
-
-    /* Verse attribution styles */
-    .verse-attribution {
-      margin-top: 8px;
-      padding: 8px;
-      background: #f5f5f5;
-      border-radius: 4px;
-      font-size: 12px;
-      color: #666;
-    }
-
-    .verse-attribution .verse-item {
-      display: inline-block;
-      margin: 2px 4px;
-      padding: 2px 6px;
-      background: #e3f2fd;
-      border-radius: 3px;
-      font-family: monospace;
-    }
-
-    /* Matrix verse info tooltip */
-    .matrix-cell[data-verse]:hover::after {
-      content: attr(data-verse);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.9);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      white-space: nowrap;
-      z-index: 100;
-      pointer-events: none;
-    }
-
-    .matrix-cell {
-      position: relative;
-    }
-
-    /* Mobile-specific matrix styles */
-    @media (max-width: 768px) {
-      .matrix-modal {
-        padding: 5px;
-      }
-
-      .matrix-modal-header {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-      }
-
-      .matrix-container {
-        padding: 10px;
-        border-radius: 5px;
-        max-height: calc(100vh - 200px);
-      }
-
-      .matrix-grid {
-        min-width: max-content;
-      }
-
-      .matrix-cell {
-        width: 22px;
-        height: 22px;
-        font-size: 14px;
-      }
-
-      .matrix-controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .matrix-controls label {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .matrix-legend {
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .proximity-container {
-        flex-direction: column;
-        align-items: stretch;
-      }
+    @media (max-width: 600px) {
+      .mode-tab .mode-desc { display: none; }
+      .matrix-cell { width: 22px; height: 22px; font-size: 14px; }
     }
   </style>
-
-  <!-- Service Worker Registration -->
-  <script type="text/javascript">
-    // Register service worker for offline capabilities
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
-          })
-          .catch(error => {
-            console.error('Service Worker registration failed:', error);
-          });
-      });
-    }
-  </script>
 </head>
-
 <body>
-  <!-- Header Section -->
   <header class="header">
-    <div class="logo-container">
-      <a href="index.html">
-        <img src="img/favicon.png" alt="logo" class="logo">
-      </a>
-      <h1 class="bible-codes-heading">Bible Codes</h1>
-    </div>
+    <a href="index.html"><img src="img/favicon.png" alt=""></a>
+    <h1>ELS Search</h1>
   </header>
 
-  <!-- Main Content Section -->
-  <main class="main-content">
-    <!-- Search Input Section -->
-    <section class="search-section">
-      <div class="input-container">
-        <label for="st1" class="input-label">Search Term 1 (Hebrew)</label>
-        <input dir="rtl" type="text" name="st1" id="st1" class="st" placeholder="Enter first search term">
+  <main class="container">
+    <!-- Mode Tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="index">
+        Index Lookup
+        <span class="mode-desc">Instant search (110K words)</span>
+      </button>
+      <button class="mode-tab" data-mode="scan">
+        Full Scan
+        <span class="mode-desc">Search any term</span>
+      </button>
+      <button class="mode-tab" data-mode="dict">
+        Dictionary
+        <span class="mode-desc">Browse 260K words</span>
+      </button>
+    </div>
+
+    <!-- INDEX MODE -->
+    <div id="index-mode" class="mode-content active">
+      <div id="indexLoading" class="loading">
+        <div class="spinner"></div>
+        <div>Loading ELS Index...</div>
+        <div id="loadProgress" style="margin-top: 10px; font-size: 12px;"></div>
       </div>
 
-      <!-- Multi-term search section -->
-      <div class="multi-term-section">
-        <div class="multi-term-toggle">
-          <input type="checkbox" id="multi-term-enabled">
-          <label for="multi-term-enabled">Enable Multi-Term Proximity Search</label>
-        </div>
+      <div id="indexContent" style="display: none;">
+        <!-- Stats -->
+        <section class="section">
+          <h2>Index Statistics</h2>
+          <div class="stats-grid" id="statsGrid"></div>
+        </section>
 
-        <div class="multi-term-inputs" id="multi-term-inputs">
-          <div class="input-container">
-            <label for="st2" class="input-label">Search Term 2 (Hebrew)</label>
-            <input dir="rtl" type="text" name="st2" id="st2" class="st" placeholder="Enter second search term">
+        <!-- Multi-term search -->
+        <section class="section">
+          <h2>Search Terms</h2>
+
+          <div class="save-panel">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+              <input type="text" id="sessionName" placeholder="Session name..." style="flex: 1; min-width: 150px;">
+              <button class="btn btn-success btn-small" onclick="saveSession()">Save</button>
+              <button class="btn btn-secondary btn-small" onclick="exportResults()">Export</button>
+              <button class="btn btn-secondary btn-small" onclick="clearSession()">Clear</button>
+            </div>
+            <div id="savedSessions"></div>
           </div>
 
-          <div class="proximity-container">
-            <div>
-              <label for="max-distance">Max Distance (characters):</label>
-              <input type="number" id="max-distance" value="1000" min="1" inputmode="numeric">
+          <div class="term-entries" id="termEntries">
+            <div class="term-entry">
+              <input type="text" class="term-input" placeholder="Term 1" value="משה" dir="rtl">
+              <button class="remove-btn" onclick="removeTerm(this)">&times;</button>
             </div>
-            <div>
-              <label>
-                <input type="checkbox" id="same-skip-only"> Same skip value only
-              </label>
+            <div class="term-entry">
+              <input type="text" class="term-input" placeholder="Term 2" value="אהרן" dir="rtl">
+              <button class="remove-btn" onclick="removeTerm(this)">&times;</button>
             </div>
           </div>
+
+          <div class="action-row">
+            <button class="btn btn-secondary" onclick="addTerm()">+ Add Term</button>
+            <button class="btn" onclick="searchIndex()">Search</button>
+          </div>
+
+          <div id="indexResults"></div>
+        </section>
+
+        <!-- Single word lookup -->
+        <section class="section">
+          <h2>Single Word Lookup</h2>
+          <div class="input-row">
+            <input type="text" id="lookupWord" placeholder="Word" value="ישראל" dir="rtl">
+            <button class="btn" onclick="doLookup()">Look Up</button>
+          </div>
+          <div id="lookupResults"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- SCAN MODE -->
+    <div id="scan-mode" class="mode-content">
+      <section class="section">
+        <h2>Real-time ELS Scan</h2>
+        <p>Scans the entire Torah text for any term. Use this for words not in the index.</p>
+
+        <div class="info-text">
+          Text: Koren Edition (Rips et al., 1994) - 304,805 letters
         </div>
-      </div>
 
-      <!-- Text Source Info -->
-      <div class="text-source-info-static">
-        Text: Koren Edition (Rips et al., 1994) - 304,805 letters
-        <br><a href="els-explorer.html" style="color: #1565c0;">→ Multi-Term Explorer</a>
-        (proximity matrix, session save/load)
-      </div>
-
-      <div class="range-container">
-        <div>
-          <label for="min-range">Min Skip:</label>
-          <input type="number" id="min-range" value="-100" inputmode="numeric">
+        <div class="input-row">
+          <input type="text" id="scanTerm1" placeholder="Search term" dir="rtl" style="flex: 1;">
         </div>
-        <div>
-          <label for="max-range">Max Skip:</label>
-          <input type="number" id="max-range" value="100" inputmode="numeric">
+
+        <div class="input-row">
+          <label><input type="checkbox" id="enableTerm2"> Second term:</label>
+          <input type="text" id="scanTerm2" placeholder="Optional" dir="rtl" disabled style="flex: 1;">
         </div>
-        <div>
-          Skip: 0 = excluded, ±1 = open text, |skip|≥2 = true ELS
+
+        <div class="range-row">
+          <label>Skip range: <input type="number" id="minSkip" value="-100"> to <input type="number" id="maxSkip" value="100"></label>
+          <span style="font-size: 12px; color: #666;">Skip 0 excluded, ±1 = open text</span>
         </div>
+
+        <div class="action-row">
+          <button class="btn" id="scanBtn" onclick="startScan()">Search</button>
+          <span id="scanStatus" style="font-size: 13px; color: #666;"></span>
+        </div>
+
+        <div id="scanResults"></div>
+      </section>
+    </div>
+
+    <!-- DICTIONARY MODE -->
+    <div id="dict-mode" class="mode-content">
+      <div id="dictLoading" class="loading">
+        <div class="spinner"></div>
+        <div>Loading Dictionary...</div>
       </div>
 
-      <button class="btn" id="search-btn">Search</button>
+      <div id="dictContent" style="display: none;">
+        <section class="section">
+          <h2>Dictionary Browser</h2>
+          <div class="stats-grid" id="dictStats"></div>
 
-      <!-- Proximity Results Container (for multi-term search) -->
-      <div id="proximity-results-container" class="proximity-results" style="display: none;">
-        <h4>🔗 Proximity Pairs Found</h4>
-        <div id="proximity-results"></div>
+          <div class="input-row">
+            <input type="text" id="dictSearch" placeholder="Search word..." dir="rtl" style="flex: 1;">
+            <select id="dictSource" style="padding: 10px; border-radius: 4px; border: 1px solid var(--border);">
+              <option value="all">All Sources</option>
+              <option value="bdb">BDB (Biblical)</option>
+              <option value="strongs">Strong's</option>
+              <option value="wiktionary">Wiktionary</option>
+              <option value="tanakh">Tanakh</option>
+              <option value="wikipedia">Wikipedia</option>
+            </select>
+            <button class="btn" onclick="searchDict()">Search</button>
+          </div>
+
+          <div class="action-row">
+            <button class="btn btn-secondary" onclick="browseDict('random')">Random Words</button>
+            <button class="btn btn-secondary" onclick="browseDict('frequent')">Common Words</button>
+          </div>
+
+          <div id="dictResults"></div>
+        </section>
       </div>
-
-      <!-- Results Container -->
-      <div id="search-results-container" class="results-container">
-        <h3>Search Results <span style="font-weight: normal; font-size: 14px;">(Click any result to view matrix)</span></h3>
-        <div id="search-results" class="results-list"></div>
-      </div>
-    </section>
-
-    <!-- Offline status indicator -->
-    <div id="offline-indicator" class="offline-indicator hidden">
-      You are currently offline. Some features may be limited.
     </div>
   </main>
 
-  <!-- Matrix Modal -->
-  <div id="matrix-modal" class="matrix-modal">
+  <!-- Matrix Modal (for scan mode) -->
+  <div id="matrixModal" class="matrix-modal">
     <div class="matrix-modal-header">
       <div>
-        <div class="matrix-modal-title" id="matrix-title">ELS Matrix View</div>
-        <div class="matrix-modal-info" id="matrix-info"></div>
+        <div class="matrix-modal-title" id="modalTitle">ELS Matrix</div>
+        <div id="modalInfo" style="font-size: 13px; opacity: 0.8;"></div>
       </div>
-      <button class="matrix-close-btn" id="matrix-close">Close (Esc)</button>
+      <button class="btn btn-danger" onclick="closeModal()">Close (Esc)</button>
     </div>
-
-    <div class="matrix-controls">
-      <label>Rows before: <input type="number" id="rows-before" value="5" min="0" max="50" inputmode="numeric"></label>
-      <label>Rows after: <input type="number" id="rows-after" value="5" min="0" max="50" inputmode="numeric"></label>
-      <button id="regenerate-matrix">Update Matrix</button>
-    </div>
-
     <div class="matrix-container">
-      <div class="matrix-grid" id="matrix-grid"></div>
+      <div class="matrix-grid" id="modalGrid"></div>
     </div>
-
-    <div class="matrix-legend" id="matrix-legend">
-      <div class="legend-item">
-        <div class="legend-color term1"></div>
-        <span id="legend-term1">Term 1</span>
-      </div>
-      <div class="legend-item" id="legend-term2-item" style="display: none;">
-        <div class="legend-color term2"></div>
-        <span id="legend-term2">Term 2</span>
-      </div>
-      <div class="legend-item" id="legend-both-item" style="display: none;">
-        <div class="legend-color both"></div>
-        <span>Overlap</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color context"></div>
-        <span>Context Column</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color regular"></div>
-        <span>Regular Text</span>
-      </div>
+    <div class="matrix-legend">
+      <div class="legend-item"><div class="legend-color t1"></div><span id="legendT1">Term 1</span></div>
+      <div class="legend-item" id="legendT2Item" style="display:none;"><div class="legend-color t2"></div><span id="legendT2">Term 2</span></div>
+      <div class="legend-item" id="legendBothItem" style="display:none;"><div class="legend-color both"></div><span>Overlap</span></div>
     </div>
   </div>
 
-  <script src="js/test.js" defer></script>
-  <script src="js/search-algorithms.js" defer></script>
+  <script type="module">
+    import { getElsIndexService, initElsIndex } from './engines/els-index.js';
 
-  <!-- PWA Install Prompt -->
-  <script src="js/pwa-install.js"></script>
+    let elsService = null;
+    let torahText = null;
+    let currentResults = null;
+
+    // ============= MODE SWITCHING =============
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.mode + '-mode').classList.add('active');
+      });
+    });
+
+    // ============= INIT =============
+    async function init() {
+      try {
+        document.getElementById('loadProgress').textContent = 'Loading Torah text...';
+        const resp = await fetch('data/torahNoSpaces.txt');
+        torahText = await resp.text();
+
+        document.getElementById('loadProgress').textContent = 'Loading ELS index (32MB)...';
+        const metadata = await initElsIndex('data/els-index/els-index-50-min4.json.gz');
+        elsService = getElsIndexService();
+
+        document.getElementById('indexLoading').style.display = 'none';
+        document.getElementById('indexContent').style.display = 'block';
+
+        displayStats(metadata);
+        loadSavedSessions();
+
+      } catch (error) {
+        console.error('Init failed:', error);
+        document.getElementById('indexLoading').innerHTML =
+          `<div style="color: red;">Error loading index: ${error.message}</div>`;
+      }
+    }
+
+    function displayStats(meta) {
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-box"><div class="value">${meta.total_words?.toLocaleString() || '?'}</div><div class="label">Words</div></div>
+        <div class="stat-box"><div class="value">${meta.total_occurrences?.toLocaleString() || '?'}</div><div class="label">Occurrences</div></div>
+        <div class="stat-box"><div class="value">±${meta.skip_range?.[1] || '?'}</div><div class="label">Skip Range</div></div>
+        <div class="stat-box"><div class="value">${meta.torah_length?.toLocaleString() || '?'}</div><div class="label">Letters</div></div>
+      `;
+    }
+
+    // ============= INDEX MODE: TERM MANAGEMENT =============
+    window.addTerm = function() {
+      const container = document.getElementById('termEntries');
+      const n = container.querySelectorAll('.term-entry').length + 1;
+      const div = document.createElement('div');
+      div.className = 'term-entry';
+      div.innerHTML = `<input type="text" class="term-input" placeholder="Term ${n}" dir="rtl"><button class="remove-btn" onclick="removeTerm(this)">&times;</button>`;
+      container.appendChild(div);
+    };
+
+    window.removeTerm = function(btn) {
+      const container = document.getElementById('termEntries');
+      if (container.querySelectorAll('.term-entry').length > 1) {
+        btn.parentElement.remove();
+      }
+    };
+
+    // ============= INDEX MODE: SEARCH =============
+    window.searchIndex = function() {
+      const inputs = document.querySelectorAll('.term-input');
+      const terms = Array.from(inputs).map(i => i.value.trim()).filter(t => t);
+
+      if (terms.length < 1) { alert('Enter at least one term'); return; }
+
+      const termData = {};
+      for (const term of terms) {
+        const occs = elsService.findWord(term);
+        termData[term] = { occurrences: occs, count: occs.length };
+      }
+
+      // Compute proximity pairs if multiple terms
+      const proximityPairs = [];
+      if (terms.length > 1) {
+        for (let i = 0; i < terms.length; i++) {
+          for (let j = i + 1; j < terms.length; j++) {
+            const prox = elsService.pairProximity(terms[i], terms[j]);
+            if (prox) {
+              proximityPairs.push({
+                term1: terms[i], term2: terms[j],
+                distance: prox.distance,
+                pos1: prox.word1.pos, skip1: prox.word1.skip,
+                pos2: prox.word2.pos, skip2: prox.word2.skip
+              });
+            }
+          }
+        }
+        proximityPairs.sort((a, b) => a.distance - b.distance);
+      }
+
+      currentResults = { terms, termData, proximityPairs, timestamp: new Date().toISOString() };
+      displayIndexResults(currentResults);
+    };
+
+    function displayIndexResults(results) {
+      const { terms, termData, proximityPairs } = results;
+
+      let html = '<div class="results"><h3>Term Occurrences</h3>';
+      html += '<table class="results-table"><tr><th>Term</th><th>Count</th><th>First Pos</th></tr>';
+      for (const term of terms) {
+        const d = termData[term];
+        const firstPos = d.occurrences[0]?.pos ?? 'N/A';
+        html += `<tr><td><strong>${term}</strong></td><td>${d.count.toLocaleString()}</td><td>${typeof firstPos === 'number' ? firstPos.toLocaleString() : firstPos}</td></tr>`;
+      }
+      html += '</table>';
+
+      if (terms.length > 1) {
+        // Proximity matrix
+        const { matrix } = elsService.computeProximityMatrix(terms);
+        html += '<h3 style="margin-top:20px;">Proximity Matrix</h3><div class="proximity-matrix"><table><tr><th></th>';
+        terms.forEach(t => html += `<th>${t}</th>`);
+        html += '</tr>';
+        for (let i = 0; i < terms.length; i++) {
+          html += `<tr><th>${terms[i]}</th>`;
+          for (let j = 0; j < terms.length; j++) {
+            const d = matrix[i][j];
+            const cls = d === 0 ? '' : d < 500 ? 'cell-close' : d < 2000 ? 'cell-medium' : 'cell-far';
+            html += `<td class="${cls}">${d === Infinity ? '∞' : d.toLocaleString()}</td>`;
+          }
+          html += '</tr>';
+        }
+        html += '</table></div>';
+
+        // Pair details
+        html += `<h3 style="margin-top:20px;">Proximity Pairs (${proximityPairs.length})</h3>`;
+        html += '<div class="results-scrollable"><table class="results-table">';
+        html += '<tr><th>#</th><th>Term 1</th><th>Term 2</th><th>Distance</th><th>Pos 1</th><th>Skip 1</th><th>Pos 2</th><th>Skip 2</th></tr>';
+        proximityPairs.forEach((p, idx) => {
+          const cls = p.distance < 500 ? 'cell-close' : p.distance < 2000 ? 'cell-medium' : 'cell-far';
+          html += `<tr class="clickable-row" onclick="showIndexMatrix(${idx})" data-idx="${idx}">
+            <td>${idx + 1}</td><td>${p.term1}</td><td>${p.term2}</td>
+            <td class="${cls}">${p.distance.toLocaleString()}</td>
+            <td>${p.pos1.toLocaleString()}</td><td>${p.skip1}</td>
+            <td>${p.pos2.toLocaleString()}</td><td>${p.skip2}</td>
+          </tr>`;
+        });
+        html += '</table></div>';
+
+        // Matrix view area
+        html += `<div id="indexMatrixView" class="matrix-view">
+          <h3>Matrix View</h3>
+          <p class="hint">Click a row above to view the matrix.</p>
+          <div id="indexMatrixDisplay"></div>
+        </div>`;
+      }
+
+      html += '</div>';
+      document.getElementById('indexResults').innerHTML = html;
+    }
+
+    window.showIndexMatrix = function(idx) {
+      if (!currentResults || !torahText) return;
+      const pair = currentResults.proximityPairs[idx];
+      if (!pair) return;
+
+      document.querySelectorAll('.clickable-row').forEach(r => r.classList.remove('selected'));
+      document.querySelector(`.clickable-row[data-idx="${idx}"]`)?.classList.add('selected');
+
+      const width = 30;
+      const centerPos = Math.min(pair.pos1, pair.pos2);
+      const startRow = Math.floor(centerPos / width) - 5;
+      const endRow = startRow + 16;
+
+      const t1Pos = new Set();
+      const t2Pos = new Set();
+      for (let i = 0; i < pair.term1.length; i++) t1Pos.add(pair.pos1 + i * pair.skip1);
+      for (let i = 0; i < pair.term2.length; i++) t2Pos.add(pair.pos2 + i * pair.skip2);
+
+      let matrixHtml = '<div class="els-matrix">';
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * width;
+        if (rowStart < 0 || rowStart >= torahText.length) continue;
+        let line = '';
+        for (let col = 0; col < width; col++) {
+          const pos = rowStart + col;
+          if (pos >= torahText.length) break;
+          const ch = torahText[pos];
+          const in1 = t1Pos.has(pos), in2 = t2Pos.has(pos);
+          if (in1 && in2) line += `<span class="hl-both">${ch}</span>`;
+          else if (in1) line += `<span class="hl1">${ch}</span>`;
+          else if (in2) line += `<span class="hl2">${ch}</span>`;
+          else line += ch;
+        }
+        matrixHtml += line + '\n';
+      }
+      matrixHtml += '</div>';
+
+      const statsHtml = `<div class="matrix-stats">
+        <div class="matrix-stat"><div class="value" style="color:#c62828;">${pair.term1}</div><div class="label">Term 1</div></div>
+        <div class="matrix-stat"><div class="value" style="color:#2e7d32;">${pair.term2}</div><div class="label">Term 2</div></div>
+        <div class="matrix-stat"><div class="value">${pair.distance.toLocaleString()}</div><div class="label">Distance</div></div>
+        <div class="matrix-stat"><div class="value">${pair.skip1}</div><div class="label">Skip 1</div></div>
+        <div class="matrix-stat"><div class="value">${pair.skip2}</div><div class="label">Skip 2</div></div>
+      </div>`;
+
+      document.getElementById('indexMatrixDisplay').innerHTML = statsHtml + matrixHtml;
+    };
+
+    // ============= INDEX MODE: SINGLE LOOKUP =============
+    window.doLookup = function() {
+      const word = document.getElementById('lookupWord').value.trim();
+      if (!word) return;
+      const occs = elsService.findWord(word);
+      if (occs.length === 0) {
+        document.getElementById('lookupResults').innerHTML = `<div class="results"><p>No occurrences found for "${word}"</p></div>`;
+        return;
+      }
+      const sample = occs.slice(0, 100);
+      let html = `<div class="results"><h3>${word}: ${occs.length.toLocaleString()} occurrences</h3>`;
+      html += '<div class="results-scrollable"><table class="results-table"><tr><th>#</th><th>Position</th><th>Skip</th></tr>';
+      sample.forEach((o, i) => html += `<tr><td>${i + 1}</td><td>${o.pos.toLocaleString()}</td><td>${o.skip}</td></tr>`);
+      html += '</table></div></div>';
+      document.getElementById('lookupResults').innerHTML = html;
+    };
+
+    // ============= INDEX MODE: SESSIONS =============
+    window.saveSession = function() {
+      if (!currentResults) { alert('No results to save'); return; }
+      const name = document.getElementById('sessionName').value.trim() || `Search ${new Date().toLocaleTimeString()}`;
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      sessions.unshift({ name, results: currentResults, savedAt: new Date().toISOString() });
+      if (sessions.length > 20) sessions.length = 20;
+      localStorage.setItem('elsSearchSessions', JSON.stringify(sessions));
+      loadSavedSessions();
+      document.getElementById('sessionName').value = '';
+    };
+
+    window.loadSession = function(idx) {
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      if (!sessions[idx]) return;
+      const session = sessions[idx];
+      currentResults = session.results;
+      const container = document.getElementById('termEntries');
+      container.innerHTML = '';
+      session.results.terms.forEach(term => {
+        const div = document.createElement('div');
+        div.className = 'term-entry';
+        div.innerHTML = `<input type="text" class="term-input" value="${term}" dir="rtl"><button class="remove-btn" onclick="removeTerm(this)">&times;</button>`;
+        container.appendChild(div);
+      });
+      displayIndexResults(currentResults);
+    };
+
+    window.deleteSession = function(idx) {
+      if (!confirm('Delete session?')) return;
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      sessions.splice(idx, 1);
+      localStorage.setItem('elsSearchSessions', JSON.stringify(sessions));
+      loadSavedSessions();
+    };
+
+    function loadSavedSessions() {
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      const container = document.getElementById('savedSessions');
+      if (sessions.length === 0) {
+        container.innerHTML = '<p style="font-size: 12px; color: #666; margin-top: 10px;">No saved sessions</p>';
+        return;
+      }
+      let html = '';
+      sessions.forEach((s, i) => {
+        html += `<div class="saved-item">
+          <div><span class="name">${s.name}</span><br><span class="meta">${s.results.terms.join(', ')}</span></div>
+          <div><button class="btn btn-small btn-secondary" onclick="loadSession(${i})">Load</button>
+          <button class="btn btn-small btn-danger" onclick="deleteSession(${i})">×</button></div>
+        </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    window.exportResults = function() {
+      if (!currentResults) { alert('No results'); return; }
+      const blob = new Blob([JSON.stringify(currentResults, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `els-search-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+    };
+
+    window.clearSession = function() {
+      if (!confirm('Clear all?')) return;
+      document.getElementById('termEntries').innerHTML = `
+        <div class="term-entry"><input type="text" class="term-input" placeholder="Term 1" dir="rtl"><button class="remove-btn" onclick="removeTerm(this)">&times;</button></div>
+        <div class="term-entry"><input type="text" class="term-input" placeholder="Term 2" dir="rtl"><button class="remove-btn" onclick="removeTerm(this)">&times;</button></div>`;
+      document.getElementById('indexResults').innerHTML = '';
+      currentResults = null;
+    };
+
+    // ============= SCAN MODE =============
+    document.getElementById('enableTerm2').addEventListener('change', (e) => {
+      document.getElementById('scanTerm2').disabled = !e.target.checked;
+    });
+
+    let scanAbort = false;
+    window.startScan = async function() {
+      if (!torahText) {
+        const resp = await fetch('data/torahNoSpaces.txt');
+        torahText = await resp.text();
+      }
+
+      const term1 = document.getElementById('scanTerm1').value.trim();
+      if (!term1) { alert('Enter a search term'); return; }
+
+      const term2Enabled = document.getElementById('enableTerm2').checked;
+      const term2 = term2Enabled ? document.getElementById('scanTerm2').value.trim() : '';
+      const minSkip = parseInt(document.getElementById('minSkip').value) || -100;
+      const maxSkip = parseInt(document.getElementById('maxSkip').value) || 100;
+
+      const btn = document.getElementById('scanBtn');
+      const status = document.getElementById('scanStatus');
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
+      scanAbort = false;
+
+      const results1 = [];
+      const results2 = [];
+
+      // Scan each skip value
+      for (let skip = minSkip; skip <= maxSkip; skip++) {
+        if (scanAbort) break;
+        if (skip === 0) continue; // Skip 0 excluded
+
+        status.textContent = `Skip ${skip}...`;
+        await new Promise(r => setTimeout(r, 0)); // yield
+
+        const found1 = findELS(torahText, term1, skip);
+        found1.forEach(pos => results1.push({ pos, skip }));
+
+        if (term2) {
+          const found2 = findELS(torahText, term2, skip);
+          found2.forEach(pos => results2.push({ pos, skip }));
+        }
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Search';
+      status.textContent = '';
+
+      displayScanResults(term1, results1, term2, results2);
+    };
+
+    function findELS(text, term, skip) {
+      const results = [];
+      const len = text.length;
+      const termLen = term.length;
+      const absSkip = Math.abs(skip);
+
+      if (absSkip === 1) {
+        // Open text search
+        const searchText = skip > 0 ? text : text.split('').reverse().join('');
+        const searchTerm = skip > 0 ? term : term.split('').reverse().join('');
+        let idx = 0;
+        while ((idx = searchText.indexOf(searchTerm, idx)) !== -1) {
+          const realPos = skip > 0 ? idx : len - 1 - idx;
+          results.push(realPos);
+          idx++;
+        }
+      } else {
+        // ELS search
+        for (let start = 0; start < len; start++) {
+          let match = true;
+          for (let i = 0; i < termLen; i++) {
+            const pos = start + i * skip;
+            if (pos < 0 || pos >= len || text[pos] !== term[i]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) results.push(start);
+        }
+      }
+      return results;
+    }
+
+    function displayScanResults(term1, results1, term2, results2) {
+      let html = '<div class="results">';
+      html += `<h3>${term1}: ${results1.length} occurrences</h3>`;
+
+      if (results1.length > 0) {
+        html += '<div class="results-scrollable">';
+        results1.slice(0, 200).forEach((r, i) => {
+          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term1}', ${term2 ? `'${term2}'` : 'null'})">
+            <span class="term">${term1}</span>
+            <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}</span>
+          </div>`;
+        });
+        if (results1.length > 200) html += `<p style="color:#666;padding:10px;">...and ${results1.length - 200} more</p>`;
+        html += '</div>';
+      }
+
+      if (term2 && results2.length > 0) {
+        html += `<h3 style="margin-top:20px;">${term2}: ${results2.length} occurrences</h3>`;
+        html += '<div class="results-scrollable">';
+        results2.slice(0, 100).forEach((r, i) => {
+          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term2}', '${term1}')">
+            <span class="term">${term2}</span>
+            <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}</span>
+          </div>`;
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+      document.getElementById('scanResults').innerHTML = html;
+    }
+
+    // ============= SCAN MODE: MATRIX MODAL =============
+    window.openScanMatrix = function(pos, skip, term1, term2) {
+      const modal = document.getElementById('matrixModal');
+      modal.classList.add('active');
+
+      document.getElementById('modalTitle').textContent = `${term1} at position ${pos.toLocaleString()}`;
+      document.getElementById('modalInfo').textContent = `Skip: ${skip}`;
+      document.getElementById('legendT1').textContent = term1;
+
+      if (term2) {
+        document.getElementById('legendT2Item').style.display = 'flex';
+        document.getElementById('legendBothItem').style.display = 'flex';
+        document.getElementById('legendT2').textContent = term2;
+      } else {
+        document.getElementById('legendT2Item').style.display = 'none';
+        document.getElementById('legendBothItem').style.display = 'none';
+      }
+
+      renderModalMatrix(pos, skip, term1, term2);
+    };
+
+    function renderModalMatrix(startPos, skip, term1, term2) {
+      const width = Math.abs(skip) || 30;
+      const rowsBefore = 5;
+      const rowsAfter = 10;
+
+      const t1Pos = new Set();
+      for (let i = 0; i < term1.length; i++) t1Pos.add(startPos + i * skip);
+
+      const t2Pos = new Set();
+      // For term2, we'd need its occurrences - simplified for now
+
+      const startRow = Math.floor(startPos / width) - rowsBefore;
+      const endRow = startRow + rowsBefore + rowsAfter;
+
+      let html = '';
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * width;
+        if (rowStart < 0) continue;
+        for (let col = 0; col < width; col++) {
+          const pos = rowStart + col;
+          if (pos >= torahText.length) break;
+          const ch = torahText[pos];
+          const in1 = t1Pos.has(pos);
+          const cls = in1 ? 'matrix-cell term1' : 'matrix-cell';
+          html += `<div class="${cls}">${ch}</div>`;
+        }
+      }
+
+      const grid = document.getElementById('modalGrid');
+      grid.style.gridTemplateColumns = `repeat(${width}, 26px)`;
+      grid.innerHTML = html;
+    }
+
+    window.closeModal = function() {
+      document.getElementById('matrixModal').classList.remove('active');
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ============= DICTIONARY MODE =============
+    let dictData = null;
+    let dictLoaded = false;
+
+    async function loadDict() {
+      if (dictLoaded) return;
+      try {
+        const resp = await fetch('data/dictionaries/unified/hebrew-unified.json.gz');
+        const blob = await resp.blob();
+        const ds = new DecompressionStream('gzip');
+        const text = await new Response(blob.stream().pipeThrough(ds)).text();
+        dictData = JSON.parse(text);
+        dictLoaded = true;
+
+        document.getElementById('dictLoading').style.display = 'none';
+        document.getElementById('dictContent').style.display = 'block';
+
+        // Stats
+        const entries = Object.keys(dictData).length;
+        const sources = {};
+        Object.values(dictData).forEach(entry => {
+          const src = entry.source || 'unknown';
+          sources[src] = (sources[src] || 0) + 1;
+        });
+        document.getElementById('dictStats').innerHTML = `
+          <div class="stat-box"><div class="value">${entries.toLocaleString()}</div><div class="label">Total Entries</div></div>
+          <div class="stat-box"><div class="value">${sources.bdb?.toLocaleString() || 0}</div><div class="label">BDB</div></div>
+          <div class="stat-box"><div class="value">${sources.strongs?.toLocaleString() || 0}</div><div class="label">Strong's</div></div>
+          <div class="stat-box"><div class="value">${sources.wiktionary?.toLocaleString() || 0}</div><div class="label">Wiktionary</div></div>
+          <div class="stat-box"><div class="value">${sources.wikipedia?.toLocaleString() || 0}</div><div class="label">Wikipedia</div></div>
+        `;
+      } catch (err) {
+        document.getElementById('dictLoading').innerHTML = `<div style="color:red;">Error: ${err.message}</div>`;
+      }
+    }
+
+    // Load dict when switching to dict tab
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        if (tab.dataset.mode === 'dict' && !dictLoaded) {
+          loadDict();
+        }
+      });
+    });
+
+    window.searchDict = function() {
+      if (!dictData) return;
+      const query = document.getElementById('dictSearch').value.trim();
+      const source = document.getElementById('dictSource').value;
+      if (!query) { browseDict('random'); return; }
+
+      const results = [];
+      for (const [word, entry] of Object.entries(dictData)) {
+        if (source !== 'all' && entry.source !== source) continue;
+        if (word.includes(query)) {
+          results.push({ word, ...entry });
+          if (results.length >= 100) break;
+        }
+      }
+
+      displayDictResults(results, `Search: "${query}"`);
+    };
+
+    window.browseDict = function(mode) {
+      if (!dictData) return;
+      const source = document.getElementById('dictSource').value;
+      const words = Object.entries(dictData)
+        .filter(([w, e]) => source === 'all' || e.source === source);
+
+      let results;
+      if (mode === 'random') {
+        const shuffled = words.sort(() => Math.random() - 0.5);
+        results = shuffled.slice(0, 50).map(([word, entry]) => ({ word, ...entry }));
+      } else {
+        // Sort by some metric - for now just alphabetical
+        results = words.slice(0, 50).map(([word, entry]) => ({ word, ...entry }));
+      }
+
+      displayDictResults(results, mode === 'random' ? 'Random Words' : 'Browse');
+    };
+
+    function displayDictResults(results, title) {
+      if (results.length === 0) {
+        document.getElementById('dictResults').innerHTML = '<div class="results"><p>No results found</p></div>';
+        return;
+      }
+
+      let html = `<div class="results"><h3>${title} (${results.length})</h3>`;
+      html += '<div class="results-scrollable">';
+      results.forEach(r => {
+        const def = r.definition || r.gloss || r.meaning || '';
+        const srcBadge = r.source ? `<span style="background:#ddd;padding:2px 6px;border-radius:3px;font-size:11px;">${r.source}</span>` : '';
+        html += `<div style="padding:12px;border-bottom:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:20px;font-weight:bold;color:var(--blue);">${r.word}</span>
+            ${srcBadge}
+          </div>
+          ${def ? `<div style="color:var(--gray);margin-top:4px;">${def.substring(0, 200)}${def.length > 200 ? '...' : ''}</div>` : ''}
+          ${r.root ? `<div style="font-size:12px;color:#888;margin-top:4px;">Root: ${r.root}</div>` : ''}
+        </div>`;
+      });
+      html += '</div></div>';
+      document.getElementById('dictResults').innerHTML = html;
+    }
+
+    // ============= INIT ON LOAD =============
+    init();
+  </script>
 </body>
-
 </html>
