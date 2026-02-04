@@ -937,27 +937,77 @@
       return results;
     }
 
+    let scanProximityPairs = [];
+
     function displayScanResults(term1, results1, term2, results2) {
       let html = '<div class="results">';
-      html += `<h3>${term1}: ${results1.length} occurrences</h3>`;
 
+      // If two terms, find and display proximity pairs first
+      if (term2 && results1.length > 0 && results2.length > 0) {
+        const maxDist = 5000; // reasonable max distance
+        const pairs = [];
+
+        for (const r1 of results1) {
+          for (const r2 of results2) {
+            const dist = Math.abs(r1.pos - r2.pos);
+            if (dist <= maxDist) {
+              pairs.push({
+                pos1: r1.pos, skip1: r1.skip,
+                pos2: r2.pos, skip2: r2.skip,
+                distance: dist,
+                overlap: dist === 0,
+                skipMatch: Math.abs(r1.skip) === Math.abs(r2.skip)
+              });
+            }
+          }
+        }
+
+        pairs.sort((a, b) => a.distance - b.distance);
+        scanProximityPairs = pairs;
+
+        html += `<div style="background:#fff3e0;padding:16px;border-radius:8px;border-right:4px solid #ff9800;margin-bottom:20px;">`;
+        html += `<h3 style="color:#e65100;margin-bottom:12px;">🔗 Proximity Pairs (${pairs.length})</h3>`;
+
+        if (pairs.length === 0) {
+          html += `<p>No proximity pairs found within ${maxDist.toLocaleString()} characters.</p>`;
+        } else {
+          html += `<p style="font-size:13px;color:#666;margin-bottom:12px;">Click to view matrix with both terms</p>`;
+          html += '<div class="results-scrollable" style="max-height:400px;">';
+          pairs.forEach((p, idx) => {
+            const distText = p.overlap ? '<span style="color:#2e7d32;font-weight:bold;">OVERLAP</span>' :
+                            `<span style="color:#2e7d32;font-weight:bold;">${p.distance.toLocaleString()}</span> chars`;
+            const skipInfo = p.skipMatch ? `Same skip: ${Math.abs(p.skip1)}` : `Skips: ${p.skip1}, ${p.skip2}`;
+            html += `<div class="result-item" style="border-right:4px solid #4caf50;" onclick="openScanProximity(${idx}, '${term1}', '${term2}')">
+              <div>Distance: ${distText} | ${skipInfo}</div>
+              <div style="display:flex;gap:15px;margin-top:8px;font-size:13px;">
+                <span style="background:#fff8e1;border:1px solid #ffc107;padding:4px 8px;border-radius:4px;">"${term1}" @ ${p.pos1.toLocaleString()}</span>
+                <span style="background:#e0f7fa;border:1px solid #00bcd4;padding:4px 8px;border-radius:4px;">"${term2}" @ ${p.pos2.toLocaleString()}</span>
+              </div>
+            </div>`;
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+
+      // Individual results
+      html += `<h3>${term1}: ${results1.length.toLocaleString()} occurrences</h3>`;
       if (results1.length > 0) {
-        html += '<div class="results-scrollable">';
-        results1.slice(0, 200).forEach((r, i) => {
-          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term1}', ${term2 ? `'${term2}'` : 'null'})">
+        html += '<div class="results-scrollable" style="max-height:300px;">';
+        results1.forEach((r, i) => {
+          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term1}', null)">
             <span class="term">${term1}</span>
             <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}</span>
           </div>`;
         });
-        if (results1.length > 200) html += `<p style="color:#666;padding:10px;">...and ${results1.length - 200} more</p>`;
         html += '</div>';
       }
 
       if (term2 && results2.length > 0) {
-        html += `<h3 style="margin-top:20px;">${term2}: ${results2.length} occurrences</h3>`;
-        html += '<div class="results-scrollable">';
-        results2.slice(0, 100).forEach((r, i) => {
-          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term2}', '${term1}')">
+        html += `<h3 style="margin-top:20px;">${term2}: ${results2.length.toLocaleString()} occurrences</h3>`;
+        html += '<div class="results-scrollable" style="max-height:300px;">';
+        results2.forEach((r, i) => {
+          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term2}', null)">
             <span class="term">${term2}</span>
             <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}</span>
           </div>`;
@@ -967,6 +1017,60 @@
 
       html += '</div>';
       document.getElementById('scanResults').innerHTML = html;
+    }
+
+    window.openScanProximity = function(idx, term1, term2) {
+      const pair = scanProximityPairs[idx];
+      if (!pair) return;
+
+      const modal = document.getElementById('matrixModal');
+      modal.classList.add('active');
+
+      const distText = pair.overlap ? 'Overlapping' : `Distance: ${pair.distance.toLocaleString()}`;
+      document.getElementById('modalTitle').textContent = `"${term1}" + "${term2}"`;
+      document.getElementById('modalInfo').textContent = `${term1} skip: ${pair.skip1} | ${term2} skip: ${pair.skip2} | ${distText}`;
+
+      document.getElementById('legendT1').textContent = term1;
+      document.getElementById('legendT2').textContent = term2;
+      document.getElementById('legendT2Item').style.display = 'flex';
+      document.getElementById('legendBothItem').style.display = 'flex';
+
+      renderDualMatrix(pair, term1, term2);
+    };
+
+    function renderDualMatrix(pair, term1, term2) {
+      const width = Math.max(Math.abs(pair.skip1), Math.abs(pair.skip2), 30);
+      const centerPos = Math.min(pair.pos1, pair.pos2);
+      const rowsBefore = 5;
+      const rowsAfter = 10;
+      const startRow = Math.floor(centerPos / width) - rowsBefore;
+      const endRow = startRow + rowsBefore + rowsAfter;
+
+      const t1Pos = new Set();
+      const t2Pos = new Set();
+      for (let i = 0; i < term1.length; i++) t1Pos.add(pair.pos1 + i * pair.skip1);
+      for (let i = 0; i < term2.length; i++) t2Pos.add(pair.pos2 + i * pair.skip2);
+
+      let html = '';
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * width;
+        if (rowStart < 0) continue;
+        for (let col = 0; col < width; col++) {
+          const pos = rowStart + col;
+          if (pos >= torahText.length) break;
+          const ch = torahText[pos];
+          const in1 = t1Pos.has(pos), in2 = t2Pos.has(pos);
+          let cls = 'matrix-cell';
+          if (in1 && in2) cls += ' term1 term2';
+          else if (in1) cls += ' term1';
+          else if (in2) cls += ' term2';
+          html += `<div class="${cls}">${ch}</div>`;
+        }
+      }
+
+      const grid = document.getElementById('modalGrid');
+      grid.style.gridTemplateColumns = `repeat(${width}, 26px)`;
+      grid.innerHTML = html;
     }
 
     // ============= SCAN MODE: MATRIX MODAL =============
