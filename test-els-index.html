@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ELS Index Test</title>
+  <title>ELS Index Explorer</title>
   <link rel="stylesheet" href="css/mobile-optimized.css">
   <style>
     .test-section {
@@ -24,13 +24,14 @@
       gap: 10px;
       margin-bottom: 15px;
       flex-wrap: wrap;
+      align-items: center;
     }
     .input-row input {
       padding: 10px;
       font-size: 16px;
       border: 2px solid #ddd;
       border-radius: 6px;
-      min-width: 150px;
+      min-width: 120px;
     }
     .input-row input:focus {
       border-color: var(--primary);
@@ -40,12 +41,36 @@
       padding: 10px 20px;
       cursor: pointer;
     }
+    .btn-small {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    .btn-secondary {
+      background: #666;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    .btn-success {
+      background: var(--success, #4caf50);
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    .btn-danger {
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
     .results {
       background: #f9f9f9;
       border-radius: 6px;
       padding: 15px;
       margin-top: 15px;
-      max-height: 400px;
+    }
+    .results-scrollable {
+      max-height: 600px;
       overflow-y: auto;
     }
     .result-item {
@@ -117,11 +142,12 @@
     }
     .proximity-matrix table {
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 14px;
+      width: 100%;
     }
     .proximity-matrix th, .proximity-matrix td {
       border: 1px solid #ddd;
-      padding: 6px 10px;
+      padding: 8px 12px;
       text-align: center;
     }
     .proximity-matrix th {
@@ -137,44 +163,116 @@
     .proximity-cell-far {
       background: #ffcdd2;
     }
-    .cluster-viz {
-      background: #1a1a2e;
-      border-radius: 8px;
-      padding: 20px;
-      margin-top: 15px;
+
+    /* Term entry styles */
+    .term-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .term-entry {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .term-entry input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+    }
+    .term-entry input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+    .term-entry .remove-btn {
+      background: #f44336;
       color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
     }
-    .cluster-term {
-      display: inline-block;
-      padding: 6px 12px;
-      margin: 4px;
-      border-radius: 20px;
-      font-size: 14px;
+    .term-entry .remove-btn:hover {
+      background: #d32f2f;
     }
-    .cluster-seed {
-      background: #e91e63;
+
+    /* Save/Load panel */
+    .save-load-panel {
+      background: #e3f2fd;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 15px;
     }
-    .cluster-close {
-      background: #4caf50;
+    .saved-searches {
+      margin-top: 10px;
     }
-    .cluster-medium {
-      background: #ff9800;
+    .saved-search-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+      margin-bottom: 5px;
     }
-    .cluster-far {
-      background: #2196f3;
+    .saved-search-item .terms {
+      font-weight: bold;
+      color: var(--primary);
+    }
+    .saved-search-item .timestamp {
+      font-size: 11px;
+      color: #666;
+    }
+
+    /* Full results table */
+    .full-results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .full-results-table th, .full-results-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+    }
+    .full-results-table th {
+      background: var(--primary);
+      color: white;
+      position: sticky;
+      top: 0;
+    }
+    .full-results-table tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .full-results-table tr:hover {
+      background: #e3f2fd;
+    }
+
+    /* Action buttons row */
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
   <header class="mobile-header">
     <div class="mobile-header-inner">
-      <a href="index.html" class="logo">ELS Index Test</a>
+      <a href="index.html" class="logo">ELS Index Explorer</a>
     </div>
   </header>
 
   <main class="container">
     <h1>Torah ELS Index Explorer</h1>
-    <p>Test the precomputed ELS index for instant word lookups and proximity analysis.</p>
+    <p>Multi-term search with full proximity analysis and session save/restore.</p>
 
     <!-- Loading Indicator -->
     <div id="loadingIndicator">
@@ -192,11 +290,48 @@
         <div class="stats-grid" id="statsGrid"></div>
       </section>
 
-      <!-- Word Lookup -->
+      <!-- Multi-Term Search -->
       <section class="test-section">
-        <h2>Word Lookup</h2>
+        <h2>Multi-Term Search & Proximity Analysis</h2>
+
+        <!-- Save/Load Panel -->
+        <div class="save-load-panel">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="sessionName" placeholder="Session name..." style="flex: 1; min-width: 150px; padding: 8px;">
+            <button class="btn btn-success btn-small" onclick="saveSession()">Save Session</button>
+            <button class="btn btn-secondary btn-small" onclick="exportResults()">Export JSON</button>
+            <button class="btn btn-secondary btn-small" onclick="clearSession()">Clear All</button>
+          </div>
+          <div class="saved-searches" id="savedSearches"></div>
+        </div>
+
+        <!-- Term Entry Boxes -->
+        <div class="term-entries" id="termEntries">
+          <div class="term-entry">
+            <input type="text" class="term-input" placeholder="Term 1 (e.g., משה)" value="משה">
+            <button class="remove-btn" onclick="removeTerm(this)" title="Remove term">&times;</button>
+          </div>
+          <div class="term-entry">
+            <input type="text" class="term-input" placeholder="Term 2 (e.g., אהרן)" value="אהרן">
+            <button class="remove-btn" onclick="removeTerm(this)" title="Remove term">&times;</button>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-secondary" onclick="addTerm()">+ Add Term</button>
+          <button class="btn" onclick="searchAllTerms()">Search All Terms</button>
+        </div>
+
+        <!-- Results Display -->
+        <div id="searchResults"></div>
+      </section>
+
+      <!-- Individual Word Lookup -->
+      <section class="test-section">
+        <h2>Individual Word Lookup</h2>
         <div class="input-row">
-          <input type="text" id="lookupWord" placeholder="Hebrew word (e.g., משה)" value="משה">
+          <input type="text" id="lookupWord" placeholder="Hebrew word" value="ישראל">
+          <input type="number" id="lookupLimit" placeholder="Max results" value="100" style="width: 100px;">
           <button class="btn" onclick="doLookup()">Look Up</button>
         </div>
         <div id="lookupResults"></div>
@@ -204,26 +339,15 @@
 
       <!-- Proximity Search -->
       <section class="test-section">
-        <h2>Proximity Search</h2>
+        <h2>Proximity Search by Position</h2>
         <p>Find all words near a specific Torah position:</p>
         <div class="input-row">
           <input type="number" id="proximityPos" placeholder="Position" value="50000">
           <input type="number" id="proximityRadius" placeholder="Radius" value="500">
+          <input type="number" id="proximityLimit" placeholder="Max results" value="50">
           <button class="btn" onclick="doProximitySearch()">Search</button>
         </div>
         <div id="proximityResults"></div>
-      </section>
-
-      <!-- Pair Proximity -->
-      <section class="test-section">
-        <h2>Term Pair Proximity</h2>
-        <p>Find minimum distance between two words:</p>
-        <div class="input-row">
-          <input type="text" id="pairWord1" placeholder="Word 1" value="משה">
-          <input type="text" id="pairWord2" placeholder="Word 2" value="אהרן">
-          <button class="btn" onclick="doPairProximity()">Calculate</button>
-        </div>
-        <div id="pairResults"></div>
       </section>
 
       <!-- Cluster Discovery -->
@@ -233,31 +357,10 @@
         <div class="input-row">
           <input type="text" id="clusterSeed" placeholder="Seed word" value="אברהם">
           <input type="number" id="clusterRadius" placeholder="Radius" value="1000">
+          <input type="number" id="clusterLimit" placeholder="Max terms" value="30">
           <button class="btn" onclick="doClusterDiscovery()">Discover</button>
         </div>
         <div id="clusterResults"></div>
-      </section>
-
-      <!-- Proximity Matrix -->
-      <section class="test-section">
-        <h2>Proximity Matrix</h2>
-        <p>Compute proximity matrix for multiple words (comma-separated):</p>
-        <div class="input-row">
-          <input type="text" id="matrixWords" placeholder="Words" value="משה,אהרן,מרים,ישראל" style="min-width: 300px;">
-          <button class="btn" onclick="doProximityMatrix()">Compute</button>
-        </div>
-        <div id="matrixResults"></div>
-      </section>
-
-      <!-- Embedding Similarity -->
-      <section class="test-section">
-        <h2>ELS Embedding Similarity</h2>
-        <p>Find words with similar ELS distribution patterns:</p>
-        <div class="input-row">
-          <input type="text" id="embeddingWord" placeholder="Target word" value="תורה">
-          <button class="btn" onclick="doEmbeddingSimilarity()">Find Similar</button>
-        </div>
-        <div id="embeddingResults"></div>
       </section>
 
       <!-- Statistical Significance -->
@@ -278,6 +381,7 @@
     import { getElsIndexService, initElsIndex } from './engines/els-index.js';
 
     let elsService;
+    let currentResults = null;
 
     async function init() {
       try {
@@ -290,6 +394,7 @@
         document.getElementById('mainContent').style.display = 'block';
 
         displayStats(metadata);
+        loadSavedSearches();
 
       } catch (error) {
         console.error('Init failed:', error);
@@ -321,8 +426,276 @@
       document.getElementById('statsGrid').innerHTML = html;
     }
 
+    // =============== Multi-Term Search ===============
+
+    window.addTerm = function() {
+      const container = document.getElementById('termEntries');
+      const count = container.querySelectorAll('.term-entry').length + 1;
+      const entry = document.createElement('div');
+      entry.className = 'term-entry';
+      entry.innerHTML = `
+        <input type="text" class="term-input" placeholder="Term ${count}">
+        <button class="remove-btn" onclick="removeTerm(this)" title="Remove term">&times;</button>
+      `;
+      container.appendChild(entry);
+    };
+
+    window.removeTerm = function(btn) {
+      const container = document.getElementById('termEntries');
+      if (container.querySelectorAll('.term-entry').length > 2) {
+        btn.parentElement.remove();
+      } else {
+        alert('Minimum 2 terms required');
+      }
+    };
+
+    window.searchAllTerms = function() {
+      const inputs = document.querySelectorAll('.term-input');
+      const terms = Array.from(inputs)
+        .map(input => input.value.trim())
+        .filter(t => t.length > 0);
+
+      if (terms.length < 2) {
+        alert('Enter at least 2 terms');
+        return;
+      }
+
+      // Collect all term data
+      const termData = {};
+      for (const term of terms) {
+        const occurrences = elsService.findWord(term);
+        termData[term] = {
+          occurrences: occurrences,
+          count: occurrences.length
+        };
+      }
+
+      // Compute full proximity matrix (all pairs)
+      const proximityPairs = [];
+      for (let i = 0; i < terms.length; i++) {
+        for (let j = i + 1; j < terms.length; j++) {
+          const result = elsService.pairProximity(terms[i], terms[j]);
+          if (result) {
+            proximityPairs.push({
+              term1: terms[i],
+              term2: terms[j],
+              distance: result.distance,
+              pos1: result.word1.pos,
+              skip1: result.word1.skip,
+              pos2: result.word2.pos,
+              skip2: result.word2.skip
+            });
+          }
+        }
+      }
+
+      // Sort by distance
+      proximityPairs.sort((a, b) => a.distance - b.distance);
+
+      // Store results
+      currentResults = {
+        terms: terms,
+        termData: termData,
+        proximityPairs: proximityPairs,
+        timestamp: new Date().toISOString()
+      };
+
+      // Display results
+      displaySearchResults(currentResults);
+    };
+
+    function displaySearchResults(results) {
+      const { terms, termData, proximityPairs } = results;
+
+      // Term occurrence summary
+      let summaryHtml = '<h3>Term Occurrences</h3><table class="full-results-table"><tr><th>Term</th><th>Occurrences</th><th>First Position</th></tr>';
+      for (const term of terms) {
+        const data = termData[term];
+        const firstPos = data.occurrences.length > 0 ? data.occurrences[0].pos : 'N/A';
+        summaryHtml += `<tr><td><strong>${term}</strong></td><td>${data.count.toLocaleString()}</td><td>${typeof firstPos === 'number' ? firstPos.toLocaleString() : firstPos}</td></tr>`;
+      }
+      summaryHtml += '</table>';
+
+      // Proximity matrix
+      const { matrix } = elsService.computeProximityMatrix(terms);
+      let matrixHtml = '<h3>Proximity Matrix (minimum distance in characters)</h3>';
+      matrixHtml += '<div class="proximity-matrix"><table><tr><th></th>';
+      for (const term of terms) {
+        matrixHtml += `<th>${term}</th>`;
+      }
+      matrixHtml += '</tr>';
+      for (let i = 0; i < terms.length; i++) {
+        matrixHtml += `<tr><th>${terms[i]}</th>`;
+        for (let j = 0; j < terms.length; j++) {
+          const dist = matrix[i][j];
+          const cls = dist === 0 ? '' :
+                      dist < 500 ? 'proximity-cell-close' :
+                      dist < 2000 ? 'proximity-cell-medium' : 'proximity-cell-far';
+          const displayDist = dist === Infinity ? '∞' : dist.toLocaleString();
+          matrixHtml += `<td class="${cls}">${displayDist}</td>`;
+        }
+        matrixHtml += '</tr>';
+      }
+      matrixHtml += '</table></div>';
+      matrixHtml += `<p style="font-size: 12px; margin-top: 10px;">
+        <span style="background: #c8e6c9; padding: 2px 8px; border-radius: 3px;">< 500</span>
+        <span style="background: #fff9c4; padding: 2px 8px; border-radius: 3px;">< 2000</span>
+        <span style="background: #ffcdd2; padding: 2px 8px; border-radius: 3px;">> 2000</span>
+      </p>`;
+
+      // Full pair details (ALL pairs shown)
+      let pairsHtml = `<h3>All Proximity Pairs (${proximityPairs.length} pairs)</h3>`;
+      pairsHtml += '<div class="results-scrollable"><table class="full-results-table">';
+      pairsHtml += '<tr><th>Term 1</th><th>Term 2</th><th>Distance</th><th>Position 1</th><th>Skip 1</th><th>Position 2</th><th>Skip 2</th></tr>';
+      for (const pair of proximityPairs) {
+        const cls = pair.distance < 500 ? 'proximity-cell-close' :
+                    pair.distance < 2000 ? 'proximity-cell-medium' : 'proximity-cell-far';
+        pairsHtml += `<tr>
+          <td><strong>${pair.term1}</strong></td>
+          <td><strong>${pair.term2}</strong></td>
+          <td class="${cls}">${pair.distance.toLocaleString()}</td>
+          <td>${pair.pos1.toLocaleString()}</td>
+          <td>${pair.skip1}</td>
+          <td>${pair.pos2.toLocaleString()}</td>
+          <td>${pair.skip2}</td>
+        </tr>`;
+      }
+      pairsHtml += '</table></div>';
+
+      document.getElementById('searchResults').innerHTML = `
+        <div class="results">
+          ${summaryHtml}
+          ${matrixHtml}
+          ${pairsHtml}
+        </div>
+      `;
+    }
+
+    // =============== Save/Load Sessions ===============
+
+    window.saveSession = function() {
+      if (!currentResults) {
+        alert('No search results to save. Run a search first.');
+        return;
+      }
+
+      const name = document.getElementById('sessionName').value.trim() ||
+                   `Search ${new Date().toLocaleString('he-IL')}`;
+
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      sessions.unshift({
+        name: name,
+        results: currentResults,
+        savedAt: new Date().toISOString()
+      });
+
+      // Keep only last 20 sessions
+      if (sessions.length > 20) sessions.length = 20;
+
+      localStorage.setItem('elsSearchSessions', JSON.stringify(sessions));
+      loadSavedSearches();
+      document.getElementById('sessionName').value = '';
+      alert('Session saved!');
+    };
+
+    window.loadSession = function(index) {
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      if (sessions[index]) {
+        const session = sessions[index];
+        currentResults = session.results;
+
+        // Restore term inputs
+        const container = document.getElementById('termEntries');
+        container.innerHTML = '';
+        for (const term of session.results.terms) {
+          const entry = document.createElement('div');
+          entry.className = 'term-entry';
+          entry.innerHTML = `
+            <input type="text" class="term-input" value="${term}">
+            <button class="remove-btn" onclick="removeTerm(this)" title="Remove term">&times;</button>
+          `;
+          container.appendChild(entry);
+        }
+
+        // Display results
+        displaySearchResults(currentResults);
+      }
+    };
+
+    window.deleteSession = function(index) {
+      if (!confirm('Delete this saved session?')) return;
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      sessions.splice(index, 1);
+      localStorage.setItem('elsSearchSessions', JSON.stringify(sessions));
+      loadSavedSearches();
+    };
+
+    function loadSavedSearches() {
+      const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
+      const container = document.getElementById('savedSearches');
+
+      if (sessions.length === 0) {
+        container.innerHTML = '<p style="font-size: 12px; color: #666; margin-top: 10px;">No saved sessions</p>';
+        return;
+      }
+
+      let html = '<p style="font-size: 12px; color: #666; margin-top: 10px;">Saved Sessions:</p>';
+      sessions.forEach((session, index) => {
+        const date = new Date(session.savedAt).toLocaleString('he-IL');
+        html += `
+          <div class="saved-search-item">
+            <div>
+              <span class="terms">${session.name}</span><br>
+              <span class="timestamp">${date} - ${session.results.terms.join(', ')}</span>
+            </div>
+            <div>
+              <button class="btn btn-small btn-secondary" onclick="loadSession(${index})">Load</button>
+              <button class="btn btn-small btn-danger" onclick="deleteSession(${index})">×</button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    window.exportResults = function() {
+      if (!currentResults) {
+        alert('No results to export');
+        return;
+      }
+
+      const dataStr = JSON.stringify(currentResults, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `els-search-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    window.clearSession = function() {
+      if (!confirm('Clear all terms and results?')) return;
+      const container = document.getElementById('termEntries');
+      container.innerHTML = `
+        <div class="term-entry">
+          <input type="text" class="term-input" placeholder="Term 1">
+          <button class="remove-btn" onclick="removeTerm(this)" title="Remove term">&times;</button>
+        </div>
+        <div class="term-entry">
+          <input type="text" class="term-input" placeholder="Term 2">
+          <button class="remove-btn" onclick="removeTerm(this)" title="Remove term">&times;</button>
+        </div>
+      `;
+      document.getElementById('searchResults').innerHTML = '';
+      currentResults = null;
+    };
+
+    // =============== Individual Word Lookup ===============
+
     window.doLookup = function() {
       const word = document.getElementById('lookupWord').value.trim();
+      const limit = parseInt(document.getElementById('lookupLimit').value) || 100;
       if (!word) return;
 
       const occurrences = elsService.findWord(word);
@@ -334,29 +707,36 @@
         return;
       }
 
-      // Show first 20 occurrences
-      const sample = occurrences.slice(0, 20);
-      const html = `
+      const sample = occurrences.slice(0, limit);
+      let html = `
         <div class="results">
-          <p><strong>${word}</strong>: ${count.toLocaleString()} occurrences</p>
-          <p style="font-size: 12px; color: #666;">Showing first 20:</p>
-          ${sample.map(o => `
-            <div class="result-item">
-              <span>Position: ${o.pos.toLocaleString()}</span>
-              <span class="stat-badge">Skip: ${o.skip}</span>
-            </div>
-          `).join('')}
-          ${count > 20 ? `<p style="color: #666; font-size: 12px;">... and ${count - 20} more</p>` : ''}
+          <p><strong>${word}</strong>: ${count.toLocaleString()} total occurrences</p>
+          <p style="font-size: 12px; color: #666;">Showing ${Math.min(limit, count)} of ${count}:</p>
+          <div class="results-scrollable">
+            <table class="full-results-table">
+              <tr><th>#</th><th>Position</th><th>Skip</th></tr>
+              ${sample.map((o, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${o.pos.toLocaleString()}</td>
+                  <td>${o.skip}</td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
         </div>
       `;
       document.getElementById('lookupResults').innerHTML = html;
     };
 
+    // =============== Proximity Search ===============
+
     window.doProximitySearch = function() {
       const pos = parseInt(document.getElementById('proximityPos').value);
       const radius = parseInt(document.getElementById('proximityRadius').value);
+      const limit = parseInt(document.getElementById('proximityLimit').value) || 50;
 
-      const results = elsService.findNearby(pos, radius, { minWordLength: 3, maxResults: 30 });
+      const results = elsService.findNearby(pos, radius, { minWordLength: 3, maxResults: limit });
 
       if (results.length === 0) {
         document.getElementById('proximityResults').innerHTML =
@@ -367,52 +747,31 @@
       const html = `
         <div class="results">
           <p>Found ${results.length} words near position ${pos.toLocaleString()}:</p>
-          ${results.map(r => `
-            <div class="result-item">
-              <span class="word-badge">${r.word}</span>
-              <span>
-                <span class="stat-badge">Distance: ${r.minDistance}</span>
-                <span class="stat-badge">${r.occurrences.length} nearby</span>
-              </span>
-            </div>
-          `).join('')}
+          <div class="results-scrollable">
+            <table class="full-results-table">
+              <tr><th>Word</th><th>Min Distance</th><th>Nearby Count</th></tr>
+              ${results.map(r => `
+                <tr>
+                  <td><strong>${r.word}</strong></td>
+                  <td>${r.minDistance}</td>
+                  <td>${r.occurrences.length}</td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
         </div>
       `;
       document.getElementById('proximityResults').innerHTML = html;
     };
 
-    window.doPairProximity = function() {
-      const word1 = document.getElementById('pairWord1').value.trim();
-      const word2 = document.getElementById('pairWord2').value.trim();
-
-      const result = elsService.pairProximity(word1, word2);
-
-      if (!result) {
-        document.getElementById('pairResults').innerHTML =
-          `<div class="results"><p>Could not find both words in index</p></div>`;
-        return;
-      }
-
-      const html = `
-        <div class="results">
-          <p><strong>Minimum distance between "${word1}" and "${word2}":</strong></p>
-          <p style="font-size: 24px; color: var(--primary); font-weight: bold;">
-            ${result.distance.toLocaleString()} characters
-          </p>
-          <p>
-            "${word1}" at position ${result.word1.pos.toLocaleString()} (skip ${result.word1.skip})<br>
-            "${word2}" at position ${result.word2.pos.toLocaleString()} (skip ${result.word2.skip})
-          </p>
-        </div>
-      `;
-      document.getElementById('pairResults').innerHTML = html;
-    };
+    // =============== Cluster Discovery ===============
 
     window.doClusterDiscovery = function() {
       const seed = document.getElementById('clusterSeed').value.trim();
       const radius = parseInt(document.getElementById('clusterRadius').value);
+      const limit = parseInt(document.getElementById('clusterLimit').value) || 30;
 
-      const cluster = elsService.discoverCluster(seed, radius, { topN: 15, minWordLength: 3 });
+      const cluster = elsService.discoverCluster(seed, radius, { topN: limit, minWordLength: 3 });
 
       if (!cluster) {
         document.getElementById('clusterResults').innerHTML =
@@ -426,95 +785,32 @@
           <p>Center: position ${cluster.center.pos.toLocaleString()} (skip ${cluster.center.skip})</p>
           <p>Centroid: position ${cluster.centroid.toLocaleString()} (shift: ${cluster.centroidShift > 0 ? '+' : ''}${cluster.centroidShift})</p>
 
-          <div class="cluster-viz">
-            <span class="cluster-term cluster-seed">${seed} (seed)</span>
-            ${cluster.words.map((w, i) => {
-              const cls = w.minDistance < 200 ? 'cluster-close' :
-                          w.minDistance < 500 ? 'cluster-medium' : 'cluster-far';
-              return `<span class="cluster-term ${cls}">${w.word} (${w.minDistance})</span>`;
-            }).join('')}
+          <div class="results-scrollable">
+            <table class="full-results-table">
+              <tr><th>Term</th><th>Distance</th><th>Occurrences Nearby</th></tr>
+              <tr style="background: #e91e63; color: white;"><td><strong>${seed}</strong></td><td>0 (seed)</td><td>-</td></tr>
+              ${cluster.words.map(w => {
+                const bg = w.minDistance < 200 ? '#c8e6c9' :
+                           w.minDistance < 500 ? '#fff9c4' : '#ffcdd2';
+                return `<tr style="background: ${bg};">
+                  <td><strong>${w.word}</strong></td>
+                  <td>${w.minDistance}</td>
+                  <td>${w.occurrences.length}</td>
+                </tr>`;
+              }).join('')}
+            </table>
           </div>
         </div>
       `;
       document.getElementById('clusterResults').innerHTML = html;
     };
 
-    window.doProximityMatrix = function() {
-      const wordsStr = document.getElementById('matrixWords').value.trim();
-      const words = wordsStr.split(',').map(w => w.trim()).filter(w => w);
-
-      if (words.length < 2) {
-        document.getElementById('matrixResults').innerHTML =
-          `<div class="results"><p>Enter at least 2 words</p></div>`;
-        return;
-      }
-
-      const { matrix } = elsService.computeProximityMatrix(words);
-
-      // Build HTML table
-      let tableHtml = '<table><tr><th></th>';
-      for (const w of words) {
-        tableHtml += `<th>${w}</th>`;
-      }
-      tableHtml += '</tr>';
-
-      for (let i = 0; i < words.length; i++) {
-        tableHtml += `<tr><th>${words[i]}</th>`;
-        for (let j = 0; j < words.length; j++) {
-          const dist = matrix[i][j];
-          const cls = dist === 0 ? '' :
-                      dist < 500 ? 'proximity-cell-close' :
-                      dist < 2000 ? 'proximity-cell-medium' : 'proximity-cell-far';
-          const displayDist = dist === Infinity ? '∞' : dist.toLocaleString();
-          tableHtml += `<td class="${cls}">${displayDist}</td>`;
-        }
-        tableHtml += '</tr>';
-      }
-      tableHtml += '</table>';
-
-      document.getElementById('matrixResults').innerHTML = `
-        <div class="proximity-matrix">
-          <p><strong>Proximity Matrix (distance in characters):</strong></p>
-          ${tableHtml}
-          <p style="font-size: 12px; margin-top: 10px;">
-            <span style="background: #c8e6c9; padding: 2px 8px;">< 500</span>
-            <span style="background: #fff9c4; padding: 2px 8px;">< 2000</span>
-            <span style="background: #ffcdd2; padding: 2px 8px;">> 2000</span>
-          </p>
-        </div>
-      `;
-    };
-
-    window.doEmbeddingSimilarity = function() {
-      const word = document.getElementById('embeddingWord').value.trim();
-
-      const similar = elsService.findSimilarByEmbedding(word, 15);
-
-      if (similar.length === 0) {
-        document.getElementById('embeddingResults').innerHTML =
-          `<div class="results"><p>No similar words found for "${word}"</p></div>`;
-        return;
-      }
-
-      const html = `
-        <div class="results">
-          <p><strong>Words with similar ELS distribution to "${word}":</strong></p>
-          ${similar.map(s => `
-            <div class="result-item">
-              <span class="word-badge">${s.word}</span>
-              <span class="stat-badge">Similarity: ${(s.similarity * 100).toFixed(1)}%</span>
-            </div>
-          `).join('')}
-        </div>
-      `;
-      document.getElementById('embeddingResults').innerHTML = html;
-    };
+    // =============== Statistical Significance ===============
 
     window.doSignificance = function() {
       const word = document.getElementById('sigWord').value.trim();
 
       const stats = elsService.significanceScore(word);
-      const occCount = elsService.getOccurrenceCount(word);
 
       const html = `
         <div class="results">
