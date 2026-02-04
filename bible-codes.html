@@ -500,6 +500,16 @@
         </div>
 
         <div id="scanResults"></div>
+
+        <!-- Inline Matrix View -->
+        <div id="scanMatrixView" class="matrix-view" style="display:none;">
+          <h3 id="scanMatrixTitle">Matrix View</h3>
+          <div id="scanMatrixStats" class="matrix-stats"></div>
+          <div class="matrix-container" style="max-height:400px;">
+            <div class="matrix-grid" id="scanMatrixGrid"></div>
+          </div>
+          <div class="matrix-legend" id="scanMatrixLegend"></div>
+        </div>
       </section>
     </div>
 
@@ -1023,24 +1033,52 @@
       const pair = scanProximityPairs[idx];
       if (!pair) return;
 
-      const modal = document.getElementById('matrixModal');
-      modal.classList.add('active');
-
       const distText = pair.overlap ? 'Overlapping' : `Distance: ${pair.distance.toLocaleString()}`;
-      document.getElementById('modalTitle').textContent = `"${term1}" + "${term2}"`;
-      document.getElementById('modalInfo').textContent = `${term1} skip: ${pair.skip1} | ${term2} skip: ${pair.skip2} | ${distText}`;
 
-      document.getElementById('legendT1').textContent = term1;
-      document.getElementById('legendT2').textContent = term2;
-      document.getElementById('legendT2Item').style.display = 'flex';
-      document.getElementById('legendBothItem').style.display = 'flex';
+      document.getElementById('scanMatrixView').style.display = 'block';
+      document.getElementById('scanMatrixTitle').textContent = `"${term1}" + "${term2}"`;
 
-      renderDualMatrix(pair, term1, term2);
+      document.getElementById('scanMatrixStats').innerHTML = `
+        <div class="matrix-stat"><div class="value" style="color:#ffc107;">${term1}</div><div class="label">Term 1</div></div>
+        <div class="matrix-stat"><div class="value" style="color:#00bcd4;">${term2}</div><div class="label">Term 2</div></div>
+        <div class="matrix-stat"><div class="value">${pair.distance.toLocaleString()}</div><div class="label">Distance</div></div>
+        <div class="matrix-stat"><div class="value">${pair.skip1}</div><div class="label">Skip 1</div></div>
+        <div class="matrix-stat"><div class="value">${pair.skip2}</div><div class="label">Skip 2</div></div>
+        <div class="matrix-stat"><div class="value">${pair.pos1.toLocaleString()}</div><div class="label">Pos 1</div></div>
+        <div class="matrix-stat"><div class="value">${pair.pos2.toLocaleString()}</div><div class="label">Pos 2</div></div>
+      `;
+
+      document.getElementById('scanMatrixLegend').innerHTML = `
+        <div class="legend-item"><div class="legend-color t1"></div><span>${term1}</span></div>
+        <div class="legend-item"><div class="legend-color t2"></div><span>${term2}</span></div>
+        <div class="legend-item"><div class="legend-color both"></div><span>Overlap</span></div>
+      `;
+
+      renderScanMatrix(pair.pos1, pair.skip1, term1, pair.pos2, pair.skip2, term2);
+      document.getElementById('scanMatrixView').scrollIntoView({ behavior: 'smooth' });
     };
 
-    function renderDualMatrix(pair, term1, term2) {
-      const width = Math.max(Math.abs(pair.skip1), Math.abs(pair.skip2), 30);
-      const centerPos = Math.min(pair.pos1, pair.pos2);
+    window.openScanMatrix = function(pos, skip, term, term2) {
+      document.getElementById('scanMatrixView').style.display = 'block';
+      document.getElementById('scanMatrixTitle').textContent = `"${term}"`;
+
+      document.getElementById('scanMatrixStats').innerHTML = `
+        <div class="matrix-stat"><div class="value" style="color:#ffc107;">${term}</div><div class="label">Term</div></div>
+        <div class="matrix-stat"><div class="value">${pos.toLocaleString()}</div><div class="label">Position</div></div>
+        <div class="matrix-stat"><div class="value">${skip}</div><div class="label">Skip</div></div>
+      `;
+
+      document.getElementById('scanMatrixLegend').innerHTML = `
+        <div class="legend-item"><div class="legend-color t1"></div><span>${term}</span></div>
+      `;
+
+      renderScanMatrix(pos, skip, term, null, null, null);
+      document.getElementById('scanMatrixView').scrollIntoView({ behavior: 'smooth' });
+    };
+
+    function renderScanMatrix(pos1, skip1, term1, pos2, skip2, term2) {
+      const width = Math.max(Math.abs(skip1), pos2 ? Math.abs(skip2) : 0, 30);
+      const centerPos = pos2 ? Math.min(pos1, pos2) : pos1;
       const rowsBefore = 5;
       const rowsAfter = 10;
       const startRow = Math.floor(centerPos / width) - rowsBefore;
@@ -1048,8 +1086,10 @@
 
       const t1Pos = new Set();
       const t2Pos = new Set();
-      for (let i = 0; i < term1.length; i++) t1Pos.add(pair.pos1 + i * pair.skip1);
-      for (let i = 0; i < term2.length; i++) t2Pos.add(pair.pos2 + i * pair.skip2);
+      for (let i = 0; i < term1.length; i++) t1Pos.add(pos1 + i * skip1);
+      if (term2) {
+        for (let i = 0; i < term2.length; i++) t2Pos.add(pos2 + i * skip2);
+      }
 
       let html = '';
       for (let row = startRow; row <= endRow; row++) {
@@ -1068,7 +1108,7 @@
         }
       }
 
-      const grid = document.getElementById('modalGrid');
+      const grid = document.getElementById('scanMatrixGrid');
       grid.style.gridTemplateColumns = `repeat(${width}, 26px)`;
       grid.innerHTML = html;
     }
