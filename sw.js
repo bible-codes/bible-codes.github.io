@@ -15,7 +15,7 @@ const urlsToCache = [
   './test-db.html',
   './test-roots.html',
   './test-dictionaries.html',
-  './test-els-index.html',
+  './els-explorer.html',
 
   // Stylesheets
   './styles.css',
