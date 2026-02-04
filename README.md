@@ -1,17 +1,21 @@
-# Hebrew Bible Analysis Suite 📜
+# Hebrew Bible Analysis Suite
 
 ## Project Link
-Visit the app at [bible-codes.github.io](https://bible-codes.github.io/)
+**Live App**: [bible-codes.github.io](https://bible-codes.github.io/)
+
+**Full Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md) - Comprehensive technical guide with TOC, algorithms, APIs, and user instructions.
 
 ---
 
 ## Overview
 
-Welcome to the **Hebrew Bible Analysis Suite** – a comprehensive, browser-based platform for exploring the Hebrew Bible through multiple analytical lenses. This unified application combines traditional Torah study tools with modern computational analysis, all running entirely in your browser with full offline capability.
+The **Hebrew Bible Analysis Suite** is a comprehensive, browser-based platform for exploring the Hebrew Bible (Tanakh) through multiple analytical lenses. This unified application combines traditional Torah study tools with modern computational analysis, all running entirely in your browser with full offline capability.
+
+**Core Philosophy**: Character-level canonical database with derived views for all analysis modes (ELS, gematria, notarikon, letter counts, cantillation variants).
 
 ---
 
-## 🎯 Current Features
+## Current Features
 
 ### 🔴 Active Tool
 
@@ -255,7 +259,7 @@ This project is **open source and free to use**. Contributions are welcome!
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions of all kinds:
 
@@ -267,11 +271,22 @@ We welcome contributions of all kinds:
 
 ### Development Setup
 
-See [CLAUDE.md](CLAUDE.md) for detailed implementation plans and architecture documentation.
+See [DOCUMENTATION.md](DOCUMENTATION.md) Section 8 for the complete development guide.
 
 ---
 
-## 📖 Usage
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [DOCUMENTATION.md](DOCUMENTATION.md) | **Complete technical documentation** - History, algorithms, APIs, user guides |
+| [ALGORITHM.md](ALGORITHM.md) | ELS search algorithm details |
+| [CLAUDE.md](CLAUDE.md) | Implementation plan and architecture |
+| [PROGRESS.md](PROGRESS.md) | Development progress tracking |
+
+---
+
+## Usage
 
 1. **Visit** [bible-codes.github.io](https://bible-codes.github.io/)
 2. **Choose a tool** from the dashboard
@@ -280,19 +295,20 @@ See [CLAUDE.md](CLAUDE.md) for detailed implementation plans and architecture do
 
 ---
 
-## 📧 Contact
+## Contact
 
+- **Developer**: Aharon
 - **Email**: roni762583@gmail.com
 - **GitHub**: [bible-codes](https://github.com/bible-codes)
 
 ---
 
-## 📄 License
+## License
 
 See [LICENSE](LICENSE) for details.
 
 ---
 
-*Last Updated: 2026-02-03*
+*Last Updated: 2026-02-04*
 
 Thank you for exploring the Hebrew Bible Analysis Suite!
