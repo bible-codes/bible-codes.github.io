@@ -261,6 +261,92 @@
       flex-wrap: wrap;
       margin-top: 15px;
     }
+
+    /* Clickable rows */
+    .clickable-row {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .clickable-row:hover {
+      background: #bbdefb !important;
+    }
+    .clickable-row.selected {
+      background: #2196f3 !important;
+      color: white;
+    }
+    .clickable-row.selected td {
+      color: white;
+    }
+
+    /* Matrix view area */
+    .matrix-view-area {
+      margin-top: 20px;
+      padding: 20px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      color: white;
+    }
+    .matrix-view-area h3 {
+      color: #64b5f6;
+      margin-bottom: 10px;
+    }
+    .matrix-view-area .hint {
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    /* ELS Matrix display */
+    .els-matrix {
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      line-height: 1.8;
+      direction: rtl;
+      background: #0d1117;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      white-space: pre;
+      margin: 15px 0;
+    }
+    .els-matrix .highlight-term1 {
+      background: #e91e63;
+      color: white;
+      padding: 2px;
+      border-radius: 2px;
+    }
+    .els-matrix .highlight-term2 {
+      background: #4caf50;
+      color: white;
+      padding: 2px;
+      border-radius: 2px;
+    }
+    .els-matrix .highlight-both {
+      background: #ff9800;
+      color: white;
+      padding: 2px;
+      border-radius: 2px;
+    }
+    .matrix-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .matrix-stat {
+      background: #16213e;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .matrix-stat .value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #64b5f6;
+    }
+    .matrix-stat .label {
+      font-size: 11px;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
@@ -382,11 +468,15 @@
 
     let elsService;
     let currentResults = null;
+    let torahText = null;
 
     async function init() {
       try {
-        document.getElementById('loadProgress').textContent = 'Fetching index file...';
+        document.getElementById('loadProgress').textContent = 'Loading Torah text...';
+        const torahResponse = await fetch('data/torahNoSpaces.txt');
+        torahText = await torahResponse.text();
 
+        document.getElementById('loadProgress').textContent = 'Fetching ELS index...';
         const metadata = await initElsIndex('data/els-index/els-index-50-min4.json.gz');
         elsService = getElsIndexService();
 
@@ -543,14 +633,15 @@
         <span style="background: #ffcdd2; padding: 2px 8px; border-radius: 3px;">> 2000</span>
       </p>`;
 
-      // Full pair details (ALL pairs shown)
-      let pairsHtml = `<h3>All Proximity Pairs (${proximityPairs.length} pairs)</h3>`;
+      // Full pair details (ALL pairs shown) - CLICKABLE ROWS
+      let pairsHtml = `<h3>All Proximity Pairs (${proximityPairs.length} pairs) - Click row to view matrix</h3>`;
       pairsHtml += '<div class="results-scrollable"><table class="full-results-table">';
-      pairsHtml += '<tr><th>Term 1</th><th>Term 2</th><th>Distance</th><th>Position 1</th><th>Skip 1</th><th>Position 2</th><th>Skip 2</th></tr>';
-      for (const pair of proximityPairs) {
+      pairsHtml += '<tr><th>#</th><th>Term 1</th><th>Term 2</th><th>Distance</th><th>Position 1</th><th>Skip 1</th><th>Position 2</th><th>Skip 2</th></tr>';
+      proximityPairs.forEach((pair, idx) => {
         const cls = pair.distance < 500 ? 'proximity-cell-close' :
                     pair.distance < 2000 ? 'proximity-cell-medium' : 'proximity-cell-far';
-        pairsHtml += `<tr>
+        pairsHtml += `<tr class="clickable-row" onclick="showPairMatrix(${idx})" data-idx="${idx}">
+          <td>${idx + 1}</td>
           <td><strong>${pair.term1}</strong></td>
           <td><strong>${pair.term2}</strong></td>
           <td class="${cls}">${pair.distance.toLocaleString()}</td>
@@ -559,17 +650,135 @@
           <td>${pair.pos2.toLocaleString()}</td>
           <td>${pair.skip2}</td>
         </tr>`;
-      }
+      });
       pairsHtml += '</table></div>';
+
+      // Matrix view area (updates when row is clicked)
+      const matrixViewHtml = `
+        <div id="matrixViewArea" class="matrix-view-area">
+          <h3>Matrix View</h3>
+          <p class="hint">Click on a proximity pair above to display its matrix view with statistics.</p>
+          <div id="matrixDisplay"></div>
+        </div>
+      `;
 
       document.getElementById('searchResults').innerHTML = `
         <div class="results">
           ${summaryHtml}
           ${matrixHtml}
           ${pairsHtml}
+          ${matrixViewHtml}
         </div>
       `;
     }
+
+    // =============== Matrix View ===============
+
+    window.showPairMatrix = function(pairIndex) {
+      if (!currentResults || !torahText) return;
+
+      const pair = currentResults.proximityPairs[pairIndex];
+      if (!pair) return;
+
+      // Highlight selected row
+      document.querySelectorAll('.clickable-row').forEach(row => row.classList.remove('selected'));
+      document.querySelector(`.clickable-row[data-idx="${pairIndex}"]`)?.classList.add('selected');
+
+      // Determine matrix parameters
+      const centerPos = Math.min(pair.pos1, pair.pos2);
+      const matrixWidth = 30; // characters per row
+      const skip = Math.abs(pair.skip1); // Use term1's skip for matrix
+      const rowsBefore = 5;
+      const rowsAfter = 10;
+
+      // Calculate positions for both terms in the matrix
+      const term1Positions = new Set();
+      const term2Positions = new Set();
+
+      // Get all positions for term1 at its skip
+      for (let i = 0; i < pair.term1.length; i++) {
+        term1Positions.add(pair.pos1 + i * pair.skip1);
+      }
+      // Get all positions for term2 at its skip
+      for (let i = 0; i < pair.term2.length; i++) {
+        term2Positions.add(pair.pos2 + i * pair.skip2);
+      }
+
+      // Build matrix HTML
+      let matrixHtml = '<div class="els-matrix">';
+
+      // Calculate start position for matrix
+      const startRow = Math.floor(centerPos / matrixWidth) - rowsBefore;
+      const endRow = startRow + rowsBefore + rowsAfter + 1;
+
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * matrixWidth;
+        if (rowStart < 0 || rowStart >= torahText.length) continue;
+
+        let rowHtml = '';
+        for (let col = 0; col < matrixWidth; col++) {
+          const pos = rowStart + col;
+          if (pos >= torahText.length) break;
+
+          const char = torahText[pos];
+          const inTerm1 = term1Positions.has(pos);
+          const inTerm2 = term2Positions.has(pos);
+
+          if (inTerm1 && inTerm2) {
+            rowHtml += `<span class="highlight-both">${char}</span>`;
+          } else if (inTerm1) {
+            rowHtml += `<span class="highlight-term1">${char}</span>`;
+          } else if (inTerm2) {
+            rowHtml += `<span class="highlight-term2">${char}</span>`;
+          } else {
+            rowHtml += char;
+          }
+        }
+        matrixHtml += rowHtml + '\\n';
+      }
+      matrixHtml += '</div>';
+
+      // Statistics
+      const statsHtml = `
+        <div class="matrix-stats">
+          <div class="matrix-stat">
+            <div class="value" style="color: #e91e63;">${pair.term1}</div>
+            <div class="label">Term 1</div>
+          </div>
+          <div class="matrix-stat">
+            <div class="value" style="color: #4caf50;">${pair.term2}</div>
+            <div class="label">Term 2</div>
+          </div>
+          <div class="matrix-stat">
+            <div class="value">${pair.distance.toLocaleString()}</div>
+            <div class="label">Distance</div>
+          </div>
+          <div class="matrix-stat">
+            <div class="value">${pair.skip1}</div>
+            <div class="label">Skip 1</div>
+          </div>
+          <div class="matrix-stat">
+            <div class="value">${pair.skip2}</div>
+            <div class="label">Skip 2</div>
+          </div>
+          <div class="matrix-stat">
+            <div class="value">${pair.pos1.toLocaleString()}</div>
+            <div class="label">Position 1</div>
+          </div>
+          <div class="matrix-stat">
+            <div class="value">${pair.pos2.toLocaleString()}</div>
+            <div class="label">Position 2</div>
+          </div>
+        </div>
+        <p style="margin-top: 10px; font-size: 12px;">
+          <span style="background: #e91e63; padding: 2px 6px; border-radius: 3px;">Term 1</span>
+          <span style="background: #4caf50; padding: 2px 6px; border-radius: 3px;">Term 2</span>
+          <span style="background: #ff9800; padding: 2px 6px; border-radius: 3px;">Overlap</span>
+        </p>
+      `;
+
+      document.getElementById('matrixDisplay').innerHTML = statsHtml + matrixHtml;
+    };
 
     // =============== Save/Load Sessions ===============
 
