@@ -29,6 +29,7 @@ SOURCE_PRIORITY = {
     'strongs': 2,  # Strong's has verified data, same era as BDB
     'wiktionary': 3,
     'tanakh': 4,
+    'wikipedia': 5,  # Modern Hebrew vocabulary from Wikipedia titles
 }
 
 # Hebrew letters for validation
@@ -376,6 +377,7 @@ def main():
         'strongs': Path('data/dictionaries/strongs-hebrew.json.gz'),
         'wiktionary': Path('data/dictionaries/hebrew-wiktionary.json.gz'),
         'tanakh': Path('data/embeddings/hebrew-roots.json.gz'),
+        'wikipedia': Path('data/dictionaries/wikipedia-hebrew.json.gz'),
     }
 
     # Load sources

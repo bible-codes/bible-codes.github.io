@@ -9,7 +9,7 @@
  * - tanakh: Words extracted from Tanakh text (56K words, heuristic roots)
  * - bdb: Brown-Driver-Briggs lexicon (6.9K verified Biblical Hebrew)
  * - wiktionary: Hebrew Wiktionary (27K words with era markers)
- * - wikipedia: Hebrew Wikipedia vocabulary (planned)
+ * - wikipedia: Hebrew Wikipedia vocabulary (198K words)
  */
 
 export class DictionaryService {
@@ -59,9 +59,13 @@ export class DictionaryService {
       license: 'N/A (derived)',
       priority: 3,  // Lower priority (heuristic)
     },
-    // Future sources:
-    // wikipedia: { ... }
-    // strong: { ... }
+    wikipedia: {
+      name: 'Hebrew Wikipedia',
+      file: 'data/dictionaries/wikipedia-hebrew.json.gz',
+      description: 'Hebrew vocabulary extracted from Wikipedia article titles',
+      license: 'CC BY-SA 4.0',
+      priority: 4,  // Modern vocabulary supplement
+    },
   };
 
   /**
