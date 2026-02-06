@@ -532,7 +532,7 @@
         <div id="scanMatrixView" class="matrix-view" style="display:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <h3 id="scanMatrixTitle">Matrix View</h3>
-            <button class="btn btn-small" onclick="downloadMatrixPDF()" style="background:#666;">Download PDF</button>
+            <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Download PNG</button>
           </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
           <div class="matrix-container" style="max-height:400px;">
@@ -965,18 +965,16 @@
       const results = [];
       const len = text.length;
       const termLen = term.length;
-      const absSkip = Math.abs(skip);
 
-      if (absSkip === 1) {
-        const searchText = skip > 0 ? text : text.split('').reverse().join('');
-        const searchTerm = skip > 0 ? term : term.split('').reverse().join('');
+      if (skip === 1) {
+        // Optimized forward open-text search using indexOf
         let idx = 0;
-        while ((idx = searchText.indexOf(searchTerm, idx)) !== -1) {
-          const realPos = skip > 0 ? idx : len - 1 - idx;
-          results.push(realPos);
+        while ((idx = text.indexOf(term, idx)) !== -1) {
+          results.push(idx);
           idx++;
         }
       } else {
+        // General ELS search for all other skip values (including negative)
         for (let start = 0; start < len; start++) {
           let match = true;
           for (let i = 0; i < termLen; i++) {
@@ -1018,8 +1016,9 @@
       cancelBtn.style.display = '';
       scanAbort = false;
 
-      // Load character database for verse attribution (non-blocking)
-      loadCharDB();
+      // Load character database for verse attribution
+      status.textContent = 'Loading verse database...';
+      await loadCharDB();
 
       scanAllResults = {};
       scanTerms = terms;
@@ -1419,7 +1418,7 @@
     loadSavedScanSessions();
 
     // ============= SCAN MODE: PDF EXPORT =============
-    window.downloadMatrixPDF = function() {
+    window.downloadMatrixPNG = function() {
       const matrixView = document.getElementById('scanMatrixView');
       if (!matrixView || matrixView.style.display === 'none') { alert('No matrix displayed'); return; }
 
