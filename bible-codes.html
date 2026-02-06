@@ -313,30 +313,6 @@
     .result-item .term { font-weight: bold; color: var(--blue); font-size: 18px; }
     .result-item .info { font-size: 13px; color: var(--gray); margin-top: 4px; }
 
-    /* Matrix modal for scan mode */
-    .matrix-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.85);
-      z-index: 1000;
-      overflow: auto;
-      padding: 10px;
-    }
-    .matrix-modal.active { display: flex; flex-direction: column; align-items: center; }
-    .matrix-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      max-width: 1200px;
-      margin-bottom: 15px;
-      color: white;
-    }
-    .matrix-modal-title { font-size: 18px; font-weight: bold; }
     .matrix-container {
       background: #1a1a2e;
       border-radius: 8px;
@@ -366,6 +342,38 @@
     .matrix-cell.term1 { background: #ffc107; color: #000; font-weight: bold; }
     .matrix-cell.term2 { background: #00bcd4; color: #000; font-weight: bold; }
     .matrix-cell.term1.term2 { background: #9c27b0; color: #fff; }
+    /* N-term color palette for scan mode */
+    .matrix-cell.term-color-0 { background: #ffc107; color: #000; font-weight: bold; }
+    .matrix-cell.term-color-1 { background: #00bcd4; color: #000; font-weight: bold; }
+    .matrix-cell.term-color-2 { background: #ff5722; color: #fff; font-weight: bold; }
+    .matrix-cell.term-color-3 { background: #4caf50; color: #fff; font-weight: bold; }
+    .matrix-cell.term-color-4 { background: #e91e63; color: #fff; font-weight: bold; }
+    .matrix-cell.term-color-5 { background: #3f51b5; color: #fff; font-weight: bold; }
+    .matrix-cell.term-color-6 { background: #795548; color: #fff; font-weight: bold; }
+    .matrix-cell.term-color-7 { background: #607d8b; color: #fff; font-weight: bold; }
+    .matrix-cell.multi-term { background: #9c27b0; color: #fff; font-weight: bold; }
+    .scan-term-entries { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+    .scan-term-entry { display: flex; gap: 10px; align-items: center; }
+    .scan-term-entry input { flex: 1; }
+    .scan-term-entry .remove-btn {
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .scan-term-entry .term-color-swatch {
+      width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+    }
+    .cluster-row { padding: 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .cluster-row:hover { background: var(--blue-light); }
+    .cluster-span { font-weight: bold; color: var(--green); font-size: 16px; }
+    .cluster-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .cluster-term-tag { padding: 4px 10px; border-radius: 4px; font-size: 13px; border: 1px solid; }
+    .cluster-verses { font-size: 12px; color: #666; margin-top: 6px; }
     .matrix-legend {
       display: flex;
       gap: 15px;
@@ -480,13 +488,31 @@
           Text: Koren Edition (Rips et al., 1994) - 304,805 letters
         </div>
 
-        <div class="input-row">
-          <input type="text" id="scanTerm1" placeholder="Search term" dir="rtl" style="flex: 1;">
+        <div class="scan-term-entries" id="scanTermEntries">
+          <div class="scan-term-entry">
+            <div class="term-color-swatch" style="background:#ffc107;"></div>
+            <input type="text" class="scan-term-input" placeholder="Term 1" dir="rtl">
+            <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
+          </div>
+          <div class="scan-term-entry">
+            <div class="term-color-swatch" style="background:#00bcd4;"></div>
+            <input type="text" class="scan-term-input" placeholder="Term 2" dir="rtl">
+            <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
+          </div>
         </div>
 
-        <div class="input-row">
-          <label><input type="checkbox" id="enableTerm2"> Second term:</label>
-          <input type="text" id="scanTerm2" placeholder="Optional" dir="rtl" disabled style="flex: 1;">
+        <div class="action-row" style="margin-bottom: 15px;">
+          <button class="btn btn-secondary" onclick="addScanTerm()">+ Add Term</button>
+        </div>
+
+        <div class="save-panel">
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="scanSessionName" placeholder="Session name..." style="flex: 1; min-width: 150px;">
+            <button class="btn btn-success btn-small" onclick="saveScanSession()">Save</button>
+            <button class="btn btn-secondary btn-small" onclick="exportScanResults()">Export JSON</button>
+            <button class="btn btn-secondary btn-small" onclick="clearScanSession()">Clear</button>
+          </div>
+          <div id="savedScanSessions"></div>
         </div>
 
         <div class="range-row">
@@ -496,6 +522,7 @@
 
         <div class="action-row">
           <button class="btn" id="scanBtn" onclick="startScan()">Search</button>
+          <button class="btn btn-danger" id="scanCancelBtn" onclick="cancelScan()" style="display:none;">Cancel</button>
           <span id="scanStatus" style="font-size: 13px; color: #666;"></span>
         </div>
 
@@ -503,7 +530,10 @@
 
         <!-- Inline Matrix View -->
         <div id="scanMatrixView" class="matrix-view" style="display:none;">
-          <h3 id="scanMatrixTitle">Matrix View</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3 id="scanMatrixTitle">Matrix View</h3>
+            <button class="btn btn-small" onclick="downloadMatrixPDF()" style="background:#666;">Download PDF</button>
+          </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
           <div class="matrix-container" style="max-height:400px;">
             <div class="matrix-grid" id="scanMatrixGrid"></div>
@@ -549,24 +579,6 @@
     </div>
   </main>
 
-  <!-- Matrix Modal (for scan mode) -->
-  <div id="matrixModal" class="matrix-modal">
-    <div class="matrix-modal-header">
-      <div>
-        <div class="matrix-modal-title" id="modalTitle">ELS Matrix</div>
-        <div id="modalInfo" style="font-size: 13px; opacity: 0.8;"></div>
-      </div>
-      <button class="btn btn-danger" onclick="closeModal()">Close (Esc)</button>
-    </div>
-    <div class="matrix-container">
-      <div class="matrix-grid" id="modalGrid"></div>
-    </div>
-    <div class="matrix-legend">
-      <div class="legend-item"><div class="legend-color t1"></div><span id="legendT1">Term 1</span></div>
-      <div class="legend-item" id="legendT2Item" style="display:none;"><div class="legend-color t2"></div><span id="legendT2">Term 2</span></div>
-      <div class="legend-item" id="legendBothItem" style="display:none;"><div class="legend-color both"></div><span>Overlap</span></div>
-    </div>
-  </div>
 
   <script type="module">
     import { getElsIndexService, initElsIndex } from './engines/els-index.js';
@@ -862,58 +874,93 @@
     };
 
     // ============= SCAN MODE =============
-    document.getElementById('enableTerm2').addEventListener('change', (e) => {
-      document.getElementById('scanTerm2').disabled = !e.target.checked;
-    });
+    const TERM_COLORS = ['#ffc107','#00bcd4','#ff5722','#4caf50','#e91e63','#3f51b5','#795548','#607d8b'];
+    const BOOK_NAMES = {
+      1:'Genesis',2:'Exodus',3:'Leviticus',4:'Numbers',5:'Deuteronomy',
+      6:'Joshua',7:'Judges',8:'1 Samuel',9:'2 Samuel',10:'1 Kings',
+      11:'2 Kings',12:'Isaiah',13:'Jeremiah',14:'Ezekiel',15:'Hosea',
+      16:'Joel',17:'Amos',18:'Obadiah',19:'Jonah',20:'Micah',
+      21:'Nahum',22:'Habakkuk',23:'Zephaniah',24:'Haggai',25:'Zechariah',
+      26:'Malachi',27:'Psalms',28:'Proverbs',29:'Job',30:'Song of Songs',
+      31:'Ruth',32:'Lamentations',33:'Ecclesiastes',34:'Esther',35:'Daniel',
+      36:'Ezra',37:'Nehemiah',38:'1 Chronicles',39:'2 Chronicles'
+    };
+    const TORAH_BOOKS = ['genesis','exodus','leviticus','numbers','deuteronomy'];
 
-    let scanAbort = false;
-    window.startScan = async function() {
-      if (!torahText) {
-        const resp = await fetch('data/torahNoSpaces.txt');
-        torahText = await resp.text();
-      }
-
-      const term1 = document.getElementById('scanTerm1').value.trim();
-      if (!term1) { alert('Enter a search term'); return; }
-
-      const term2Enabled = document.getElementById('enableTerm2').checked;
-      const term2 = term2Enabled ? document.getElementById('scanTerm2').value.trim() : '';
-      const minSkip = parseInt(document.getElementById('minSkip').value) || -100;
-      const maxSkip = parseInt(document.getElementById('maxSkip').value) || 100;
-
-      const btn = document.getElementById('scanBtn');
-      const status = document.getElementById('scanStatus');
-      btn.disabled = true;
-      btn.textContent = 'Scanning...';
-      scanAbort = false;
-
-      const results1 = [];
-      const results2 = [];
-
-      // Scan each skip value
-      for (let skip = minSkip; skip <= maxSkip; skip++) {
-        if (scanAbort) break;
-        if (skip === 0) continue; // Skip 0 excluded
-
-        status.textContent = `Skip ${skip}...`;
-        await new Promise(r => setTimeout(r, 0)); // yield
-
-        const found1 = findELS(torahText, term1, skip);
-        found1.forEach(pos => results1.push({ pos, skip }));
-
-        if (term2) {
-          const found2 = findELS(torahText, term2, skip);
-          found2.forEach(pos => results2.push({ pos, skip }));
-        }
-      }
-
-      btn.disabled = false;
-      btn.textContent = 'Search';
-      status.textContent = '';
-
-      displayScanResults(term1, results1, term2, results2);
+    // --- Scan term management ---
+    window.addScanTerm = function() {
+      const container = document.getElementById('scanTermEntries');
+      const n = container.querySelectorAll('.scan-term-entry').length;
+      if (n >= 8) { alert('Maximum 8 terms'); return; }
+      const div = document.createElement('div');
+      div.className = 'scan-term-entry';
+      div.innerHTML = `<div class="term-color-swatch" style="background:${TERM_COLORS[n % 8]};"></div>
+        <input type="text" class="scan-term-input" placeholder="Term ${n + 1}" dir="rtl">
+        <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>`;
+      container.appendChild(div);
+      updateScanTermColors();
     };
 
+    window.removeScanTerm = function(btn) {
+      const container = document.getElementById('scanTermEntries');
+      if (container.querySelectorAll('.scan-term-entry').length > 1) {
+        btn.parentElement.remove();
+        updateScanTermColors();
+      }
+    };
+
+    function updateScanTermColors() {
+      const entries = document.querySelectorAll('.scan-term-entry');
+      entries.forEach((entry, i) => {
+        const swatch = entry.querySelector('.term-color-swatch');
+        if (swatch) swatch.style.background = TERM_COLORS[i % 8];
+        const input = entry.querySelector('input');
+        if (input) input.placeholder = `Term ${i + 1}`;
+      });
+    }
+
+    // --- Character database for verse attribution ---
+    let charDatabase = null;
+
+    async function loadCharDB() {
+      if (charDatabase) return;
+      try {
+        const allChars = [];
+        for (const book of TORAH_BOOKS) {
+          const resp = await fetch(`data/${book}-chars.json.gz`);
+          if (!resp.ok) continue;
+          const blob = await resp.blob();
+          const ds = new DecompressionStream('gzip');
+          const text = await new Response(blob.stream().pipeThrough(ds)).text();
+          allChars.push(...JSON.parse(text));
+        }
+        if (allChars.length > 0) charDatabase = allChars;
+      } catch (e) {
+        console.log('Character database not available:', e.message);
+      }
+    }
+
+    function getVerseForPosition(pos) {
+      if (!charDatabase || pos < 0 || pos >= charDatabase.length) return null;
+      const ch = charDatabase[pos];
+      if (!ch) return null;
+      const bookName = BOOK_NAMES[ch.book] || `Book ${ch.book}`;
+      return `${bookName} ${ch.chapter}:${ch.verse}`;
+    }
+
+    function getVersesForHit(pos, skip, termLen) {
+      if (!charDatabase) return [];
+      const seen = new Set();
+      const verses = [];
+      for (let i = 0; i < termLen; i++) {
+        const p = pos + i * skip;
+        const v = getVerseForPosition(p);
+        if (v && !seen.has(v)) { seen.add(v); verses.push(v); }
+      }
+      return verses;
+    }
+
+    // --- ELS search ---
     function findELS(text, term, skip) {
       const results = [];
       const len = text.length;
@@ -921,7 +968,6 @@
       const absSkip = Math.abs(skip);
 
       if (absSkip === 1) {
-        // Open text search
         const searchText = skip > 0 ? text : text.split('').reverse().join('');
         const searchTerm = skip > 0 ? term : term.split('').reverse().join('');
         let idx = 0;
@@ -931,15 +977,11 @@
           idx++;
         }
       } else {
-        // ELS search
         for (let start = 0; start < len; start++) {
           let match = true;
           for (let i = 0; i < termLen; i++) {
             const pos = start + i * skip;
-            if (pos < 0 || pos >= len || text[pos] !== term[i]) {
-              match = false;
-              break;
-            }
+            if (pos < 0 || pos >= len || text[pos] !== term[i]) { match = false; break; }
           }
           if (match) results.push(start);
         }
@@ -947,148 +989,294 @@
       return results;
     }
 
-    let scanProximityPairs = [];
+    // --- N-term scan ---
+    let scanAbort = false;
+    let scanAllResults = {};  // { term: [{pos, skip}, ...] }
+    let scanTerms = [];
+    let scanClusters = [];
 
-    function displayScanResults(term1, results1, term2, results2) {
+    window.cancelScan = function() { scanAbort = true; };
+
+    window.startScan = async function() {
+      if (!torahText) {
+        const resp = await fetch('data/torahNoSpaces.txt');
+        torahText = await resp.text();
+      }
+
+      const inputs = document.querySelectorAll('.scan-term-input');
+      const terms = Array.from(inputs).map(i => i.value.trim()).filter(t => t);
+      if (terms.length < 1) { alert('Enter at least one term'); return; }
+
+      const minSkip = parseInt(document.getElementById('minSkip').value) || -100;
+      const maxSkip = parseInt(document.getElementById('maxSkip').value) || 100;
+
+      const btn = document.getElementById('scanBtn');
+      const cancelBtn = document.getElementById('scanCancelBtn');
+      const status = document.getElementById('scanStatus');
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
+      cancelBtn.style.display = '';
+      scanAbort = false;
+
+      // Load character database for verse attribution (non-blocking)
+      loadCharDB();
+
+      scanAllResults = {};
+      scanTerms = terms;
+      for (const term of terms) scanAllResults[term] = [];
+
+      const totalSkips = maxSkip - minSkip + 1;
+      let done = 0;
+
+      for (let skip = minSkip; skip <= maxSkip; skip++) {
+        if (scanAbort) break;
+        if (skip === 0) { done++; continue; }
+
+        done++;
+        status.textContent = `Skip ${skip} (${Math.round(done / totalSkips * 100)}%)...`;
+        await new Promise(r => setTimeout(r, 0));
+
+        for (const term of terms) {
+          const found = findELS(torahText, term, skip);
+          for (const pos of found) scanAllResults[term].push({ pos, skip });
+        }
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Search';
+      cancelBtn.style.display = 'none';
+      status.textContent = '';
+
+      // Find clusters if 2+ terms
+      scanClusters = [];
+      if (terms.length >= 2) {
+        scanClusters = findClusters(terms, scanAllResults, 10000);
+      }
+
+      displayScanResults(terms, scanAllResults, scanClusters);
+    };
+
+    // --- Sliding window cluster finder ---
+    function findClusters(terms, allResults, maxSpan) {
+      // Merge all hits tagged by term index
+      const merged = [];
+      terms.forEach((term, idx) => {
+        for (const hit of allResults[term]) {
+          merged.push({ pos: hit.pos, skip: hit.skip, termIdx: idx, term });
+        }
+      });
+      if (merged.length === 0) return [];
+
+      merged.sort((a, b) => a.pos - b.pos);
+
+      const clusters = [];
+      const termCount = terms.length;
+      // Count of each term in current window
+      const counts = new Array(termCount).fill(0);
+      let presentTerms = 0;
+      let left = 0;
+
+      for (let right = 0; right < merged.length; right++) {
+        const rHit = merged[right];
+        if (counts[rHit.termIdx] === 0) presentTerms++;
+        counts[rHit.termIdx]++;
+
+        // Shrink window from left while all terms still present
+        while (presentTerms === termCount) {
+          const span = merged[right].pos - merged[left].pos;
+          if (span <= maxSpan) {
+            // Record cluster: pick one hit per term (closest to center)
+            const centerPos = (merged[left].pos + merged[right].pos) / 2;
+            const hits = [];
+            for (let t = 0; t < termCount; t++) {
+              // Find best hit for this term in window
+              let best = null, bestDist = Infinity;
+              for (let k = left; k <= right; k++) {
+                if (merged[k].termIdx === t) {
+                  const d = Math.abs(merged[k].pos - centerPos);
+                  if (d < bestDist) { bestDist = d; best = merged[k]; }
+                }
+              }
+              if (best) hits.push({ ...best });
+            }
+            clusters.push({ span, hits, minPos: merged[left].pos, maxPos: merged[right].pos });
+          }
+
+          const lHit = merged[left];
+          counts[lHit.termIdx]--;
+          if (counts[lHit.termIdx] === 0) presentTerms--;
+          left++;
+        }
+      }
+
+      // Sort by span ascending
+      clusters.sort((a, b) => a.span - b.span);
+
+      // Deduplicate overlapping clusters (keep smallest span variant)
+      const deduped = [];
+      const usedKeys = new Set();
+      for (const c of clusters) {
+        // Key = sorted positions of chosen hits
+        const key = c.hits.map(h => `${h.termIdx}:${h.pos}:${h.skip}`).sort().join('|');
+        if (!usedKeys.has(key)) {
+          usedKeys.add(key);
+          deduped.push(c);
+          if (deduped.length >= 200) break;
+        }
+      }
+
+      return deduped;
+    }
+
+    // --- Display scan results ---
+    function displayScanResults(terms, allResults, clusters) {
       let html = '<div class="results">';
 
-      // If two terms, find and display proximity pairs first
-      if (term2 && results1.length > 0 && results2.length > 0) {
-        const maxDist = 5000; // reasonable max distance
-        const pairs = [];
-
-        for (const r1 of results1) {
-          for (const r2 of results2) {
-            const dist = Math.abs(r1.pos - r2.pos);
-            if (dist <= maxDist) {
-              pairs.push({
-                pos1: r1.pos, skip1: r1.skip,
-                pos2: r2.pos, skip2: r2.skip,
-                distance: dist,
-                overlap: dist === 0,
-                skipMatch: Math.abs(r1.skip) === Math.abs(r2.skip)
-              });
-            }
-          }
-        }
-
-        pairs.sort((a, b) => a.distance - b.distance);
-        scanProximityPairs = pairs;
-
+      // Clusters section (2+ terms)
+      if (terms.length >= 2 && clusters.length > 0) {
         html += `<div style="background:#fff3e0;padding:16px;border-radius:8px;border-right:4px solid #ff9800;margin-bottom:20px;">`;
-        html += `<h3 style="color:#e65100;margin-bottom:12px;">🔗 Proximity Pairs (${pairs.length})</h3>`;
+        html += `<h3 style="color:#e65100;margin-bottom:12px;">Clusters (${clusters.length}) — sorted by smallest region</h3>`;
+        html += `<p style="font-size:13px;color:#666;margin-bottom:12px;">Click to view matrix with all terms</p>`;
+        html += '<div class="results-scrollable" style="max-height:500px;">';
+        clusters.forEach((c, idx) => {
+          html += `<div class="cluster-row" onclick="showClusterMatrix(${idx})">`;
+          html += `<div><span class="cluster-span">${c.span.toLocaleString()} chars</span></div>`;
+          html += `<div class="cluster-terms">`;
+          c.hits.forEach(h => {
+            const color = TERM_COLORS[h.termIdx % 8];
+            const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+            const verseStr = verses.length > 0 ? ` [${verses.join(', ')}]` : '';
+            html += `<span class="cluster-term-tag" style="background:${color}20;border-color:${color};color:#333;">
+              "${h.term}" pos:${h.pos.toLocaleString()} skip:${h.skip}${verseStr}
+            </span>`;
+          });
+          html += `</div></div>`;
+        });
+        html += '</div></div>';
+      } else if (terms.length >= 2) {
+        html += `<div style="background:#fff3e0;padding:16px;border-radius:8px;border-right:4px solid #ff9800;margin-bottom:20px;">`;
+        html += `<h3 style="color:#e65100;margin-bottom:12px;">Clusters</h3>`;
+        html += `<p>No clusters found — some terms may have no results.</p></div>`;
+      }
 
-        if (pairs.length === 0) {
-          html += `<p>No proximity pairs found within ${maxDist.toLocaleString()} characters.</p>`;
-        } else {
-          html += `<p style="font-size:13px;color:#666;margin-bottom:12px;">Click to view matrix with both terms</p>`;
-          html += '<div class="results-scrollable" style="max-height:400px;">';
-          pairs.forEach((p, idx) => {
-            const distText = p.overlap ? '<span style="color:#2e7d32;font-weight:bold;">OVERLAP</span>' :
-                            `<span style="color:#2e7d32;font-weight:bold;">${p.distance.toLocaleString()}</span> chars`;
-            const skipInfo = p.skipMatch ? `Same skip: ${Math.abs(p.skip1)}` : `Skips: ${p.skip1}, ${p.skip2}`;
-            html += `<div class="result-item" style="border-right:4px solid #4caf50;" onclick="openScanProximity(${idx}, '${term1}', '${term2}')">
-              <div>Distance: ${distText} | ${skipInfo}</div>
-              <div style="display:flex;gap:15px;margin-top:8px;font-size:13px;">
-                <span style="background:#fff8e1;border:1px solid #ffc107;padding:4px 8px;border-radius:4px;">"${term1}" @ ${p.pos1.toLocaleString()}</span>
-                <span style="background:#e0f7fa;border:1px solid #00bcd4;padding:4px 8px;border-radius:4px;">"${term2}" @ ${p.pos2.toLocaleString()}</span>
-              </div>
+      // Individual term results
+      terms.forEach((term, tIdx) => {
+        const results = allResults[term];
+        const color = TERM_COLORS[tIdx % 8];
+        html += `<h3 style="margin-top:20px;border-right:4px solid ${color};padding-right:10px;">${term}: ${results.length.toLocaleString()} occurrences</h3>`;
+        if (results.length > 0) {
+          html += '<div class="results-scrollable" style="max-height:300px;">';
+          results.forEach((r, i) => {
+            const verses = getVersesForHit(r.pos, r.skip, term.length);
+            const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
+            html += `<div class="result-item" onclick="showSingleTermMatrix(${tIdx}, ${i})">
+              <span class="term" style="color:${color};">${term}</span>
+              <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}</span>
             </div>`;
           });
           html += '</div>';
         }
-        html += '</div>';
-      }
-
-      // Individual results
-      html += `<h3>${term1}: ${results1.length.toLocaleString()} occurrences</h3>`;
-      if (results1.length > 0) {
-        html += '<div class="results-scrollable" style="max-height:300px;">';
-        results1.forEach((r, i) => {
-          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term1}', null)">
-            <span class="term">${term1}</span>
-            <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}</span>
-          </div>`;
-        });
-        html += '</div>';
-      }
-
-      if (term2 && results2.length > 0) {
-        html += `<h3 style="margin-top:20px;">${term2}: ${results2.length.toLocaleString()} occurrences</h3>`;
-        html += '<div class="results-scrollable" style="max-height:300px;">';
-        results2.forEach((r, i) => {
-          html += `<div class="result-item" onclick="openScanMatrix(${r.pos}, ${r.skip}, '${term2}', null)">
-            <span class="term">${term2}</span>
-            <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}</span>
-          </div>`;
-        });
-        html += '</div>';
-      }
+      });
 
       html += '</div>';
       document.getElementById('scanResults').innerHTML = html;
     }
 
-    window.openScanProximity = function(idx, term1, term2) {
-      const pair = scanProximityPairs[idx];
-      if (!pair) return;
+    // --- Show cluster matrix ---
+    window.showClusterMatrix = function(idx) {
+      const cluster = scanClusters[idx];
+      if (!cluster || !torahText) return;
 
-      const distText = pair.overlap ? 'Overlapping' : `Distance: ${pair.distance.toLocaleString()}`;
+      const view = document.getElementById('scanMatrixView');
+      view.style.display = 'block';
+      document.getElementById('scanMatrixTitle').textContent =
+        `Cluster — ${cluster.hits.map(h => `"${h.term}"`).join(' + ')}`;
 
-      document.getElementById('scanMatrixView').style.display = 'block';
-      document.getElementById('scanMatrixTitle').textContent = `"${term1}" + "${term2}"`;
+      // Stats
+      let statsHtml = `<div class="matrix-stat"><div class="value">${cluster.span.toLocaleString()}</div><div class="label">Span</div></div>`;
+      cluster.hits.forEach(h => {
+        const color = TERM_COLORS[h.termIdx % 8];
+        statsHtml += `<div class="matrix-stat">
+          <div class="value" style="color:${color};">${h.term}</div>
+          <div class="label">pos ${h.pos.toLocaleString()} skip ${h.skip}</div>
+        </div>`;
+      });
+      document.getElementById('scanMatrixStats').innerHTML = statsHtml;
 
-      document.getElementById('scanMatrixStats').innerHTML = `
-        <div class="matrix-stat"><div class="value" style="color:#ffc107;">${term1}</div><div class="label">Term 1</div></div>
-        <div class="matrix-stat"><div class="value" style="color:#00bcd4;">${term2}</div><div class="label">Term 2</div></div>
-        <div class="matrix-stat"><div class="value">${pair.distance.toLocaleString()}</div><div class="label">Distance</div></div>
-        <div class="matrix-stat"><div class="value">${pair.skip1}</div><div class="label">Skip 1</div></div>
-        <div class="matrix-stat"><div class="value">${pair.skip2}</div><div class="label">Skip 2</div></div>
-        <div class="matrix-stat"><div class="value">${pair.pos1.toLocaleString()}</div><div class="label">Pos 1</div></div>
-        <div class="matrix-stat"><div class="value">${pair.pos2.toLocaleString()}</div><div class="label">Pos 2</div></div>
-      `;
+      // Legend
+      let legendHtml = '';
+      cluster.hits.forEach(h => {
+        const color = TERM_COLORS[h.termIdx % 8];
+        const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+        const verseStr = verses.length > 0 ? ` (${verses.join(', ')})` : '';
+        legendHtml += `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${h.term}${verseStr}</span></div>`;
+      });
+      if (cluster.hits.length > 1) {
+        legendHtml += `<div class="legend-item"><div class="legend-color" style="background:#9c27b0;"></div><span>Overlap</span></div>`;
+      }
+      document.getElementById('scanMatrixLegend').innerHTML = legendHtml;
 
-      document.getElementById('scanMatrixLegend').innerHTML = `
-        <div class="legend-item"><div class="legend-color t1"></div><span>${term1}</span></div>
-        <div class="legend-item"><div class="legend-color t2"></div><span>${term2}</span></div>
-        <div class="legend-item"><div class="legend-color both"></div><span>Overlap</span></div>
-      `;
-
-      renderScanMatrix(pair.pos1, pair.skip1, term1, pair.pos2, pair.skip2, term2);
-      document.getElementById('scanMatrixView').scrollIntoView({ behavior: 'smooth' });
+      renderScanMatrix(cluster.hits);
+      view.scrollIntoView({ behavior: 'smooth' });
     };
 
-    window.openScanMatrix = function(pos, skip, term, term2) {
-      document.getElementById('scanMatrixView').style.display = 'block';
+    // --- Show single term matrix ---
+    window.showSingleTermMatrix = function(termIdx, resultIdx) {
+      const term = scanTerms[termIdx];
+      const results = scanAllResults[term];
+      if (!results || !results[resultIdx] || !torahText) return;
+
+      const r = results[resultIdx];
+      const hit = { pos: r.pos, skip: r.skip, term, termIdx };
+
+      const view = document.getElementById('scanMatrixView');
+      view.style.display = 'block';
       document.getElementById('scanMatrixTitle').textContent = `"${term}"`;
 
+      const color = TERM_COLORS[termIdx % 8];
+      const verses = getVersesForHit(r.pos, r.skip, term.length);
+      const verseStr = verses.length > 0 ? ` — ${verses.join(', ')}` : '';
+
       document.getElementById('scanMatrixStats').innerHTML = `
-        <div class="matrix-stat"><div class="value" style="color:#ffc107;">${term}</div><div class="label">Term</div></div>
-        <div class="matrix-stat"><div class="value">${pos.toLocaleString()}</div><div class="label">Position</div></div>
-        <div class="matrix-stat"><div class="value">${skip}</div><div class="label">Skip</div></div>
+        <div class="matrix-stat"><div class="value" style="color:${color};">${term}</div><div class="label">Term</div></div>
+        <div class="matrix-stat"><div class="value">${r.pos.toLocaleString()}</div><div class="label">Position</div></div>
+        <div class="matrix-stat"><div class="value">${r.skip}</div><div class="label">Skip</div></div>
       `;
-
       document.getElementById('scanMatrixLegend').innerHTML = `
-        <div class="legend-item"><div class="legend-color t1"></div><span>${term}</span></div>
+        <div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${term}${verseStr}</span></div>
       `;
 
-      renderScanMatrix(pos, skip, term, null, null, null);
-      document.getElementById('scanMatrixView').scrollIntoView({ behavior: 'smooth' });
+      renderScanMatrix([hit]);
+      view.scrollIntoView({ behavior: 'smooth' });
     };
 
-    function renderScanMatrix(pos1, skip1, term1, pos2, skip2, term2) {
-      const width = Math.max(Math.abs(skip1), pos2 ? Math.abs(skip2) : 0, 30);
-      const centerPos = pos2 ? Math.min(pos1, pos2) : pos1;
+    // --- Render N-term matrix ---
+    function renderScanMatrix(hits) {
+      // Determine grid width from max |skip|
+      const width = Math.max(...hits.map(h => Math.abs(h.skip)), 30);
+
+      // Center on cluster midpoint
+      const allPositions = [];
+      for (const h of hits) {
+        for (let i = 0; i < h.term.length; i++) allPositions.push(h.pos + i * h.skip);
+      }
+      const minPos = Math.min(...allPositions);
+      const maxPos = Math.max(...allPositions);
+      const centerPos = Math.floor((minPos + maxPos) / 2);
+
       const rowsBefore = 5;
       const rowsAfter = 10;
       const startRow = Math.floor(centerPos / width) - rowsBefore;
       const endRow = startRow + rowsBefore + rowsAfter;
 
-      const t1Pos = new Set();
-      const t2Pos = new Set();
-      for (let i = 0; i < term1.length; i++) t1Pos.add(pos1 + i * skip1);
-      if (term2) {
-        for (let i = 0; i < term2.length; i++) t2Pos.add(pos2 + i * skip2);
+      // Build posMap: position -> Set of termIdx
+      const posMap = new Map();
+      for (const h of hits) {
+        for (let i = 0; i < h.term.length; i++) {
+          const p = h.pos + i * h.skip;
+          if (!posMap.has(p)) posMap.set(p, new Set());
+          posMap.get(p).add(h.termIdx);
+        }
       }
 
       let html = '';
@@ -1099,12 +1287,24 @@
           const pos = rowStart + col;
           if (pos >= torahText.length) break;
           const ch = torahText[pos];
-          const in1 = t1Pos.has(pos), in2 = t2Pos.has(pos);
+          const termSet = posMap.get(pos);
           let cls = 'matrix-cell';
-          if (in1 && in2) cls += ' term1 term2';
-          else if (in1) cls += ' term1';
-          else if (in2) cls += ' term2';
-          html += `<div class="${cls}">${ch}</div>`;
+          let tooltip = '';
+
+          if (termSet) {
+            if (termSet.size > 1) {
+              cls += ' multi-term';
+            } else {
+              const idx = termSet.values().next().value;
+              cls += ` term-color-${idx % 8}`;
+            }
+            // Tooltip with verse reference
+            const verse = getVerseForPosition(pos);
+            const termNames = [...termSet].map(t => scanTerms[t]).join(', ');
+            tooltip = verse ? `${termNames} — ${verse}` : termNames;
+          }
+
+          html += `<div class="${cls}"${tooltip ? ` title="${tooltip}"` : ''}>${ch}</div>`;
         }
       }
 
@@ -1113,67 +1313,190 @@
       grid.innerHTML = html;
     }
 
-    // ============= SCAN MODE: MATRIX MODAL =============
-    window.openScanMatrix = function(pos, skip, term1, term2) {
-      const modal = document.getElementById('matrixModal');
-      modal.classList.add('active');
-
-      document.getElementById('modalTitle').textContent = `${term1} at position ${pos.toLocaleString()}`;
-      document.getElementById('modalInfo').textContent = `Skip: ${skip}`;
-      document.getElementById('legendT1').textContent = term1;
-
-      if (term2) {
-        document.getElementById('legendT2Item').style.display = 'flex';
-        document.getElementById('legendBothItem').style.display = 'flex';
-        document.getElementById('legendT2').textContent = term2;
-      } else {
-        document.getElementById('legendT2Item').style.display = 'none';
-        document.getElementById('legendBothItem').style.display = 'none';
-      }
-
-      renderModalMatrix(pos, skip, term1, term2);
+    // ============= SCAN MODE: SAVE/LOAD SESSIONS =============
+    window.saveScanSession = function() {
+      if (scanTerms.length === 0) { alert('No scan results to save'); return; }
+      const name = document.getElementById('scanSessionName').value.trim() || `Scan ${new Date().toLocaleTimeString()}`;
+      const sessions = JSON.parse(localStorage.getItem('elsScanSessions') || '[]');
+      sessions.unshift({
+        name,
+        terms: scanTerms,
+        allResults: scanAllResults,
+        clusters: scanClusters,
+        savedAt: new Date().toISOString()
+      });
+      if (sessions.length > 20) sessions.length = 20;
+      localStorage.setItem('elsScanSessions', JSON.stringify(sessions));
+      loadSavedScanSessions();
+      document.getElementById('scanSessionName').value = '';
     };
 
-    function renderModalMatrix(startPos, skip, term1, term2) {
-      const width = Math.abs(skip) || 30;
-      const rowsBefore = 5;
-      const rowsAfter = 10;
+    window.loadScanSession = function(idx) {
+      const sessions = JSON.parse(localStorage.getItem('elsScanSessions') || '[]');
+      if (!sessions[idx]) return;
+      const s = sessions[idx];
+      scanTerms = s.terms;
+      scanAllResults = s.allResults;
+      scanClusters = s.clusters || [];
 
-      const t1Pos = new Set();
-      for (let i = 0; i < term1.length; i++) t1Pos.add(startPos + i * skip);
+      // Restore term inputs
+      const container = document.getElementById('scanTermEntries');
+      container.innerHTML = '';
+      s.terms.forEach((term, i) => {
+        const div = document.createElement('div');
+        div.className = 'scan-term-entry';
+        div.innerHTML = `<div class="term-color-swatch" style="background:${TERM_COLORS[i % 8]};"></div>
+          <input type="text" class="scan-term-input" value="${term}" dir="rtl">
+          <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>`;
+        container.appendChild(div);
+      });
 
-      const t2Pos = new Set();
-      // For term2, we'd need its occurrences - simplified for now
+      // Load char DB for verse attribution then display
+      loadCharDB().then(() => {
+        displayScanResults(scanTerms, scanAllResults, scanClusters);
+      });
+    };
 
-      const startRow = Math.floor(startPos / width) - rowsBefore;
-      const endRow = startRow + rowsBefore + rowsAfter;
+    window.deleteScanSession = function(idx) {
+      if (!confirm('Delete session?')) return;
+      const sessions = JSON.parse(localStorage.getItem('elsScanSessions') || '[]');
+      sessions.splice(idx, 1);
+      localStorage.setItem('elsScanSessions', JSON.stringify(sessions));
+      loadSavedScanSessions();
+    };
 
-      let html = '';
-      for (let row = startRow; row <= endRow; row++) {
-        const rowStart = row * width;
-        if (rowStart < 0) continue;
-        for (let col = 0; col < width; col++) {
-          const pos = rowStart + col;
-          if (pos >= torahText.length) break;
-          const ch = torahText[pos];
-          const in1 = t1Pos.has(pos);
-          const cls = in1 ? 'matrix-cell term1' : 'matrix-cell';
-          html += `<div class="${cls}">${ch}</div>`;
-        }
+    function loadSavedScanSessions() {
+      const sessions = JSON.parse(localStorage.getItem('elsScanSessions') || '[]');
+      const container = document.getElementById('savedScanSessions');
+      if (!container) return;
+      if (sessions.length === 0) {
+        container.innerHTML = '<p style="font-size: 12px; color: #666; margin-top: 10px;">No saved scan sessions</p>';
+        return;
       }
-
-      const grid = document.getElementById('modalGrid');
-      grid.style.gridTemplateColumns = `repeat(${width}, 26px)`;
-      grid.innerHTML = html;
+      let html = '';
+      sessions.forEach((s, i) => {
+        html += `<div class="saved-item">
+          <div><span class="name">${s.name}</span><br><span class="meta">${s.terms.join(', ')}</span></div>
+          <div><button class="btn btn-small btn-secondary" onclick="loadScanSession(${i})">Load</button>
+          <button class="btn btn-small btn-danger" onclick="deleteScanSession(${i})">×</button></div>
+        </div>`;
+      });
+      container.innerHTML = html;
     }
 
-    window.closeModal = function() {
-      document.getElementById('matrixModal').classList.remove('active');
+    window.exportScanResults = function() {
+      if (scanTerms.length === 0) { alert('No results to export'); return; }
+      const data = { terms: scanTerms, allResults: scanAllResults, clusters: scanClusters, timestamp: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `els-scan-${scanTerms.join('-')}-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
     };
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeModal();
-    });
+    window.clearScanSession = function() {
+      if (!confirm('Clear all terms and results?')) return;
+      const container = document.getElementById('scanTermEntries');
+      container.innerHTML = `
+        <div class="scan-term-entry">
+          <div class="term-color-swatch" style="background:#ffc107;"></div>
+          <input type="text" class="scan-term-input" placeholder="Term 1" dir="rtl">
+          <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
+        </div>
+        <div class="scan-term-entry">
+          <div class="term-color-swatch" style="background:#00bcd4;"></div>
+          <input type="text" class="scan-term-input" placeholder="Term 2" dir="rtl">
+          <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
+        </div>`;
+      document.getElementById('scanResults').innerHTML = '';
+      document.getElementById('scanMatrixView').style.display = 'none';
+      scanTerms = [];
+      scanAllResults = {};
+      scanClusters = [];
+    };
+
+    // Load saved scan sessions on init
+    loadSavedScanSessions();
+
+    // ============= SCAN MODE: PDF EXPORT =============
+    window.downloadMatrixPDF = function() {
+      const matrixView = document.getElementById('scanMatrixView');
+      if (!matrixView || matrixView.style.display === 'none') { alert('No matrix displayed'); return; }
+
+      // Use canvas rendering approach
+      const grid = document.getElementById('scanMatrixGrid');
+      const cells = grid.querySelectorAll('.matrix-cell');
+      if (cells.length === 0) return;
+
+      const title = document.getElementById('scanMatrixTitle').textContent;
+      const cols = parseInt(grid.style.gridTemplateColumns.match(/repeat\((\d+)/)?.[1] || '30');
+      const rows = Math.ceil(cells.length / cols);
+      const cellSize = 22;
+      const padding = 40;
+      const headerHeight = 80;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = cols * cellSize + padding * 2;
+      canvas.height = rows * cellSize + padding * 2 + headerHeight;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#1a1a28';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Title
+      ctx.fillStyle = '#8bb8e8';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, canvas.width / 2, 30);
+
+      // Stats/legend text
+      const legend = document.getElementById('scanMatrixLegend');
+      ctx.font = '12px sans-serif';
+      ctx.fillStyle = '#ccc';
+      ctx.fillText(legend?.textContent?.trim() || '', canvas.width / 2, 55);
+
+      // Color map
+      const colorMap = {
+        'term-color-0': '#ffc107', 'term-color-1': '#00bcd4', 'term-color-2': '#ff5722',
+        'term-color-3': '#4caf50', 'term-color-4': '#e91e63', 'term-color-5': '#3f51b5',
+        'term-color-6': '#795548', 'term-color-7': '#607d8b', 'multi-term': '#9c27b0'
+      };
+
+      // Draw cells
+      ctx.font = '14px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      cells.forEach((cell, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = padding + col * cellSize;
+        const y = headerHeight + padding + row * cellSize;
+
+        // Determine cell color
+        let bg = '#2d2d44';
+        let fg = '#e0e0e0';
+        for (const [cls, color] of Object.entries(colorMap)) {
+          if (cell.classList.contains(cls)) {
+            bg = color;
+            fg = cls === 'term-color-0' || cls === 'term-color-1' ? '#000' : '#fff';
+            break;
+          }
+        }
+
+        ctx.fillStyle = bg;
+        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+        ctx.fillStyle = fg;
+        ctx.fillText(cell.textContent, x + cellSize / 2, y + cellSize / 2);
+      });
+
+      // Download as PNG (simpler, universally supported, better quality than canvas-to-PDF)
+      const link = document.createElement('a');
+      link.download = `els-matrix-${title.replace(/[^a-zA-Z0-9א-ת]/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
 
     // ============= DICTIONARY MODE =============
     let dictData = null;

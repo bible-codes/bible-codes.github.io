@@ -423,6 +423,103 @@ if (skip === '0') {
 
 ---
 
+## N-Term Scan with Cluster Ranking
+
+### Overview
+
+The Full Scan mode supports searching for up to 8 terms simultaneously. Each term is searched independently across all skip values. When 2+ terms are used, results are ranked by the **smallest bounding region** ("cluster") that contains at least one hit from every term.
+
+### N-Term Search Process
+
+```
+For each term T in [T1, T2, ..., Tn]:
+  For each skip value in [minSkip..maxSkip] (excluding 0):
+    Find all positions where T appears at this skip
+    Store: scanAllResults[T] = [{pos, skip}, ...]
+```
+
+All terms are searched independently — there is no coupling between terms during the search phase.
+
+### Cluster Discovery Algorithm
+
+**Input**: N terms, each with a list of `{pos, skip}` hits
+**Output**: Clusters sorted by smallest span
+
+**Algorithm**: Sliding window (O(M log M) where M = total hits across all terms)
+
+```
+1. MERGE all hits into one array, each tagged with termIdx
+2. SORT by position (ascending)
+3. Initialize sliding window [left, right]:
+   - counts[t] = number of hits for term t in window
+   - presentTerms = count of terms with counts[t] > 0
+4. For each right pointer:
+   a. Add merged[right] to window, increment counts[termIdx]
+   b. If this term was not present, increment presentTerms
+   c. While presentTerms == N (all terms present):
+      - Record cluster: span = merged[right].pos - merged[left].pos
+      - If span <= maxSpan (default 10,000):
+        Pick one hit per term closest to window center
+        Store cluster
+      - Remove merged[left] from window, shrink left
+5. Sort clusters by span ascending
+6. Deduplicate overlapping clusters
+7. Limit to top 200
+```
+
+**Key Properties**:
+- Finds ALL minimal-span windows, not just the globally smallest
+- Each cluster selects one representative hit per term (closest to center)
+- Deduplication uses a hash of `termIdx:pos:skip` tuples to avoid reporting the same combination from different window positions
+
+### Verse Attribution
+
+Each ELS hit spans multiple character positions in the Torah text:
+
+```
+For hit {pos, skip, term}:
+  Letter positions = [pos, pos+skip, pos+2*skip, ..., pos+(len-1)*skip]
+  For each position p:
+    Look up charDatabase[p] → {book, chapter, verse}
+  Collect unique verses
+```
+
+**Character Database**: Loaded from 5 compressed files (`genesis-chars.json.gz` through `deuteronomy-chars.json.gz`), each containing an array of character records with `book`, `chapter`, and `verse` fields. The array is indexed by global position (0-based ordinal within the Torah).
+
+**Display Format**: `Genesis 1:1`, `Exodus 3:4`, etc.
+
+### Matrix Rendering for N Terms
+
+The matrix renderer accepts an array of hits `[{term, pos, skip, termIdx}, ...]`:
+
+```
+1. Grid width = max(all |skip| values, 30)
+2. Center on midpoint of all letter positions
+3. Build posMap: Map<position, Set<termIdx>>
+   - For each hit, mark all letter positions with its termIdx
+4. Render grid cells:
+   - No terms: default gray (#2d2d44)
+   - One term: term-color-{idx} (8-color palette)
+   - Multiple terms: purple overlap (#9c27b0)
+5. Tooltips show verse reference + term name(s)
+```
+
+**Color Palette** (8 distinct colors):
+
+| Index | Color | Hex |
+|-------|-------|-----|
+| 0 | Amber | #ffc107 |
+| 1 | Cyan | #00bcd4 |
+| 2 | Deep Orange | #ff5722 |
+| 3 | Green | #4caf50 |
+| 4 | Pink | #e91e63 |
+| 5 | Indigo | #3f51b5 |
+| 6 | Brown | #795548 |
+| 7 | Blue-grey | #607d8b |
+| Overlap | Purple | #9c27b0 |
+
+---
+
 ## Future Enhancements
 
 ### Web Worker Implementation
@@ -469,6 +566,6 @@ Expand precomputed hash tables to cover:
 
 ---
 
-*Last Updated: 2026-02-02*
+*Last Updated: 2026-02-06*
 *Implementation: Hebrew Bible Analysis Suite*
-*Version: 1.0*
+*Version: 2.0 (N-Term Scan with Cluster Ranking)*

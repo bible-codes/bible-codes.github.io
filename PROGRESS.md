@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-03 (ELS Index System Complete)
+**Last Updated**: 2026-02-06 (N-Term ELS Scan with Cluster Ranking)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,38 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-03 (Part 4)
+## Current Session: 2026-02-06
+
+### N-Term ELS Scan with Smallest-Cluster Ranking ✅ COMPLETE
+
+Upgraded the Full Scan mode from fixed 2-term to arbitrary N-term search (up to 8), with results ranked by the smallest bounding region ("cluster") containing at least one hit from every term. Each result includes verse attribution.
+
+**Key Features**:
+- **Dynamic N-term UI**: Add/remove scan terms dynamically (up to 8), each with color swatch
+- **8-color palette**: amber, cyan, deep orange, green, pink, indigo, brown, blue-grey + purple for overlap
+- **Sliding window cluster finder**: O(M log M) algorithm merges all hits, finds minimal-span windows containing all terms, deduplicates, limits to top 200
+- **Verse attribution**: Loads Torah character database (5 books), provides book/chapter/verse for each ELS hit position
+- **Cluster display**: Sorted by smallest span, each showing all terms with position, skip, and contributing verses
+- **N-term matrix view**: Click any cluster to see all terms rendered in distinct colors, tooltips show verse references
+- **Individual results**: Below clusters, each term's results listed with verse info, clickable for single-term matrix
+- **Cancel button**: Abort long scans mid-progress
+- **Session save/load**: Save scan terms + results to localStorage, restore later
+- **Export**: JSON export of all results and clusters
+- **Matrix image download**: Canvas-rendered PNG export of the matrix view
+- **Dead code cleanup**: Removed duplicate `openScanMatrix`, removed unused `renderModalMatrix` and modal HTML/CSS
+
+**Modified Files**:
+- `bible-codes.html` - All changes in single file (HTML, CSS, JS)
+
+**Technical Details**:
+- `findClusters()`: Sliding window over position-sorted merged hits, tracks per-term counts, shrinks from left while all terms present
+- `loadCharDB()`: Loads 5 Torah book character databases (genesis through deuteronomy .json.gz) via DecompressionStream
+- `renderScanMatrix(hits)`: Accepts array of `{term, pos, skip, termIdx}`, builds `posMap<position, Set<termIdx>>` for multi-color rendering
+- Default skip range: -100 to +100
+
+---
+
+## Previous Session: 2026-02-03 (Part 4)
 
 ### ELS Index System ✅ COMPLETE
 
@@ -692,26 +723,31 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 
 ---
 
-## Statistics (Updated 2026-01-13)
+## Statistics (Updated 2026-02-06)
 
 ### Total Implementation
-- **Pages**: 10/14 (71% complete) ⬆️ +7% from last session
-- **Engines**: 8/9 (89% complete) ⬆️ +11% from last session
+- **Pages**: 10/14 (71% complete)
+- **Engines**: 8/9 (89% complete)
 - **Database**: 5/5 (100% complete) ✅
-- **Total Code**: ~9,500+ lines ⬆️ +1,500 lines
-- **Data**: 117 files, 21 MB compressed ✅
+- **Total Code**: ~10,000+ lines
+- **Data**: 117+ files, 21 MB compressed ✅
 
-### Current Session Progress (2026-01-13)
-- ✅ Matrix view engine created (600+ lines)
-- ✅ Matrix view interface created (full-featured HTML)
-- ✅ Book view interface created (traditional reader)
-- ✅ Letter analysis engine created (450+ lines)
-- ✅ Comprehensive feature assessment completed
-- ✅ Documentation review and update
-- ✅ Gap analysis completed
+### Session Progress (2026-02-06)
+- ✅ N-term scan UI (up to 8 dynamic terms with color swatches)
+- ✅ 8-color CSS palette + overlap styling
+- ✅ Sliding window cluster finder (O(M log M))
+- ✅ Torah character database loader (verse attribution)
+- ✅ N-term matrix renderer with verse tooltips
+- ✅ Cluster display sorted by smallest span
+- ✅ Individual term results with verse info
+- ✅ Cancel button for long scans
+- ✅ Scan session save/load (localStorage)
+- ✅ JSON export + PNG matrix download
+- ✅ Dead code cleanup (removed modal, duplicate functions)
+- ✅ Documentation update (README, ALGORITHM, CLAUDE.md, PROGRESS.md)
 
 ### Remaining Work
-- 🚨 1 dashboard update (IMMEDIATE)
+- 🚨 1 dashboard update (index.html tool cards)
 - 🔴 1 HTML page (letter-analysis.html - engine ready)
 - 🔴 1 unique differentiator (taamim viewer)
 - 🟡 1 integration feature (cross-references)
@@ -724,9 +760,9 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 - Phase 2: Database - ✅ 100%
 - Phase 3: Search Engines - ✅ 100%
 - Phase 4: UI Development - ✅ 100%
-- Phase 5: Advanced Features - 🟡 80% (4/5 complete)
+- Phase 5: Advanced Features - 🟡 85% (N-term scan + clusters added)
 - Phase 5.5: Tsirufim - ✅ 100%
-- Phase 5.6: PWA & i18n - ✅ 100% (NEW)
+- Phase 5.6: PWA & i18n - ✅ 100%
 - Phase 6: Testing - ⏳ 0%
 - Phase 7: Release - ⏳ 0%
 
@@ -784,7 +820,8 @@ python3 build-database.py --book genesis
 - Save/load matrix configurations
 - Share matrix URLs with parameters
 - Print-optimized matrix view
-- Multiple term search simultaneously
+- ~~Multiple term search simultaneously~~ ✅ DONE (N-term scan with 8-color matrix, 2026-02-06)
+- Web Worker for non-blocking scan (currently runs on main thread with yield)
 
 ---
 

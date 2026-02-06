@@ -1,7 +1,7 @@
 # Hebrew Bible Analysis Suite - Complete Documentation
 
-**Version**: 3.0
-**Last Updated**: February 4, 2026
+**Version**: 3.1
+**Last Updated**: February 6, 2026
 **Status**: Production Ready
 
 ---
@@ -301,7 +301,7 @@ The ELS (Equidistant Letter Sequence) research is based on peer-reviewed academi
 
 | Tool | File | Description |
 |------|------|-------------|
-| ELS Bible Codes | `bible-codes.html` | Unified ELS search with scan, index lookup, and dictionary modes |
+| ELS Bible Codes | `bible-codes.html` | Unified ELS search with N-term scan, index lookup, and dictionary modes |
 | Text Search | `text-search.html` | Pattern matching with regex support |
 | Gematria | `gematria.html` | Multiple calculation methods |
 | Acronym | `acronym.html` | First/last letter extraction |
@@ -317,6 +317,8 @@ The ELS (Equidistant Letter Sequence) research is based on peer-reviewed academi
 - **Fully Offline**: All tools work without internet
 - **260K Hebrew Dictionary**: Unified multi-source dictionary
 - **Precomputed ELS Index**: Instant proximity lookups
+- **N-Term Cluster Discovery**: Find smallest regions containing all search terms
+- **Verse Attribution**: Book/chapter/verse shown for every ELS hit
 
 ---
 
@@ -802,18 +804,34 @@ The unified ELS search page (`bible-codes.html`) offers three modes:
 
 #### Full Scan Mode
 
-**Best for**: Custom skip ranges, finding all occurrences
+**Best for**: Custom skip ranges, N-term cluster discovery, finding all occurrences
 
 1. Select "Full Scan" tab
-2. Enter search term(s)
-3. Set min/max skip values
-4. Click "Search"
-5. View results grouped by skip value
+2. Enter up to 8 search terms (click "+ Add Term" for more)
+3. Set skip range (default: -100 to +100)
+4. Click "Search" (use "Cancel" to abort long scans)
+5. View cluster results sorted by smallest bounding region
 
 **Features**:
-- Searches entire Torah in real-time
-- Custom skip range (-100 to +100)
-- KMP and Boyer-Moore algorithms
+- **N-Term Search**: Up to 8 terms searched independently across all skip values
+- **Cluster Ranking**: When 2+ terms are used, results are ranked by the smallest region ("cluster") containing at least one hit from every term (sliding window algorithm, O(M log M))
+- **Verse Attribution**: Each hit shows which Torah verses contribute its letters (loaded from character database covering Genesis through Deuteronomy)
+- **8-Color Palette**: Each term gets a distinct color (amber, cyan, deep orange, green, pink, indigo, brown, blue-grey); overlapping cells shown in purple
+- **N-Term Matrix**: Click any cluster or individual result to see an inline matrix with all terms highlighted in their respective colors; tooltips show verse references
+- **Session Save/Load**: Save scan terms and results to localStorage for later retrieval
+- **Export**: JSON export of all results and clusters, plus PNG image download of the matrix view
+- **Cancel Support**: Abort long scans mid-progress with the Cancel button
+- Custom skip range (default -100 to +100, skip 0 excluded)
+- Progress percentage shown during scan
+
+**Cluster Algorithm**:
+1. All hits from all terms are merged into one array, tagged by term index
+2. Sorted by position in the Torah text
+3. A sliding window expands right until all terms are present, then shrinks left to minimize span
+4. Clusters with span <= 10,000 characters are recorded
+5. Results are sorted by span ascending, deduplicated, and limited to top 200
+
+**Single-Term Mode**: When only one term is entered, results are shown as a simple list (no clusters), each clickable for matrix view
 
 #### Dictionary Mode
 
@@ -832,11 +850,23 @@ The unified ELS search page (`bible-codes.html`) offers three modes:
 
 #### Matrix View
 
-When viewing results:
-1. Click any proximity pair or result
+When viewing ELS results (both Index and Scan modes):
+1. Click any proximity pair, cluster, or individual result
 2. Matrix appears inline below results
-3. Yellow = Term 1, Cyan = Term 2, Purple = Overlap
-4. Hover cells for position info
+3. In **Index Mode**: Yellow = Term 1, Cyan = Term 2, Purple = Overlap
+4. In **Scan Mode (N-term)**: Each of up to 8 terms gets a distinct color:
+   - Term 1: Amber (#ffc107)
+   - Term 2: Cyan (#00bcd4)
+   - Term 3: Deep Orange (#ff5722)
+   - Term 4: Green (#4caf50)
+   - Term 5: Pink (#e91e63)
+   - Term 6: Indigo (#3f51b5)
+   - Term 7: Brown (#795548)
+   - Term 8: Blue-grey (#607d8b)
+   - Overlap (2+ terms): Purple (#9c27b0)
+5. Hover cells for verse reference tooltips (e.g., "Genesis 12:3")
+6. Click "Download PDF" to export matrix as PNG image
+7. Grid width is determined by the largest |skip| value among displayed terms
 
 ### 6.2 Text Search
 
@@ -1135,6 +1165,34 @@ python3 build-unified-dict.py
 
 ### 9.1 February 2026 Updates
 
+#### February 6, 2026: N-Term ELS Scan with Cluster Ranking
+
+**Upgraded Full Scan mode** from fixed 2-term to arbitrary N-term search (up to 8 terms), with smallest-cluster ranking and verse attribution:
+
+- **Dynamic N-Term UI**: Add/remove scan terms dynamically, each with color-coded swatch
+- **Sliding Window Cluster Finder**: O(M log M) algorithm that merges all hits by position, finds minimal-span windows containing at least one hit from every term, deduplicates, and returns the top 200 tightest clusters
+- **Verse Attribution**: Loads Torah character database (5 books, ~304K chars) to provide book/chapter/verse for each ELS hit position; displayed in result lists, cluster tags, matrix legend, and cell tooltips
+- **8-Color Matrix**: Each term rendered in a distinct color (amber, cyan, deep orange, green, pink, indigo, brown, blue-grey); overlapping cells in purple
+- **Session Save/Load**: Save and restore scan terms + results to localStorage
+- **Export**: JSON export of all results/clusters; PNG image download of matrix view
+- **Cancel Button**: Abort long scans mid-progress with percentage indicator
+- **Dead Code Cleanup**: Removed duplicate `openScanMatrix`, unused `renderModalMatrix`, and modal HTML/CSS
+
+**Files Changed**:
+- `bible-codes.html`: Major rewrite of scan mode (HTML, CSS, JS)
+- `PROGRESS.md`: Updated with session details
+- `README.md`: Updated with new feature documentation
+- `ALGORITHM.md`: Updated with cluster algorithm documentation
+
+**Key Functions Added**:
+- `findClusters(terms, allResults, maxSpan)` — sliding window cluster discovery
+- `loadCharDB()` — Torah character database loader for verse attribution
+- `getVersesForHit(pos, skip, termLen)` — verse lookup for each ELS hit
+- `renderScanMatrix(hits)` — N-term matrix renderer with `posMap<position, Set<termIdx>>`
+- `addScanTerm()` / `removeScanTerm()` — dynamic term entry management
+- `saveScanSession()` / `loadScanSession()` — session persistence
+- `downloadMatrixPDF()` — canvas-rendered PNG export
+
 #### February 4, 2026: Unified ELS Interface
 
 **Combined bible-codes.html and els-explorer.html** into single unified interface:
@@ -1257,6 +1315,6 @@ python3 build-unified-dict.py
 
 ---
 
-*Last Updated: February 4, 2026*
-*Version: 3.0*
+*Last Updated: February 6, 2026*
+*Version: 3.1*
 *Status: Production Ready*

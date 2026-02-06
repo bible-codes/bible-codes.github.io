@@ -31,10 +31,13 @@ This file tracks:
 
 ### Active Components 🔴
 - **ELS Bible Codes Search** (`bible-codes.html`)
-  - Pure client-side JavaScript for Equidistant Letter Sequence searches
-  - Precomputed hashes and dynamic search
-  - Service worker for offline caching
-  - PWA support via manifest
+  - Three modes: Index Lookup (precomputed), Full Scan (real-time), Dictionary
+  - **N-Term Scan** (up to 8 terms) with smallest-cluster ranking
+  - Sliding window cluster discovery algorithm (O(M log M))
+  - Verse attribution from Torah character database (5 books)
+  - 8-color matrix with cell tooltips showing verse references
+  - Session save/load, JSON export, PNG matrix download
+  - Service worker for offline caching, PWA support
 - **Hebrew Text Search** (`text-search.html`)
   - Pattern matching with regex support
   - First/last letter filtering
@@ -166,8 +169,14 @@ Not predictive, but **exploratory**:
 - Cross-reference to original verse contexts
 
 #### 5. ELS (Bible Codes) 🔴
-- Already implemented in bible-codes.html
-- Expand with enhanced UI/features as needed
+- Implemented in bible-codes.html with three modes:
+  - **Index Lookup**: Instant proximity search from precomputed index (51K words, 42M occurrences)
+  - **Full Scan**: Real-time N-term ELS search (up to 8 terms) with cluster ranking
+  - **Dictionary**: Browse 260K Hebrew words, click to search
+- **N-Term Cluster Discovery**: Sliding window algorithm finds smallest bounding regions containing all search terms
+- **Verse Attribution**: Torah character database provides book/chapter/verse for every ELS hit
+- **8-Color Matrix**: Multi-term visualization with tooltips
+- **Session Persistence**: Save/load scan results, JSON export, PNG matrix download
 
 #### 6. Cross-Reference Linking 🟢
 - Reference index of where verses appear in Talmud, Midrash, Zohar
@@ -364,16 +373,20 @@ All engines run **100% client-side** with **no network dependency**. Heavy opera
 - **ELS = ±1**: Excluded (redundant with ELS=0)
 - **|ELS| ≥ 2**: True equidistant letter sequences (per Rips et al. 1994)
 
-**Multi-Term Proximity Search** (NEW):
-- Search for two terms simultaneously
-- Find pairs within specified distance
-- Same-skip filter option
-- Dual-term matrix visualization (yellow/cyan/purple)
+**N-Term Scan with Cluster Ranking**:
+- Search up to 8 terms simultaneously across all skip values
+- Sliding window cluster discovery: O(M log M) finds smallest bounding regions containing all terms
+- Results sorted by span (smallest first), deduplicated, limited to top 200
+- Each cluster shows position, skip, and contributing verses for every term
+- Click cluster for N-term matrix with 8-color palette + purple overlap
+- Session save/load, JSON export, PNG matrix download
+- Cancel button for aborting long scans
 
-**Verse Attribution** (NEW):
-- Character database provides book/chapter/verse for each position
-- O(1) lookup via array index
-- Displayed in search results and matrix tooltips
+**Verse Attribution**:
+- Character database (5 Torah books) provides book/chapter/verse for each position
+- O(1) lookup via array index into `charDatabase[]`
+- Loaded lazily on first scan via `loadCharDB()` using DecompressionStream
+- Displayed in search results, cluster tags, matrix legend, and cell tooltips
 
 **Algorithm Details**:
 
@@ -885,7 +898,7 @@ This schema is **future-proof**:
 
 ---
 
-*Last Updated: 2026-01-13 - Comprehensive Feature Assessment Completed*
-*Phase Status: 1-4 Complete (100%), Phase 5 (80%), Phase 5.5 Complete (100%)*
+*Last Updated: 2026-02-06 - N-Term ELS Scan with Cluster Ranking*
+*Phase Status: 1-4 Complete (100%), Phase 5 (85%), Phase 5.5 Complete (100%)*
 *Active Tools: 10 user-facing tools operational*
-*Documentation: FEATURE-ASSESSMENT.md added for strategic planning*
+*Key Addition: N-term scan (up to 8 terms), sliding window cluster finder, verse attribution, 8-color matrix*
