@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-06 (N-Term ELS Scan with Cluster Ranking)
+**Last Updated**: 2026-02-08 (3D Matrix, Batch Loader, Verse Hover, Unified Search)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,92 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-06
+## Current Session: 2026-02-07/08
+
+### 3D Matrix View ✅ COMPLETE
+
+Three.js WebGL 3D renderer for ELS matrix visualization, lazy-loaded on first use.
+
+**Key Features**:
+- **Lazy-loaded Three.js** (~600KB) from unpkg CDN, only when "3D View" clicked
+- **Auto-optimal dimensions**: `findOptimalDimensions()` scores W×H candidates to align skip values along axes
+- **Hebrew letter textures**: Offscreen canvas renders 64×64 letter tiles, cached by letter+color key
+- **OrbitControls**: Auto-rotate, mouse drag orbit, scroll zoom, damping
+- **Raycasting tooltips**: Hover shows letter, position, term, verse reference, col/row/layer
+- **Only renders highlighted letters** (10-50 meshes typical) + dim neighbors for context
+- **Semi-transparent layer planes** for depth perception
+- Buttons: 3D View toggle, Pause Rotation, Reset Camera
+
+**Functions Added**: `load3DDeps()`, `findOptimalDimensions()`, `init3DScene()`, `render3DMatrix()`, `makeLetterTexture()`, `fitCameraToGroup()`, `onMouseMove3D()`, `toggle3DView()`, `toggle3DAutoRotate()`, `reset3DCamera()`, `destroy3DScene()`, `onResize3D()`
+
+### Verse Hover Tooltips ✅ COMPLETE
+
+Hovering a verse reference in the matrix legend shows the full verse text and highlights its letters.
+
+**Key Features**:
+- **Verse text tooltip**: Shows full Hebrew verse text on hover over legend verse references
+- **Matrix glow highlight**: Letters belonging to that verse get `.verse-glow` class (animated golden glow)
+- **Verse text cache**: Reconstructed from `charDatabase` with word boundary detection via `word_index`
+- **`data-pos` attribute** on all matrix cells for position-based lookup
+
+**Functions Added**: `getVerseKey()`, `getVerseTextByKey()`, `buildHitVerseMap()`, `onVerseHover()`, `onVerseLeave()`, `makeVerseSpans()`, `findVerseKeyByLabel()`
+
+### Batch Term Loader ✅ COMPLETE
+
+Bulk ELS scanning of term lists (e.g., 182 hostage names from CHATUFIM.txt).
+
+**Key Features**:
+- **Paste or upload** .txt files with one term per line
+- **Auto-clean Hebrew names**: Strips military ranks (אל"ם, סמ"ר, etc.), parenthetical notes, הי"ד, punctuation
+- **Parse preview**: Shows cleaned terms with letter counts before scanning
+- **Results table**: Sortable columns (#, Original, Search Term, Letters, Hits, Best Skip, Status)
+- **CSV export** of batch results
+
+**Functions Added**: `toggleBatchPanel()`, `loadBatchFile()`, `clearBatchInput()`, `cleanHebrewName()`, `parseBatchInput()`, `renderBatchTable()`, `updateBatchRow()`, `exportBatchResults()`, `sortBatchTable()`
+
+**Data**: `torah-codes/CHATUFIM.txt` — 182 hostage names added to repo
+
+### Unified Search Flow ✅ COMPLETE
+
+Single Search button now handles both manual terms and batch terms together.
+
+**Key Features**:
+- **Merged scanning**: Manual inputs + batch terms deduplicated and scanned in one pass
+- **Per-term progress**: ETA display with time remaining
+- **Auto-cluster**: All terms with hits automatically clustered (if 2+ found)
+- **Batch table live updates**: Each batch row updated as its term completes
+- **Default skip range changed** from ±100 to ±500
+- Removed separate batch "Scan All" / "Analyze Clusters" buttons — unified into main Search
+
+### UI Improvements ✅ COMPLETE
+- Removed default values from term inputs (was "משה" / "אהרן")
+- Changed batch textarea placeholder to generic text
+- Added `#scanProgress` progress bar to scan mode
+
+### WRR 1994 Experiment Replication 🟡 PLANNED
+
+One-click demo replicating the famous Witztum-Rips-Rosenberg experiment (32 rabbis, Genesis, name-date ELS pairs). Plan written at `.claude/plans/temporal-sauteeing-harbor.md`.
+
+**Planned Features**:
+- Pre-loaded dataset of 32 rabbis with Hebrew name appellations + birth/death dates
+- Genesis-only search (first 78,064 chars)
+- Per-term dynamic skip range based on expected occurrences
+- WRR-style 2D proximity measure between name-date ELS pairs
+- Results table with proximity scores, clickable for matrix view
+- CSV export and per-rabbi summary
+
+### Default Tab Change 🟡 PLANNED
+
+- Full Scan becomes the default active tab on page load
+- Index Lookup and Dictionary tabs greyed out (reduced opacity, still clickable)
+
+**Modified Files**:
+- `bible-codes.html` — All changes in single file (HTML, CSS, JS)
+- `torah-codes/CHATUFIM.txt` — Added hostage names file
+
+---
+
+## Previous Session: 2026-02-06
 
 ### N-Term ELS Scan with Smallest-Cluster Ranking ✅ COMPLETE
 
@@ -634,50 +719,42 @@ function showAnagramInMatrix(anagram) {
 
 ## Next Session TODO (Updated Priority Order)
 
-### 🚨 IMMEDIATE (30 minutes)
-1. **Update index.html dashboard**
-   - Add tool cards for matrix-view.html
-   - Add tool cards for book-view.html
+### 🔴 PRIORITY 0 - Immediate (Next Session)
+1. **Implement WRR 1994 Experiment Demo**
+   - Pre-loaded 32-rabbi dataset with Hebrew name-date pairs
+   - Genesis-only scan (78,064 chars), per-term dynamic skip ranges
+   - 2D proximity measure between name-date ELS pairs
+   - Results table, matrix view, CSV export, per-rabbi summary
+   - Plan: `.claude/plans/temporal-sauteeing-harbor.md`
+   - **VALUE**: Validates tool with published scientific experiment
+
+2. **Default tab = Full Scan + grey out Index/Dictionary tabs**
+   - Swap active classes in HTML
+   - CSS for muted secondary tabs
+   - **VALUE**: Better UX — Full Scan is the primary feature
+
+### 🚨 PRIORITY 1 (30 minutes)
+3. **Update index.html dashboard**
+   - Add tool cards for matrix-view.html, book-view.html
    - Update status indicators
-   - Test all navigation links
    - **WHY CRITICAL**: Users can't discover new tools without dashboard links
 
-### 🔴 PRIORITY 1 (2-3 hours) - Quick Wins
-2. **Create letter-analysis.html**
+### 🔴 PRIORITY 2 (2-3 hours) - Quick Wins
+4. **Create letter-analysis.html**
    - Engine already complete! Just need UI
-   - Add Chart.js for visualization
-   - Bar charts for letter frequencies
-   - Line charts for word length distributions
-   - Export to CSV functionality
+   - Chart.js for visualization
    - **VALUE**: Unlocks research capabilities, academic credibility
 
-3. **Update documentation**
-   - Update README.md with current feature list
-   - Update CLAUDE.md Phase 5 status
-   - Mark Tsirufim as complete
-   - **VALUE**: Accurate state for future sessions
-
-### 🔴 PRIORITY 2 (4-5 hours) - Unique Differentiator
-4. **Create taamim.html + engines/taamim.js**
+### 🔴 PRIORITY 3 (4-5 hours) - Unique Differentiator
+5. **Create taamim.html + engines/taamim.js**
    - Cantillation mark visualization
-   - Filter by taamim type (disjunctive/conjunctive)
-   - Show alternate taamim side-by-side
-   - Color-code different mark types
-   - Musical notation reference
    - **VALUE**: UNIQUE FEATURE - No competitor offers this
-   - **DATA READY**: chars.taamim, chars.alt_taamim already populated
 
-### 🟡 PRIORITY 3 (6-8 hours) - High Value
-5. **Create cross-ref.html**
-   - Sefaria API integration
-   - IndexedDB caching layer
-   - Cross-reference links to Talmud/Midrash/Zohar
-   - **VALUE**: High value for traditional learners
+### 🟡 PRIORITY 4 (6-8 hours) - High Value
+6. **Create cross-ref.html** — Sefaria API integration
 
-### 🟢 PRIORITY 4 (Defer)
-6. **Create anagram.html** - DEFER until higher priorities complete
-   - Overlaps with Tsirufim
-   - Non-essential feature
+### 🟢 PRIORITY 5 (Defer)
+7. **Create anagram.html** — Overlaps with Tsirufim, defer
 
 ---
 
@@ -723,30 +800,31 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 
 ---
 
-## Statistics (Updated 2026-02-06)
+## Statistics (Updated 2026-02-08)
 
 ### Total Implementation
 - **Pages**: 10/14 (71% complete)
 - **Engines**: 8/9 (89% complete)
 - **Database**: 5/5 (100% complete) ✅
-- **Total Code**: ~10,000+ lines
+- **Total Code**: ~12,000+ lines
 - **Data**: 117+ files, 21 MB compressed ✅
+- **bible-codes.html**: ~2,680 lines (single-file app)
 
-### Session Progress (2026-02-06)
-- ✅ N-term scan UI (up to 8 dynamic terms with color swatches)
-- ✅ 8-color CSS palette + overlap styling
-- ✅ Sliding window cluster finder (O(M log M))
-- ✅ Torah character database loader (verse attribution)
-- ✅ N-term matrix renderer with verse tooltips
-- ✅ Cluster display sorted by smallest span
-- ✅ Individual term results with verse info
-- ✅ Cancel button for long scans
-- ✅ Scan session save/load (localStorage)
-- ✅ JSON export + PNG matrix download
-- ✅ Dead code cleanup (removed modal, duplicate functions)
-- ✅ Documentation update (README, ALGORITHM, CLAUDE.md, PROGRESS.md)
+### Session Progress (2026-02-07/08)
+- ✅ 3D Matrix View (Three.js, lazy-loaded, auto-optimal dimensions)
+- ✅ Verse hover tooltips (full verse text + glow highlight in matrix)
+- ✅ Batch term loader (paste/upload, auto-clean Hebrew names)
+- ✅ Unified search (manual + batch merged, single Search button)
+- ✅ Default skip range changed to ±500
+- ✅ Removed default term values
+- ✅ CHATUFIM.txt added to repo (182 hostage names)
+- 🟡 WRR 1994 experiment demo (planned, research complete)
+- 🟡 Default tab → Full Scan (planned)
+- ✅ Documentation update (CLAUDE.md, PROGRESS.md)
 
 ### Remaining Work
+- 🔴 WRR 1994 experiment replication (32 rabbis, Genesis, proximity)
+- 🔴 Default tab = Full Scan + grey out others
 - 🚨 1 dashboard update (index.html tool cards)
 - 🔴 1 HTML page (letter-analysis.html - engine ready)
 - 🔴 1 unique differentiator (taamim viewer)
@@ -760,7 +838,7 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 - Phase 2: Database - ✅ 100%
 - Phase 3: Search Engines - ✅ 100%
 - Phase 4: UI Development - ✅ 100%
-- Phase 5: Advanced Features - 🟡 85% (N-term scan + clusters added)
+- Phase 5: Advanced Features - 🟡 90% (3D matrix, batch, verse hover, unified search added)
 - Phase 5.5: Tsirufim - ✅ 100%
 - Phase 5.6: PWA & i18n - ✅ 100%
 - Phase 6: Testing - ⏳ 0%
@@ -821,6 +899,10 @@ python3 build-database.py --book genesis
 - Share matrix URLs with parameters
 - Print-optimized matrix view
 - ~~Multiple term search simultaneously~~ ✅ DONE (N-term scan with 8-color matrix, 2026-02-06)
+- ~~3D Matrix visualization~~ ✅ DONE (Three.js renderer with auto-rotate, 2026-02-07)
+- ~~Batch term loading~~ ✅ DONE (paste/upload .txt, auto-clean Hebrew names, 2026-02-07)
+- ~~Verse hover tooltips~~ ✅ DONE (full verse text + glow highlight, 2026-02-07)
+- WRR 1994 experiment replication (planned, 2026-02-08)
 - Web Worker for non-blocking scan (currently runs on main thread with yield)
 
 ---

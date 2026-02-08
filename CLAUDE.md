@@ -31,11 +31,17 @@ This file tracks:
 
 ### Active Components 🔴
 - **ELS Bible Codes Search** (`bible-codes.html`)
-  - Three modes: Index Lookup (precomputed), Full Scan (real-time), Dictionary
+  - Three modes: Index Lookup, Full Scan (default), Dictionary
   - **N-Term Scan** (up to 8 terms) with smallest-cluster ranking
+  - **Batch Term Loader**: Upload .txt files or paste lists, auto-clean Hebrew names
+  - **Unified Search**: One Search button handles manual + batch terms, auto-clusters
   - Sliding window cluster discovery algorithm (O(M log M))
   - Verse attribution from Torah character database (5 books)
+  - **Verse Hover**: Tooltip shows full verse text, glow highlights letters in matrix
   - 8-color matrix with cell tooltips showing verse references
+  - **3D Matrix View**: Three.js WebGL renderer with auto-rotate, raycasting tooltips
+  - **WRR 1994 Demo** (planned): One-click replication of famous rabbi name-date experiment
+  - Default skip range: ±500
   - Session save/load, JSON export, PNG matrix download
   - Service worker for offline caching, PWA support
 - **Hebrew Text Search** (`text-search.html`)
@@ -171,12 +177,18 @@ Not predictive, but **exploratory**:
 #### 5. ELS (Bible Codes) 🔴
 - Implemented in bible-codes.html with three modes:
   - **Index Lookup**: Instant proximity search from precomputed index (51K words, 42M occurrences)
-  - **Full Scan**: Real-time N-term ELS search (up to 8 terms) with cluster ranking
+  - **Full Scan** (default tab): Real-time N-term ELS search (up to 8 terms) with cluster ranking
   - **Dictionary**: Browse 260K Hebrew words, click to search
+- **Batch Term Loader**: Upload .txt files or paste term lists, auto-clean Hebrew names (strip ranks, punctuation, parenthetical notes)
+- **Unified Search**: Single Search button merges manual inputs + batch terms, deduplicates, scans all
 - **N-Term Cluster Discovery**: Sliding window algorithm finds smallest bounding regions containing all search terms
 - **Verse Attribution**: Torah character database provides book/chapter/verse for every ELS hit
+- **Verse Hover**: Hovering a verse in the legend shows full verse text tooltip + glow highlights its letters in matrix
 - **8-Color Matrix**: Multi-term visualization with tooltips
+- **3D Matrix View**: Three.js WebGL rendering with OrbitControls, auto-rotate, raycasting tooltips, auto-optimal dimensions
+- **WRR 1994 Experiment Demo** (planned): One-click replication of the famous 32-rabbi name-date experiment on Genesis
 - **Session Persistence**: Save/load scan results, JSON export, PNG matrix download
+- **Default skip range**: ±500
 
 #### 6. Cross-Reference Linking 🟢
 - Reference index of where verses appear in Talmud, Midrash, Zohar
@@ -898,7 +910,7 @@ This schema is **future-proof**:
 
 ---
 
-*Last Updated: 2026-02-06 - N-Term ELS Scan with Cluster Ranking*
-*Phase Status: 1-4 Complete (100%), Phase 5 (85%), Phase 5.5 Complete (100%)*
+*Last Updated: 2026-02-08 - 3D Matrix, Batch Loader, Verse Hover, Unified Search, WRR Demo planned*
+*Phase Status: 1-4 Complete (100%), Phase 5 (90%), Phase 5.5 Complete (100%)*
 *Active Tools: 10 user-facing tools operational*
-*Key Addition: N-term scan (up to 8 terms), sliding window cluster finder, verse attribution, 8-color matrix*
+*Key Additions: 3D Three.js matrix, batch term loader, verse hover tooltips, unified search, WRR 1994 experiment replication (next)*
