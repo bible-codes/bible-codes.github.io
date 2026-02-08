@@ -399,6 +399,42 @@
       margin-bottom: 15px;
     }
 
+    /* Verse hover highlight */
+    .matrix-cell.verse-glow {
+      box-shadow: 0 0 0 2px #fff, 0 0 8px 3px rgba(255,255,255,0.7);
+      z-index: 2;
+      position: relative;
+    }
+    .verse-ref-hover {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 3px;
+    }
+    .verse-ref-hover:hover { text-decoration-style: solid; }
+    #verseTooltip {
+      position: fixed;
+      background: rgba(0,0,0,0.92);
+      color: #e0e0e0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: 'Courier New', monospace;
+      direction: rtl;
+      max-width: 500px;
+      line-height: 1.8;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+      border: 1px solid #555;
+    }
+    #verseTooltip .verse-tooltip-ref {
+      font-size: 11px;
+      color: #8bb8e8;
+      font-family: sans-serif;
+      margin-bottom: 4px;
+    }
+
     /* 3D Matrix View */
     .matrix-3d-container {
       height: 450px;
@@ -630,6 +666,8 @@
     </div>
   </main>
 
+
+  <div id="verseTooltip"></div>
 
   <script type="module">
     import { getElsIndexService, initElsIndex } from './engines/els-index.js';
@@ -1018,6 +1056,117 @@
       return verses;
     }
 
+    // --- Verse hover: text reconstruction + matrix highlight ---
+    let verseTextCache = new Map();
+
+    function getVerseKey(pos) {
+      if (!charDatabase || pos < 0 || pos >= charDatabase.length) return null;
+      const ch = charDatabase[pos];
+      if (!ch) return null;
+      return `${ch.book}:${ch.chapter}:${ch.verse}`;
+    }
+
+    function getVerseTextByKey(key) {
+      if (verseTextCache.has(key)) return verseTextCache.get(key);
+      if (!charDatabase) return null;
+      const [bookStr, chapStr, verseStr] = key.split(':');
+      const book = +bookStr, chap = +chapStr, verse = +verseStr;
+      let text = '';
+      let lastWordIdx = -1;
+      for (let i = 0; i < charDatabase.length; i++) {
+        const ch = charDatabase[i];
+        if (ch.book === book && ch.chapter === chap && ch.verse === verse) {
+          if (ch.word_index !== undefined && ch.word_index !== lastWordIdx && lastWordIdx !== -1) {
+            text += ' ';
+          }
+          text += ch.base_char || torahText[i];
+          if (ch.word_index !== undefined) lastWordIdx = ch.word_index;
+        } else if (ch.book > book || (ch.book === book && ch.chapter > chap) ||
+                   (ch.book === book && ch.chapter === chap && ch.verse > verse)) {
+          break; // past our verse, stop early
+        }
+      }
+      if (text) verseTextCache.set(key, text);
+      return text || null;
+    }
+
+    // Positions of current hits by verse key: Map<verseKey, Set<pos>>
+    let currentHitVerseMap = null;
+
+    function buildHitVerseMap(hits) {
+      currentHitVerseMap = new Map();
+      for (const h of hits) {
+        for (let i = 0; i < h.term.length; i++) {
+          const p = h.pos + i * h.skip;
+          const vk = getVerseKey(p);
+          if (vk) {
+            if (!currentHitVerseMap.has(vk)) currentHitVerseMap.set(vk, new Set());
+            currentHitVerseMap.get(vk).add(p);
+          }
+        }
+      }
+    }
+
+    window.onVerseHover = function(verseKey, verseLabel, event) {
+      // 1. Show tooltip with verse text
+      const tooltip = document.getElementById('verseTooltip');
+      const text = getVerseTextByKey(verseKey);
+      if (text) {
+        tooltip.innerHTML = `<div class="verse-tooltip-ref">${verseLabel}</div>${text}`;
+        tooltip.style.display = 'block';
+        // Position near cursor
+        const x = event.clientX, y = event.clientY;
+        tooltip.style.left = Math.min(x + 15, window.innerWidth - 520) + 'px';
+        tooltip.style.top = (y > window.innerHeight / 2 ? y - tooltip.offsetHeight - 10 : y + 20) + 'px';
+      }
+
+      // 2. Highlight matching cells in matrix
+      if (currentHitVerseMap && currentHitVerseMap.has(verseKey)) {
+        const positions = currentHitVerseMap.get(verseKey);
+        const grid = document.getElementById('scanMatrixGrid');
+        if (grid) {
+          for (const cell of grid.children) {
+            const pos = parseInt(cell.dataset.pos);
+            if (positions.has(pos)) cell.classList.add('verse-glow');
+          }
+        }
+      }
+    };
+
+    window.onVerseLeave = function() {
+      document.getElementById('verseTooltip').style.display = 'none';
+      const grid = document.getElementById('scanMatrixGrid');
+      if (grid) {
+        for (const cell of grid.children) cell.classList.remove('verse-glow');
+      }
+    };
+
+    // Helper to create hoverable verse span HTML
+    function makeVerseSpans(versesArray) {
+      if (!versesArray || versesArray.length === 0) return '';
+      return versesArray.map(v => {
+        // Parse "BookName chapter:verse" to get key
+        // We need to reverse-map: find a position with this verse label to get the key
+        const verseKey = findVerseKeyByLabel(v);
+        if (!verseKey) return v;
+        const escaped = v.replace(/"/g, '&quot;');
+        return `<span class="verse-ref-hover" onmouseenter="onVerseHover('${verseKey}','${escaped}',event)" onmouseleave="onVerseLeave()">${v}</span>`;
+      }).join(', ');
+    }
+
+    function findVerseKeyByLabel(label) {
+      // label is like "Genesis 1:1" — reverse lookup through BOOK_NAMES
+      if (!charDatabase) return null;
+      for (const [num, name] of Object.entries(BOOK_NAMES)) {
+        if (label.startsWith(name + ' ')) {
+          const ref = label.substring(name.length + 1);
+          const [chap, verse] = ref.split(':').map(Number);
+          if (chap && verse) return `${num}:${chap}:${verse}`;
+        }
+      }
+      return null;
+    }
+
     // --- ELS search ---
     function findELS(text, term, skip) {
       const results = [];
@@ -1260,12 +1409,14 @@
       });
       document.getElementById('scanMatrixStats').innerHTML = statsHtml;
 
-      // Legend
+      // Legend with hoverable verse references
+      buildHitVerseMap(cluster.hits);
       let legendHtml = '';
       cluster.hits.forEach(h => {
         const color = TERM_COLORS[h.termIdx % 8];
         const verses = getVersesForHit(h.pos, h.skip, h.term.length);
-        const verseStr = verses.length > 0 ? ` (${verses.join(', ')})` : '';
+        const verseSpans = makeVerseSpans(verses);
+        const verseStr = verseSpans ? ` (${verseSpans})` : '';
         legendHtml += `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${h.term}${verseStr}</span></div>`;
       });
       if (cluster.hits.length > 1) {
@@ -1299,13 +1450,17 @@
 
       const color = TERM_COLORS[termIdx % 8];
       const verses = getVersesForHit(r.pos, r.skip, term.length);
-      const verseStr = verses.length > 0 ? ` — ${verses.join(', ')}` : '';
 
       document.getElementById('scanMatrixStats').innerHTML = `
         <div class="matrix-stat"><div class="value" style="color:${color};">${term}</div><div class="label">Term</div></div>
         <div class="matrix-stat"><div class="value">${r.pos.toLocaleString()}</div><div class="label">Position</div></div>
         <div class="matrix-stat"><div class="value">${r.skip}</div><div class="label">Skip</div></div>
       `;
+
+      // Legend with hoverable verse references
+      buildHitVerseMap([hit]);
+      const verseSpans = makeVerseSpans(verses);
+      const verseStr = verseSpans ? ` — ${verseSpans}` : '';
       document.getElementById('scanMatrixLegend').innerHTML = `
         <div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${term}${verseStr}</span></div>
       `;
@@ -1374,7 +1529,7 @@
             tooltip = verse ? `${termNames} — ${verse}` : termNames;
           }
 
-          html += `<div class="${cls}"${tooltip ? ` title="${tooltip}"` : ''}>${ch}</div>`;
+          html += `<div class="${cls}" data-pos="${pos}"${tooltip ? ` title="${tooltip}"` : ''}>${ch}</div>`;
         }
       }
 
