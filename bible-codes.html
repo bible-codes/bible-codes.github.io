@@ -399,9 +399,47 @@
       margin-bottom: 15px;
     }
 
+    /* 3D Matrix View */
+    .matrix-3d-container {
+      height: 450px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .matrix-3d-container canvas { display: block; width: 100% !important; height: 100% !important; }
+    #btn3DToggle.active { background: #9c27b0; }
+    .btn-3d-ctrl { padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; background: #555; color: #fff; border: none; border-radius: 4px; }
+    .btn-3d-ctrl:hover { background: #777; }
+    #matrix3DInfo {
+      background: #2a2a3d;
+      color: #aaa;
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 0 0 8px 8px;
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    #matrix3DInfo .info-val { color: #8bb8e8; font-weight: bold; }
+    #matrix3DTooltip {
+      position: absolute;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+      white-space: nowrap;
+      direction: rtl;
+    }
+
     @media (max-width: 600px) {
       .mode-tab .mode-desc { display: none; }
       .matrix-cell { width: 22px; height: 22px; font-size: 14px; }
+      .matrix-3d-container { height: 300px; }
     }
   </style>
 </head>
@@ -530,13 +568,26 @@
 
         <!-- Inline Matrix View -->
         <div id="scanMatrixView" class="matrix-view" style="display:none;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <h3 id="scanMatrixTitle">Matrix View</h3>
-            <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Download PNG</button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="btn btn-small" id="btn3DToggle" onclick="toggle3DView()">3D View</button>
+              <button class="btn-3d-ctrl" id="btn3DPause" onclick="toggle3DAutoRotate()" style="display:none;">Pause Rotation</button>
+              <button class="btn-3d-ctrl" id="btn3DReset" onclick="reset3DCamera()" style="display:none;">Reset Camera</button>
+              <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Download PNG</button>
+            </div>
           </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
-          <div class="matrix-container" style="max-height:400px;">
-            <div class="matrix-grid" id="scanMatrixGrid"></div>
+          <div id="scanMatrix2D">
+            <div class="matrix-container" style="max-height:400px;">
+              <div class="matrix-grid" id="scanMatrixGrid"></div>
+            </div>
+          </div>
+          <div id="scanMatrix3D" style="display:none;">
+            <div class="matrix-3d-container" id="matrix3DCanvas">
+              <div id="matrix3DTooltip"></div>
+            </div>
+            <div id="matrix3DInfo" style="display:none;"></div>
           </div>
           <div class="matrix-legend" id="scanMatrixLegend"></div>
         </div>
@@ -800,6 +851,12 @@
       `;
 
       document.getElementById('indexMatrixDisplay').innerHTML = statsHtml;
+
+      // Set current3DHits for index mode (convert pair to hits format)
+      current3DHits = [
+        { pos: pair.pos1, skip: pair.skip1, term: pair.term1, termIdx: 0 },
+        { pos: pair.pos2, skip: pair.skip2, term: pair.term2, termIdx: 1 }
+      ];
     };
 
     // ============= INDEX MODE: SESSIONS =============
@@ -1216,7 +1273,14 @@
       }
       document.getElementById('scanMatrixLegend').innerHTML = legendHtml;
 
+      current3DHits = cluster.hits;
       renderScanMatrix(cluster.hits);
+
+      if (is3DActive && THREE) {
+        const { W, H } = findOptimalDimensions(current3DHits);
+        render3DMatrix(current3DHits, W, H);
+      }
+
       view.scrollIntoView({ behavior: 'smooth' });
     };
 
@@ -1246,7 +1310,14 @@
         <div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${term}${verseStr}</span></div>
       `;
 
+      current3DHits = [hit];
       renderScanMatrix([hit]);
+
+      if (is3DActive && THREE) {
+        const { W, H } = findOptimalDimensions(current3DHits);
+        render3DMatrix(current3DHits, W, H);
+      }
+
       view.scrollIntoView({ behavior: 'smooth' });
     };
 
@@ -1412,6 +1483,16 @@
       scanTerms = [];
       scanAllResults = {};
       scanClusters = [];
+      current3DHits = null;
+      is3DActive = false;
+      destroy3DScene();
+      // Reset 3D toggle button state
+      const btn3d = document.getElementById('btn3DToggle');
+      if (btn3d) { btn3d.textContent = '3D View'; btn3d.classList.remove('active'); }
+      document.getElementById('scanMatrix2D').style.display = '';
+      document.getElementById('scanMatrix3D').style.display = 'none';
+      document.getElementById('btn3DPause').style.display = 'none';
+      document.getElementById('btn3DReset').style.display = 'none';
     };
 
     // Load saved scan sessions on init
@@ -1653,6 +1734,399 @@
       div.innerHTML = `<input type="text" class="term-input" value="${word}" dir="rtl"><button class="remove-btn" onclick="removeTerm(this)">&times;</button>`;
       container.appendChild(div);
     };
+
+    // ============= 3D MATRIX VIEW =============
+    let THREE = null, OrbitControls = null;
+    let scene3D = null, camera3D = null, renderer3D = null, controls3D = null;
+    let animFrame3D = null;
+    let is3DActive = false;
+    let current3DHits = null;
+    let meshUserData = []; // for raycasting
+    let textureCache = new Map();
+    let raycaster3D = null, mouse3D = null;
+
+    // Lazy-load Three.js from CDN
+    async function load3DDeps() {
+      if (THREE) return;
+      const threeModule = await import('https://unpkg.com/three@0.160.0/build/three.module.js');
+      THREE = threeModule;
+      const controlsModule = await import('https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js');
+      OrbitControls = controlsModule.OrbitControls;
+    }
+
+    // Auto-compute optimal W,H from hit skip values
+    function findOptimalDimensions(hits) {
+      const skips = [...new Set(hits.map(h => Math.abs(h.skip)))].filter(s => s >= 2);
+      if (skips.length === 0) return { W: 30, H: 15 };
+
+      // Generate candidate W values
+      const candidateWs = new Set();
+      for (const s of skips) {
+        if (s >= 10 && s <= 200) candidateWs.add(s);
+        if (s - 1 >= 10) candidateWs.add(s - 1);
+        if (s + 1 <= 200) candidateWs.add(s + 1);
+        // factors of s
+        for (let f = 2; f * f <= s; f++) {
+          if (s % f === 0) {
+            if (f >= 10 && f <= 200) candidateWs.add(f);
+            if (s / f >= 10 && s / f <= 200) candidateWs.add(s / f);
+          }
+        }
+      }
+      if (candidateWs.size === 0) candidateWs.add(Math.max(Math.max(...skips), 30));
+
+      let bestScore = -1, bestW = 30, bestH = 15;
+
+      for (const W of candidateWs) {
+        // Generate candidate H values
+        const candidateHs = new Set([10, 15, 20]);
+        for (const s of skips) {
+          if (s % W === 0) {
+            const h = s / W;
+            if (h >= 3 && h <= 50) candidateHs.add(h);
+          }
+        }
+        for (const H of candidateHs) {
+          let score = 0;
+          for (const s of skips) {
+            if (s === W) score += 10;           // Y-axis aligned
+            else if (s === W * H) score += 10;  // Z-axis aligned
+            else if (W > 0 && s % W === 0) score += 7; // divisible by W
+            else if (s === W + 1 || s === W - 1) score += 6; // XY diagonal
+            else if (Math.abs(s - W) <= 3) score += 3;       // near axis
+          }
+          if (score > bestScore) { bestScore = score; bestW = W; bestH = H; }
+        }
+      }
+
+      return { W: bestW, H: bestH };
+    }
+
+    // Create Hebrew letter texture on canvas
+    function makeLetterTexture(letter, colorHex) {
+      const key = letter + '|' + colorHex;
+      if (textureCache.has(key)) return textureCache.get(key);
+
+      const size = 64;
+      const cv = document.createElement('canvas');
+      cv.width = size; cv.height = size;
+      const ctx = cv.getContext('2d');
+
+      // Background with slight transparency
+      ctx.fillStyle = colorHex;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(0, 0, size, size);
+      ctx.globalAlpha = 1;
+
+      // Letter
+      ctx.fillStyle = (colorHex === '#ffc107' || colorHex === '#00bcd4') ? '#000' : '#fff';
+      ctx.font = 'bold 40px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter, size / 2, size / 2);
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.minFilter = THREE.LinearFilter;
+      textureCache.set(key, tex);
+      return tex;
+    }
+
+    // Init Three.js scene
+    function init3DScene(container) {
+      const w = container.clientWidth, h = container.clientHeight;
+
+      scene3D = new THREE.Scene();
+      scene3D.background = new THREE.Color('#1a1a2e');
+
+      camera3D = new THREE.PerspectiveCamera(50, w / h, 0.1, 2000);
+      camera3D.position.set(0, 0, 50);
+
+      renderer3D = new THREE.WebGLRenderer({ antialias: true });
+      renderer3D.setSize(w, h);
+      renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer3D.domElement);
+
+      // Lights
+      scene3D.add(new THREE.AmbientLight(0xffffff, 0.7));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+      dirLight.position.set(10, 20, 15);
+      scene3D.add(dirLight);
+
+      // Controls
+      controls3D = new OrbitControls(camera3D, renderer3D.domElement);
+      controls3D.enableDamping = true;
+      controls3D.dampingFactor = 0.08;
+      controls3D.autoRotate = true;
+      controls3D.autoRotateSpeed = 1.0;
+
+      // Raycaster
+      raycaster3D = new THREE.Raycaster();
+      mouse3D = new THREE.Vector2();
+
+      // Mousemove for tooltips
+      renderer3D.domElement.addEventListener('mousemove', onMouseMove3D);
+
+      // Animation loop
+      function animate() {
+        animFrame3D = requestAnimationFrame(animate);
+        controls3D.update();
+        renderer3D.render(scene3D, camera3D);
+      }
+      animate();
+    }
+
+    // Render 3D matrix
+    function render3DMatrix(hits, W, H) {
+      if (!scene3D || !THREE) return;
+
+      // Clear existing meshes
+      const toRemove = [];
+      scene3D.traverse(obj => { if (obj.isMesh) toRemove.push(obj); });
+      toRemove.forEach(obj => { obj.geometry.dispose(); obj.material.dispose(); scene3D.remove(obj); });
+      meshUserData = [];
+
+      // Build posMap: position -> { termIdxs, letter }
+      const posMap = new Map();
+      for (const h of hits) {
+        for (let i = 0; i < h.term.length; i++) {
+          const p = h.pos + i * h.skip;
+          if (p < 0 || p >= torahText.length) continue;
+          if (!posMap.has(p)) posMap.set(p, { termIdxs: new Set(), letter: torahText[p] });
+          posMap.get(p).termIdxs.add(h.termIdx);
+        }
+      }
+
+      const cellSize = 1.2;
+      const layerGap = 1.5;
+      const group = new THREE.Group();
+      const planeGeo = new THREE.PlaneGeometry(cellSize * 0.9, cellSize * 0.9);
+
+      // Collect positions for context neighbors
+      const contextPositions = new Set();
+      for (const pos of posMap.keys()) {
+        for (const dp of [-1, 1, -W, W]) {
+          const np = pos + dp;
+          if (np >= 0 && np < torahText.length && !posMap.has(np)) contextPositions.add(np);
+        }
+      }
+
+      // Render highlighted term chars
+      for (const [pos, data] of posMap) {
+        const col = pos % W;
+        const row = Math.floor(pos / W) % H;
+        const layer = Math.floor(pos / (W * H));
+
+        const color = data.termIdxs.size > 1 ? '#9c27b0' :
+          TERM_COLORS[[...data.termIdxs][0] % 8];
+        const tex = makeLetterTexture(data.letter, color);
+        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 1.0, side: THREE.DoubleSide });
+        const mesh = new THREE.Mesh(planeGeo, mat);
+
+        // Position: X = col (RTL so negate), Y = -row, Z = layer * gap
+        mesh.position.set(-col * cellSize, -row * cellSize, layer * cellSize * layerGap);
+        group.add(mesh);
+
+        // Store data for raycasting
+        const termNames = [...data.termIdxs].map(t => scanTerms[t] || `Term ${t}`).join(', ');
+        const verse = getVerseForPosition(pos);
+        mesh.userData = { pos, letter: data.letter, termNames, verse, col, row, layer };
+        meshUserData.push(mesh);
+      }
+
+      // Render dim context neighbors
+      for (const pos of contextPositions) {
+        const col = pos % W;
+        const row = Math.floor(pos / W) % H;
+        const layer = Math.floor(pos / (W * H));
+        const letter = torahText[pos];
+
+        const tex = makeLetterTexture(letter, '#2d2d44');
+        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+        const mesh = new THREE.Mesh(planeGeo, mat);
+        mesh.position.set(-col * cellSize, -row * cellSize, layer * cellSize * layerGap);
+        group.add(mesh);
+      }
+
+      // Layer guide planes (semi-transparent)
+      const allLayers = new Set();
+      for (const pos of posMap.keys()) allLayers.add(Math.floor(pos / (W * H)));
+      for (const layer of allLayers) {
+        const guideGeo = new THREE.PlaneGeometry(W * cellSize, H * cellSize);
+        const guideMat = new THREE.MeshBasicMaterial({
+          color: 0x3a3a5d, transparent: true, opacity: 0.05, side: THREE.DoubleSide
+        });
+        const guide = new THREE.Mesh(guideGeo, guideMat);
+        guide.position.set(-W * cellSize / 2, -H * cellSize / 2, layer * cellSize * layerGap);
+        group.add(guide);
+      }
+
+      scene3D.add(group);
+
+      // Center group
+      const box = new THREE.Box3().setFromObject(group);
+      const center = box.getCenter(new THREE.Vector3());
+      group.position.sub(center);
+
+      fitCameraToGroup(box);
+
+      // Update info bar
+      const layers = allLayers.size;
+      const infoEl = document.getElementById('matrix3DInfo');
+      infoEl.style.display = 'flex';
+      infoEl.innerHTML = `
+        <span>W: <span class="info-val">${W}</span></span>
+        <span>H: <span class="info-val">${H}</span></span>
+        <span>Layers: <span class="info-val">${layers}</span></span>
+        <span>Cells: <span class="info-val">${posMap.size + contextPositions.size}</span></span>
+        <span style="margin-right:auto;"></span>
+        <span>Drag to orbit · Scroll to zoom · Right-drag to pan</span>
+      `;
+    }
+
+    function fitCameraToGroup(box) {
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fov = camera3D.fov * (Math.PI / 180);
+      let dist = maxDim / (2 * Math.tan(fov / 2));
+      dist *= 1.4; // padding
+      camera3D.position.set(dist * 0.5, dist * 0.3, dist);
+      camera3D.lookAt(0, 0, 0);
+      controls3D.target.set(0, 0, 0);
+      controls3D.update();
+    }
+
+    // Tooltip raycasting
+    function onMouseMove3D(event) {
+      if (!raycaster3D || !camera3D || meshUserData.length === 0) return;
+      const rect = renderer3D.domElement.getBoundingClientRect();
+      mouse3D.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse3D.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster3D.setFromCamera(mouse3D, camera3D);
+      const intersects = raycaster3D.intersectObjects(meshUserData);
+
+      const tooltip = document.getElementById('matrix3DTooltip');
+      if (intersects.length > 0) {
+        const d = intersects[0].object.userData;
+        if (d && d.termNames) {
+          tooltip.innerHTML = `<strong>${d.letter}</strong> — ${d.termNames}` +
+            (d.verse ? `<br>${d.verse}` : '') +
+            `<br>pos: ${d.pos.toLocaleString()} | col: ${d.col} row: ${d.row} layer: ${d.layer}`;
+          tooltip.style.display = 'block';
+          tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
+          tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
+        }
+      } else {
+        tooltip.style.display = 'none';
+      }
+    }
+
+    // Toggle between 2D and 3D views
+    window.toggle3DView = async function() {
+      const btn = document.getElementById('btn3DToggle');
+      const d2 = document.getElementById('scanMatrix2D');
+      const d3 = document.getElementById('scanMatrix3D');
+      const pauseBtn = document.getElementById('btn3DPause');
+      const resetBtn = document.getElementById('btn3DReset');
+
+      if (is3DActive) {
+        // Switch back to 2D
+        is3DActive = false;
+        btn.textContent = '3D View';
+        btn.classList.remove('active');
+        d2.style.display = '';
+        d3.style.display = 'none';
+        pauseBtn.style.display = 'none';
+        resetBtn.style.display = 'none';
+        destroy3DScene();
+        return;
+      }
+
+      // Switch to 3D
+      btn.textContent = 'Loading 3D...';
+      btn.disabled = true;
+      try {
+        await load3DDeps();
+      } catch (e) {
+        alert('Failed to load Three.js: ' + e.message);
+        btn.textContent = '3D View';
+        btn.disabled = false;
+        return;
+      }
+
+      is3DActive = true;
+      btn.textContent = '2D View';
+      btn.classList.add('active');
+      btn.disabled = false;
+      d2.style.display = 'none';
+      d3.style.display = '';
+      pauseBtn.style.display = '';
+      resetBtn.style.display = '';
+
+      const container = document.getElementById('matrix3DCanvas');
+      // Remove old canvas if any
+      const oldCanvas = container.querySelector('canvas');
+      if (oldCanvas) oldCanvas.remove();
+
+      init3DScene(container);
+
+      if (current3DHits && current3DHits.length > 0) {
+        const { W, H } = findOptimalDimensions(current3DHits);
+        render3DMatrix(current3DHits, W, H);
+      }
+    };
+
+    window.toggle3DAutoRotate = function() {
+      if (!controls3D) return;
+      controls3D.autoRotate = !controls3D.autoRotate;
+      document.getElementById('btn3DPause').textContent =
+        controls3D.autoRotate ? 'Pause Rotation' : 'Resume Rotation';
+    };
+
+    window.reset3DCamera = function() {
+      if (!scene3D || !camera3D) return;
+      const box = new THREE.Box3().setFromObject(scene3D);
+      fitCameraToGroup(box);
+    };
+
+    function destroy3DScene() {
+      if (animFrame3D) { cancelAnimationFrame(animFrame3D); animFrame3D = null; }
+      if (renderer3D) {
+        renderer3D.domElement.removeEventListener('mousemove', onMouseMove3D);
+        renderer3D.dispose();
+        const container = document.getElementById('matrix3DCanvas');
+        const canvas = container?.querySelector('canvas');
+        if (canvas) canvas.remove();
+        renderer3D = null;
+      }
+      if (controls3D) { controls3D.dispose(); controls3D = null; }
+      // Dispose all textures in scene
+      if (scene3D) {
+        scene3D.traverse(obj => {
+          if (obj.isMesh) {
+            obj.geometry.dispose();
+            if (obj.material.map) obj.material.map.dispose();
+            obj.material.dispose();
+          }
+        });
+        scene3D = null;
+      }
+      camera3D = null;
+      meshUserData = [];
+      document.getElementById('matrix3DInfo').style.display = 'none';
+      document.getElementById('matrix3DTooltip').style.display = 'none';
+    }
+
+    // Resize handler
+    function onResize3D() {
+      if (!renderer3D || !camera3D) return;
+      const container = document.getElementById('matrix3DCanvas');
+      const w = container.clientWidth, h = container.clientHeight;
+      camera3D.aspect = w / h;
+      camera3D.updateProjectionMatrix();
+      renderer3D.setSize(w, h);
+    }
+    window.addEventListener('resize', onResize3D);
 
     // ============= INIT ON LOAD =============
     init();
