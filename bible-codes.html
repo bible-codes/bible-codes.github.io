@@ -462,8 +462,6 @@
     .batch-table tr:nth-child(even) { background: #f5f5f5; }
     .batch-table tr:hover { background: var(--blue-light); }
     .batch-table tr.batch-selected { background: #c8e6c9 !important; }
-    .batch-table .cb-cell { text-align: center; width: 36px; }
-    .batch-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
     .batch-status-cell { font-size: 11px; }
     .batch-status-done { color: var(--green); font-weight: bold; }
     .batch-status-active { color: var(--orange); }
@@ -678,36 +676,28 @@
             <span id="batchParseStatus" style="font-size:13px;color:var(--gray);"></span>
           </div>
 
-          <!-- Parsed preview + scan controls -->
+          <!-- Parsed preview -->
           <div id="batchPreview" style="display:none;margin-top:15px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
               <strong id="batchPreviewCount" style="color:var(--blue);"></strong>
               <div style="font-size:12px;color:var(--gray);" id="batchTimeEstimate"></div>
             </div>
             <div id="batchPreviewList" class="results-scrollable" style="max-height:200px;margin:10px 0;font-size:13px;border:1px solid var(--border);border-radius:4px;background:white;padding:8px;direction:rtl;"></div>
-            <div class="batch-progress" id="batchProgress" style="display:none;">
-              <div class="batch-progress-bar" id="batchProgressBar" style="width:0%;">0%</div>
-            </div>
-            <div id="batchScanStatus" style="font-size:13px;color:var(--gray);margin:6px 0;"></div>
-            <div style="display:flex;gap:10px;">
-              <button class="btn btn-success" id="batchScanBtn" onclick="startBatchScan()">Scan All</button>
-              <button class="btn btn-danger" id="batchCancelBtn" onclick="cancelBatchScan()" style="display:none;">Cancel</button>
-              <button class="btn btn-secondary" id="batchExportBtn" onclick="exportBatchResults()" style="display:none;">Export CSV</button>
-            </div>
+            <p style="font-size:13px;color:var(--green);margin-top:8px;">Click <strong>Search</strong> below to scan all parsed terms + any manual terms.</p>
           </div>
 
-          <!-- Batch results table -->
+          <!-- Batch results table (populated during search) -->
           <div id="batchResults" style="display:none;margin-top:15px;">
-            <div class="batch-select-info">
-              Select 2–8 terms below, then click <strong>Analyze Clusters</strong> to find proximity patterns.
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+              <strong style="color:var(--blue);">Batch Results</strong>
+              <button class="btn btn-secondary btn-small" id="batchExportBtn" onclick="exportBatchResults()">Export CSV</button>
             </div>
             <div class="results-scrollable" style="max-height:500px;">
               <table class="batch-table" id="batchTable">
                 <thead>
                   <tr>
-                    <th class="cb-cell"><input type="checkbox" onchange="toggleAllBatchRows(this)"></th>
                     <th onclick="sortBatchTable(0)">#</th>
-                    <th onclick="sortBatchTable(1)">Original Name</th>
+                    <th onclick="sortBatchTable(1)">Original</th>
                     <th onclick="sortBatchTable(2)">Search Term</th>
                     <th onclick="sortBatchTable(3)">Letters</th>
                     <th onclick="sortBatchTable(4)">Hits</th>
@@ -717,10 +707,6 @@
                 </thead>
                 <tbody id="batchTableBody"></tbody>
               </table>
-            </div>
-            <div class="batch-actions">
-              <button class="btn btn-success" id="batchAnalyzeBtn" onclick="analyzeSelectedBatchTerms()" disabled>Analyze Clusters</button>
-              <span id="batchSelectCount" style="font-size:13px;color:var(--gray);">0 selected</span>
             </div>
           </div>
         </div>
@@ -736,7 +722,7 @@
         </div>
 
         <div class="range-row">
-          <label>Skip range: <input type="number" id="minSkip" value="-100"> to <input type="number" id="maxSkip" value="100"></label>
+          <label>Skip range: <input type="number" id="minSkip" value="-500"> to <input type="number" id="maxSkip" value="500"></label>
           <span style="font-size: 12px; color: #666;">Skip 0 excluded, ±1 = open text</span>
         </div>
 
@@ -744,6 +730,10 @@
           <button class="btn" id="scanBtn" onclick="startScan()">Search</button>
           <button class="btn btn-danger" id="scanCancelBtn" onclick="cancelScan()" style="display:none;">Cancel</button>
           <span id="scanStatus" style="font-size: 13px; color: #666;"></span>
+        </div>
+
+        <div class="batch-progress" id="scanProgress" style="display:none;">
+          <div class="batch-progress-bar" id="scanProgressBar" style="width:0%;">0%</div>
         </div>
 
         <div id="scanResults"></div>
@@ -1346,7 +1336,7 @@
     let scanTerms = [];
     let scanClusters = [];
 
-    window.cancelScan = function() { scanAbort = true; };
+    window.cancelScan = function() { scanAbort = true; batchAbort = true; };
 
     window.startScan = async function() {
       if (!torahText) {
@@ -1354,19 +1344,32 @@
         torahText = await resp.text();
       }
 
+      // Merge manual terms + batch terms
       const inputs = document.querySelectorAll('.scan-term-input');
-      const terms = Array.from(inputs).map(i => i.value.trim()).filter(t => t);
-      if (terms.length < 1) { alert('Enter at least one term'); return; }
+      const manualTerms = Array.from(inputs).map(i => i.value.trim()).filter(t => t);
+      const batchCleaned = batchTerms.filter(t => t.cleaned.length >= 2).map(t => t.cleaned);
 
-      const minSkip = parseInt(document.getElementById('minSkip').value) || -100;
-      const maxSkip = parseInt(document.getElementById('maxSkip').value) || 100;
+      const seen = new Set();
+      const terms = [];
+      for (const t of [...manualTerms, ...batchCleaned]) {
+        if (!seen.has(t) && t.length >= 2) { seen.add(t); terms.push(t); }
+      }
+      if (terms.length < 1) { alert('Enter at least one term or load a batch list'); return; }
+
+      const minSkip = parseInt(document.getElementById('minSkip').value) || -500;
+      const maxSkip = parseInt(document.getElementById('maxSkip').value) || 500;
 
       const btn = document.getElementById('scanBtn');
       const cancelBtn = document.getElementById('scanCancelBtn');
       const status = document.getElementById('scanStatus');
+      const progressDiv = document.getElementById('scanProgress');
+      const progressBar = document.getElementById('scanProgressBar');
       btn.disabled = true;
       btn.textContent = 'Scanning...';
       cancelBtn.style.display = '';
+      progressDiv.style.display = '';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
       scanAbort = false;
 
       // Load character database for verse attribution
@@ -1377,35 +1380,95 @@
       scanTerms = terms;
       for (const term of terms) scanAllResults[term] = [];
 
-      const totalSkips = maxSkip - minSkip + 1;
-      let done = 0;
+      // Reset batch term statuses if batch is active
+      const hasBatch = batchTerms.length > 0;
+      if (hasBatch) {
+        for (const t of batchTerms) { t.hits = 0; t.bestSkip = null; t.bestPos = null; t.status = 'pending'; }
+        batchAllResults = {};
+        document.getElementById('batchResults').style.display = '';
+        renderBatchTable();
+      }
 
-      for (let skip = minSkip; skip <= maxSkip; skip++) {
+      const totalTerms = terms.length;
+      const startTime = performance.now();
+
+      // Scan per-term (better progress for large batches)
+      for (let ti = 0; ti < totalTerms; ti++) {
         if (scanAbort) break;
-        if (skip === 0) { done++; continue; }
 
-        done++;
-        status.textContent = `Skip ${skip} (${Math.round(done / totalSkips * 100)}%)...`;
-        await new Promise(r => setTimeout(r, 0));
+        const term = terms[ti];
+        const results = [];
 
-        for (const term of terms) {
+        for (let skip = minSkip; skip <= maxSkip; skip++) {
+          if (scanAbort) break;
+          if (skip === 0) continue;
           const found = findELS(torahText, term, skip);
-          for (const pos of found) scanAllResults[term].push({ pos, skip });
+          for (const pos of found) results.push({ pos, skip });
         }
+
+        scanAllResults[term] = results;
+
+        // Update batch table row if this term came from batch
+        if (hasBatch) {
+          const bt = batchTerms.find(b => b.cleaned === term);
+          if (bt) {
+            batchAllResults[term] = results;
+            bt.hits = results.length;
+            if (results.length > 0) {
+              const sorted = [...results].sort((a, b) => Math.abs(a.skip) - Math.abs(b.skip));
+              bt.bestSkip = sorted[0].skip;
+              bt.bestPos = sorted[0].pos;
+            }
+            bt.status = 'done';
+            const btIdx = batchTerms.indexOf(bt);
+            updateBatchRow(btIdx);
+          }
+        }
+
+        // Progress
+        const pct = Math.round(((ti + 1) / totalTerms) * 100);
+        progressBar.style.width = pct + '%';
+        progressBar.textContent = pct + '%';
+
+        const elapsed = (performance.now() - startTime) / 1000;
+        const perTerm = elapsed / (ti + 1);
+        const remaining = Math.round(perTerm * (totalTerms - ti - 1));
+        const remMin = Math.floor(remaining / 60);
+        const remSec = remaining % 60;
+        status.textContent = `Term ${ti + 1}/${totalTerms}: "${term}" — ${results.length} hits` +
+          (remaining > 0 ? ` | ~${remMin}m ${remSec}s remaining` : '');
+
+        await new Promise(r => setTimeout(r, 0));
       }
 
       btn.disabled = false;
       btn.textContent = 'Search';
       cancelBtn.style.display = 'none';
-      status.textContent = '';
+      progressDiv.style.display = 'none';
 
-      // Find clusters if 2+ terms
+      const totalTime = Math.round((performance.now() - startTime) / 1000);
+      const totalHits = Object.values(scanAllResults).reduce((s, r) => s + r.length, 0);
+      status.textContent = scanAbort
+        ? 'Cancelled.'
+        : `Done! ${totalTerms} terms, ${totalHits.toLocaleString()} hits in ${Math.floor(totalTime/60)}m ${totalTime%60}s`;
+
+      // Auto-cluster all terms with hits (if 2+)
       scanClusters = [];
-      if (terms.length >= 2) {
-        scanClusters = findClusters(terms, scanAllResults, 10000);
+      const termsWithHits = terms.filter(t => scanAllResults[t].length > 0);
+      if (termsWithHits.length >= 2) {
+        status.textContent += ' — Finding clusters...';
+        await new Promise(r => setTimeout(r, 0));
+        scanClusters = findClusters(termsWithHits, scanAllResults, 10000);
+        // Update scanTerms to only include terms with hits for display
+        scanTerms = termsWithHits;
       }
 
-      displayScanResults(terms, scanAllResults, scanClusters);
+      displayScanResults(scanTerms, scanAllResults, scanClusters);
+
+      if (hasBatch) {
+        batchTerms.forEach((t, i) => t._origIdx = i);
+        renderBatchTable();
+      }
     };
 
     // --- Sliding window cluster finder ---
@@ -1790,104 +1853,6 @@
       batchAllResults = {};
     };
 
-    window.cancelBatchScan = function() { batchAbort = true; };
-
-    window.startBatchScan = async function() {
-      if (batchTerms.length === 0) { alert('Parse terms first'); return; }
-
-      if (!torahText) {
-        const resp = await fetch('data/torahNoSpaces.txt');
-        torahText = await resp.text();
-      }
-
-      const minSkip = parseInt(document.getElementById('minSkip').value) || -100;
-      const maxSkip = parseInt(document.getElementById('maxSkip').value) || 100;
-
-      // UI state
-      const scanBtn = document.getElementById('batchScanBtn');
-      const cancelBtn = document.getElementById('batchCancelBtn');
-      const progressDiv = document.getElementById('batchProgress');
-      const progressBar = document.getElementById('batchProgressBar');
-      const statusEl = document.getElementById('batchScanStatus');
-      scanBtn.disabled = true;
-      cancelBtn.style.display = '';
-      progressDiv.style.display = '';
-      batchAbort = false;
-
-      // Load char DB
-      statusEl.textContent = 'Loading verse database...';
-      await loadCharDB();
-
-      // Init results table
-      batchAllResults = {};
-      document.getElementById('batchResults').style.display = '';
-      renderBatchTable();
-
-      const totalTerms = batchTerms.length;
-      const startTime = performance.now();
-      let lastTi = 0;
-
-      for (let ti = 0; ti < totalTerms; ti++) {
-        lastTi = ti;
-        if (batchAbort) break;
-
-        const t = batchTerms[ti];
-        t.status = 'scanning';
-        updateBatchRow(ti);
-
-        const term = t.cleaned;
-        const results = [];
-
-        for (let skip = minSkip; skip <= maxSkip; skip++) {
-          if (batchAbort) break;
-          if (skip === 0) continue;
-
-          const found = findELS(torahText, term, skip);
-          for (const pos of found) results.push({ pos, skip });
-        }
-
-        batchAllResults[term] = results;
-        t.hits = results.length;
-        if (results.length > 0) {
-          // Best = smallest |skip| > 1 (or just first result)
-          const sorted = [...results].sort((a, b) => Math.abs(a.skip) - Math.abs(b.skip));
-          t.bestSkip = sorted[0].skip;
-          t.bestPos = sorted[0].pos;
-        }
-        t.status = 'done';
-        updateBatchRow(ti);
-
-        // Progress
-        const pct = Math.round(((ti + 1) / totalTerms) * 100);
-        progressBar.style.width = pct + '%';
-        progressBar.textContent = pct + '%';
-
-        const elapsed = (performance.now() - startTime) / 1000;
-        const perTerm = elapsed / (ti + 1);
-        const remaining = Math.round(perTerm * (totalTerms - ti - 1));
-        const remMin = Math.floor(remaining / 60);
-        const remSec = remaining % 60;
-        statusEl.textContent = `Term ${ti + 1}/${totalTerms}: "${t.original}" — ${t.hits} hits` +
-          (remaining > 0 ? ` | ~${remMin}m ${remSec}s remaining` : '');
-
-        await new Promise(r => setTimeout(r, 0)); // yield to UI
-      }
-
-      scanBtn.disabled = false;
-      cancelBtn.style.display = 'none';
-      document.getElementById('batchExportBtn').style.display = '';
-
-      const totalTime = Math.round((performance.now() - startTime) / 1000);
-      const totalHits = batchTerms.reduce((s, t) => s + t.hits, 0);
-      statusEl.textContent = batchAbort
-        ? `Cancelled after ${lastTi + 1} terms.`
-        : `Done! ${totalTerms} terms, ${totalHits.toLocaleString()} total hits in ${Math.floor(totalTime/60)}m ${totalTime%60}s`;
-
-      // Sort table by hits descending
-      batchTerms.forEach((t, i) => t._origIdx = i);
-      renderBatchTable();
-    };
-
     function renderBatchTable() {
       const tbody = document.getElementById('batchTableBody');
       let html = '';
@@ -1896,8 +1861,7 @@
                           t.status === 'scanning' ? 'batch-status-active' : 'batch-status-pending';
         const statusText = t.status === 'done' ? 'Done' :
                            t.status === 'scanning' ? 'Scanning...' : 'Pending';
-        html += `<tr data-batch-idx="${i}" class="${t._selected ? 'batch-selected' : ''}" onclick="toggleBatchSelect(${i}, event)">
-          <td class="cb-cell"><input type="checkbox" ${t._selected ? 'checked' : ''} onchange="toggleBatchSelect(${i}, event)"></td>
+        html += `<tr data-batch-idx="${i}">
           <td>${i + 1}</td>
           <td>${t.original}</td>
           <td style="direction:rtl;font-weight:bold;">${t.cleaned}</td>
@@ -1918,95 +1882,11 @@
                         t.status === 'scanning' ? 'batch-status-active' : 'batch-status-pending';
       const statusText = t.status === 'done' ? 'Done' :
                          t.status === 'scanning' ? 'Scanning...' : 'Pending';
-      row.cells[5].textContent = t.status === 'done' ? t.hits.toLocaleString() : '—';
-      row.cells[6].textContent = t.bestSkip !== null ? t.bestSkip : '—';
-      row.cells[7].className = 'batch-status-cell ' + statusCls;
-      row.cells[7].textContent = statusText;
+      row.cells[4].textContent = t.status === 'done' ? t.hits.toLocaleString() : '—';
+      row.cells[5].textContent = t.bestSkip !== null ? t.bestSkip : '—';
+      row.cells[6].className = 'batch-status-cell ' + statusCls;
+      row.cells[6].textContent = statusText;
     }
-
-    window.toggleBatchSelect = function(idx, event) {
-      event.stopPropagation();
-      const t = batchTerms[idx];
-      t._selected = !t._selected;
-
-      // Enforce max 8
-      const selectedCount = batchTerms.filter(t => t._selected).length;
-      if (selectedCount > 8) {
-        t._selected = false;
-        alert('Maximum 8 terms for cluster analysis');
-        renderBatchTable();
-        return;
-      }
-
-      // Update row visual + checkbox
-      const row = document.querySelector(`tr[data-batch-idx="${idx}"]`);
-      if (row) {
-        row.classList.toggle('batch-selected', t._selected);
-        row.cells[0].querySelector('input').checked = t._selected;
-      }
-
-      // Update count + button
-      document.getElementById('batchSelectCount').textContent = `${selectedCount} selected`;
-      document.getElementById('batchAnalyzeBtn').disabled = selectedCount < 2;
-    };
-
-    window.toggleAllBatchRows = function(masterCb) {
-      // Only select first 8 if checking all
-      const target = masterCb.checked;
-      let count = 0;
-      for (const t of batchTerms) {
-        if (target && count >= 8) { t._selected = false; continue; }
-        if (target && t.status !== 'done') { t._selected = false; continue; }
-        t._selected = target;
-        if (target) count++;
-      }
-      renderBatchTable();
-      const selectedCount = batchTerms.filter(t => t._selected).length;
-      document.getElementById('batchSelectCount').textContent = `${selectedCount} selected`;
-      document.getElementById('batchAnalyzeBtn').disabled = selectedCount < 2;
-    };
-
-    window.analyzeSelectedBatchTerms = async function() {
-      const selected = batchTerms.filter(t => t._selected && t.status === 'done');
-      if (selected.length < 2) { alert('Select at least 2 completed terms'); return; }
-      if (selected.length > 8) { alert('Maximum 8 terms'); return; }
-
-      // Transfer to main scan system
-      scanTerms = selected.map(t => t.cleaned);
-      scanAllResults = {};
-      for (const t of selected) {
-        scanAllResults[t.cleaned] = batchAllResults[t.cleaned] || [];
-      }
-
-      // Update scan term inputs to reflect selected terms
-      const container = document.getElementById('scanTermEntries');
-      container.innerHTML = '';
-      scanTerms.forEach((term, i) => {
-        const div = document.createElement('div');
-        div.className = 'scan-term-entry';
-        div.innerHTML = `<div class="term-color-swatch" style="background:${TERM_COLORS[i % 8]};"></div>
-          <input type="text" class="scan-term-input" value="${term}" dir="rtl">
-          <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>`;
-        container.appendChild(div);
-      });
-
-      // Find clusters
-      scanClusters = [];
-      if (scanTerms.length >= 2) {
-        document.getElementById('batchScanStatus').textContent = 'Finding clusters...';
-        await new Promise(r => setTimeout(r, 0));
-        scanClusters = findClusters(scanTerms, scanAllResults, 10000);
-      }
-
-      // Display results using existing display system
-      displayScanResults(scanTerms, scanAllResults, scanClusters);
-
-      document.getElementById('batchScanStatus').textContent =
-        `Cluster analysis: ${scanClusters.length} clusters found for ${scanTerms.length} terms`;
-
-      // Scroll to results
-      document.getElementById('scanResults').scrollIntoView({ behavior: 'smooth' });
-    };
 
     window.exportBatchResults = function() {
       if (batchTerms.length === 0) return;
