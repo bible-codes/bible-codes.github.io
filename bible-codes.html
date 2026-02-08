@@ -615,11 +615,11 @@
 
           <div class="term-entries" id="termEntries">
             <div class="term-entry">
-              <input type="text" class="term-input" placeholder="Term 1" value="משה" dir="rtl">
+              <input type="text" class="term-input" placeholder="Term 1" dir="rtl">
               <button class="remove-btn" onclick="removeTerm(this)">&times;</button>
             </div>
             <div class="term-entry">
-              <input type="text" class="term-input" placeholder="Term 2" value="אהרן" dir="rtl">
+              <input type="text" class="term-input" placeholder="Term 2" dir="rtl">
               <button class="remove-btn" onclick="removeTerm(this)">&times;</button>
             </div>
           </div>
@@ -672,7 +672,7 @@
             <input type="file" id="batchFileInput" accept=".txt" onchange="loadBatchFile(this)" style="font-size:13px;">
             <button class="btn btn-small btn-secondary" onclick="clearBatchInput()">Clear</button>
           </div>
-          <textarea id="batchTextarea" class="batch-textarea" placeholder="נטלי רענן&#10;יהודית רענן&#10;אביבה סיגל&#10;..."></textarea>
+          <textarea id="batchTextarea" class="batch-textarea" placeholder="Enter terms, one per line...&#10;..."></textarea>
           <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
             <button class="btn" id="batchParseBtn" onclick="parseBatchInput()">Parse Terms</button>
             <span id="batchParseStatus" style="font-size:13px;color:var(--gray);"></span>
