@@ -749,16 +749,17 @@
 
       // Use skip value as width for proper alignment, or default to 30
       const width = Math.max(Math.abs(pair.skip1), Math.abs(pair.skip2), 30);
-      const centerPos = Math.min(pair.pos1, pair.pos2);
-      const rowsBefore = 5;
-      const rowsAfter = 10;
-      const startRow = Math.floor(centerPos / width) - rowsBefore;
-      const endRow = startRow + rowsBefore + rowsAfter;
 
       const t1Pos = new Set();
       const t2Pos = new Set();
       for (let i = 0; i < pair.term1.length; i++) t1Pos.add(pair.pos1 + i * pair.skip1);
       for (let i = 0; i < pair.term2.length; i++) t2Pos.add(pair.pos2 + i * pair.skip2);
+
+      // Compute row range from actual term positions (with context padding)
+      const allTermPositions = [...t1Pos, ...t2Pos];
+      const padding = 3;
+      const startRow = Math.max(0, Math.floor(Math.min(...allTermPositions) / width) - padding);
+      const endRow = Math.floor(Math.max(...allTermPositions) / width) + padding;
 
       // Build grid-based matrix like the popup
       let gridHtml = '';
@@ -1261,12 +1262,11 @@
       }
       const minPos = Math.min(...allPositions);
       const maxPos = Math.max(...allPositions);
-      const centerPos = Math.floor((minPos + maxPos) / 2);
 
-      const rowsBefore = 5;
-      const rowsAfter = 10;
-      const startRow = Math.floor(centerPos / width) - rowsBefore;
-      const endRow = startRow + rowsBefore + rowsAfter;
+      // Compute row range from actual term positions (with context padding)
+      const padding = 3;
+      const startRow = Math.max(0, Math.floor(minPos / width) - padding);
+      const endRow = Math.floor(maxPos / width) + padding;
 
       // Build posMap: position -> Set of termIdx
       const posMap = new Map();
