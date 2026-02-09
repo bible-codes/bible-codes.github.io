@@ -11,8 +11,16 @@
  * Uses IndexedDB character-level database for calculations.
  */
 
-import { openDB } from '../db/schema.js';
-import { getWordsByGematria, getVersesByGematria } from '../db/query.js';
+// Database functions loaded lazily - search features require IndexedDB to be populated
+let _db = null;
+async function openDB() {
+    if (_db) return _db;
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('BibleAnalysisDB', 1);
+        request.onerror = () => reject(new Error('Database not available. Load book data first via test-db.html'));
+        request.onsuccess = () => { _db = request.result; resolve(_db); };
+    });
+}
 
 /**
  * Hebrew letter to standard gematria value mapping
