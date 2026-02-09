@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-analysis-suite-v5.4';
+const CACHE_NAME = 'bible-codes-v6.0';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -88,12 +88,16 @@ const urlsToCache = [
   // Integration modules
   './integrations/text-search-root-integration.js',
   './integrations/gematria-root-integration.js',
-  './integrations/acronym-root-integration.js'
+  './integrations/acronym-root-integration.js',
+
+  // Three.js (local for offline 3D matrix view)
+  './lib/three.module.js',
+  './lib/OrbitControls.js'
 ];
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v5.3...');
+  console.log('Service Worker: Installing v6.0...');
 
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -122,7 +126,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating v5.4...');
+  console.log('Service Worker: Activating v6.0...');
 
   const cacheWhitelist = [CACHE_NAME];
 
@@ -143,56 +147,48 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache, fall back to network
+// Fetch event - network-first for HTML (auto-update), cache-first for assets (fast offline)
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
+  if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return the cached response
-        if (response) {
-          return response;
-        }
+  const url = new URL(event.request.url);
+  const isHTML = url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+  const isLocal = url.origin === self.location.origin;
 
-        // Clone the request to ensure it's safe to use
-        const fetchRequest = event.request.clone();
-
-        // Not in cache - fetch from network
-        return fetch(fetchRequest)
-          .then((response) => {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response to ensure it's safe to use
+  if (isHTML) {
+    // Network-first for HTML pages: always get latest version, fall back to cache
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
             const responseToCache = response.clone();
-
-            // Cache the fetched response for future
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          })
-          .catch(error => {
-            console.error('Service Worker: Fetch failed:', error);
-
-            // For HTML files, return index.html as fallback
-            if (event.request.url.indexOf('.html') > -1) {
-              return caches.match('./index.html');
-            }
-
-            // For other resources, let the error propagate
-            throw error;
-          });
-      })
-  );
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(r => r || caches.match('./bible-codes.html')))
+    );
+  } else {
+    // Cache-first for assets: fast offline, update cache in background
+    event.respondWith(
+      caches.match(event.request)
+        .then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request.clone())
+            .then((response) => {
+              if (response && response.status === 200 && isLocal) {
+                const responseToCache = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+              }
+              return response;
+            })
+            .catch(error => {
+              console.error('Service Worker: Fetch failed:', error);
+              throw error;
+            });
+        })
+    );
+  }
 });
 
 // Background sync for searches when offline

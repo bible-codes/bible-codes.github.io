@@ -11,7 +11,22 @@
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="apple-touch-icon" href="icons/icon-192x192.png">
   <link rel="manifest" href="manifest.json">
-  <title>ELS Search - Torah Codes</title>
+  <title>Bible Codes - ELS Search</title>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'activated') location.reload();
+            });
+          });
+          reg.update();
+        });
+      });
+    }
+  </script>
   <style>
     :root {
       --blue: #1e5aa8;
@@ -561,29 +576,29 @@
 </head>
 <body>
   <header class="header">
-    <a href="index.html"><img src="img/favicon.png" alt=""></a>
-    <h1>ELS Search</h1>
+    <a href="bible-codes.html"><img src="img/favicon.png" alt=""></a>
+    <h1>Bible Codes</h1>
   </header>
 
   <main class="container">
     <!-- Mode Tabs -->
     <div class="mode-tabs">
-      <button class="mode-tab active" data-mode="index">
+      <button class="mode-tab" data-mode="index" style="opacity:0.5;">
         Index Lookup
         <span class="mode-desc">Instant search (110K words)</span>
       </button>
-      <button class="mode-tab" data-mode="scan">
+      <button class="mode-tab active" data-mode="scan">
         Full Scan
         <span class="mode-desc">Search any term</span>
       </button>
-      <button class="mode-tab" data-mode="dict">
+      <button class="mode-tab" data-mode="dict" style="opacity:0.5;">
         Dictionary
         <span class="mode-desc">Browse 260K words</span>
       </button>
     </div>
 
     <!-- INDEX MODE -->
-    <div id="index-mode" class="mode-content active">
+    <div id="index-mode" class="mode-content">
       <div id="indexLoading" class="loading">
         <div class="spinner"></div>
         <div>Loading ELS Index...</div>
@@ -633,7 +648,7 @@
     </div>
 
     <!-- SCAN MODE -->
-    <div id="scan-mode" class="mode-content">
+    <div id="scan-mode" class="mode-content active">
       <section class="section">
         <h2>Real-time ELS Scan</h2>
         <p>Scans the entire Torah text for any term. Use this for words not in the index.</p>
@@ -657,11 +672,11 @@
 
         <div class="action-row" style="margin-bottom: 15px;">
           <button class="btn btn-secondary" onclick="addScanTerm()">+ Add Term</button>
-          <button class="btn btn-secondary" onclick="toggleBatchPanel()" id="batchToggleBtn">Load Batch List</button>
+          <button class="btn btn-secondary" onclick="toggleBatchPanel()" id="batchToggleBtn">Hide Batch</button>
         </div>
 
         <!-- Batch loader panel -->
-        <div id="batchPanel" class="batch-panel" style="display:none;">
+        <div id="batchPanel" class="batch-panel">
           <h3>Batch Term Loader</h3>
           <p style="font-size:13px;color:var(--gray);margin-bottom:10px;">
             Paste names (one per line) or load a .txt file. Names are auto-stripped to Hebrew consonants.
@@ -802,6 +817,15 @@
     </div>
   </main>
 
+  <footer style="max-width:900px;margin:20px auto;padding:12px 20px;font-size:13px;color:#888;text-align:center;border-top:1px solid #ddd;">
+    <span>Other Tools:</span>
+    <a href="text-search.html" style="color:#1e5aa8;margin:0 6px;">Text Search</a> |
+    <a href="gematria.html" style="color:#1e5aa8;margin:0 6px;">Gematria</a> |
+    <a href="acronym.html" style="color:#1e5aa8;margin:0 6px;">Acronyms</a> |
+    <a href="tsirufim.html" style="color:#1e5aa8;margin:0 6px;">Tsirufim</a> |
+    <a href="matrix-view.html" style="color:#1e5aa8;margin:0 6px;">Matrix View</a> |
+    <a href="book-view.html" style="color:#1e5aa8;margin:0 6px;">Book View</a>
+  </footer>
 
   <div id="verseTooltip"></div>
 
@@ -2293,9 +2317,9 @@
     // Lazy-load Three.js from CDN
     async function load3DDeps() {
       if (THREE) return;
-      const threeModule = await import('https://unpkg.com/three@0.160.0/build/three.module.js');
+      const threeModule = await import('./lib/three.module.js');
       THREE = threeModule;
-      const controlsModule = await import('https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js');
+      const controlsModule = await import('./lib/OrbitControls.js');
       OrbitControls = controlsModule.OrbitControls;
     }
 
