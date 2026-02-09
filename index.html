@@ -4,6 +4,29 @@
   <meta charset="UTF-8">
   <meta http-equiv="refresh" content="0;url=bible-codes.html">
   <title>Bible Codes</title>
+  <script>
+    // Force service worker update so old cached pages get replaced
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').then(function(reg) {
+        reg.update();
+        reg.addEventListener('updatefound', function() {
+          var newSW = reg.installing;
+          newSW.addEventListener('statechange', function() {
+            if (newSW.state === 'activated') {
+              // New SW active — clear old caches and redirect
+              caches.keys().then(function(names) {
+                names.forEach(function(name) {
+                  if (name !== 'bible-codes-v6.0') caches.delete(name);
+                });
+              });
+            }
+          });
+        });
+      });
+    }
+    // JS redirect as backup in case meta refresh is blocked
+    window.location.replace('bible-codes.html');
+  </script>
 </head>
 <body>
   <p>Redirecting to <a href="bible-codes.html">Bible Codes</a>...</p>
