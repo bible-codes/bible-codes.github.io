@@ -592,8 +592,8 @@
         <span class="mode-desc">Search any term</span>
       </button>
       <button class="mode-tab" data-mode="dict" style="opacity:0.5;">
-        Dictionary
-        <span class="mode-desc">Browse 260K words</span>
+        References
+        <span class="mode-desc">Dictionary & Texts</span>
       </button>
     </div>
 
@@ -783,37 +783,44 @@
 
     <!-- DICTIONARY MODE -->
     <div id="dict-mode" class="mode-content">
-      <div id="dictLoading" class="loading">
-        <div class="spinner"></div>
-        <div>Loading Dictionary...</div>
-      </div>
+      <section class="section">
+        <h2>References & Texts</h2>
 
-      <div id="dictContent" style="display: none;">
-        <section class="section">
-          <h2>Dictionary Browser</h2>
-          <div class="stats-grid" id="dictStats"></div>
-
-          <div class="input-row">
-            <input type="text" id="dictSearch" placeholder="Search word..." dir="rtl" style="flex: 1;">
-            <select id="dictSource" style="padding: 10px; border-radius: 4px; border: 1px solid var(--border);">
-              <option value="all">All Sources</option>
-              <option value="bdb">BDB (Biblical)</option>
-              <option value="strongs">Strong's</option>
-              <option value="wiktionary">Wiktionary</option>
-              <option value="tanakh">Tanakh</option>
-              <option value="wikipedia">Wikipedia</option>
-            </select>
-            <button class="btn" onclick="searchDict()">Search</button>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;">
+          <div style="padding:16px;background:var(--gray-light);border-radius:8px;border-left:4px solid var(--blue);">
+            <strong style="color:var(--blue);">Hebrew Dictionary</strong>
+            <p style="font-size:13px;color:var(--gray);margin:6px 0 0;">BDB, Strong's, 260K words</p>
+            <span style="font-size:11px;color:var(--orange);">Coming soon</span>
           </div>
-
-          <div class="action-row">
-            <button class="btn btn-secondary" onclick="browseDict('random')">Random Words</button>
-            <button class="btn btn-secondary" onclick="browseDict('frequent')">Common Words</button>
+          <div style="padding:16px;background:var(--gray-light);border-radius:8px;border-left:4px solid var(--blue);">
+            <strong style="color:var(--blue);">Mikraot Gedolot</strong>
+            <p style="font-size:13px;color:var(--gray);margin:6px 0 0;">Rashi, Ibn Ezra, Ramban, etc.</p>
+            <span style="font-size:11px;color:var(--orange);">Planned</span>
           </div>
+          <div style="padding:16px;background:var(--gray-light);border-radius:8px;border-left:4px solid var(--blue);">
+            <strong style="color:var(--blue);">Talmud Bavli</strong>
+            <p style="font-size:13px;color:var(--gray);margin:6px 0 0;">Babylonian Talmud full text</p>
+            <span style="font-size:11px;color:var(--orange);">Planned</span>
+          </div>
+          <div style="padding:16px;background:var(--gray-light);border-radius:8px;border-left:4px solid var(--blue);">
+            <strong style="color:var(--blue);">Mishna</strong>
+            <p style="font-size:13px;color:var(--gray);margin:6px 0 0;">Six orders, full text</p>
+            <span style="font-size:11px;color:var(--orange);">Planned</span>
+          </div>
+          <div style="padding:16px;background:var(--gray-light);border-radius:8px;border-left:4px solid var(--blue);">
+            <strong style="color:var(--blue);">Zohar</strong>
+            <p style="font-size:13px;color:var(--gray);margin:6px 0 0;">Mystical commentary</p>
+            <span style="font-size:11px;color:var(--orange);">Planned</span>
+          </div>
+          <div style="padding:16px;background:var(--gray-light);border-radius:8px;border-left:4px solid var(--blue);">
+            <strong style="color:var(--blue);">Midrash</strong>
+            <p style="font-size:13px;color:var(--gray);margin:6px 0 0;">Midrash Rabbah, Tanchuma</p>
+            <span style="font-size:11px;color:var(--orange);">Planned</span>
+          </div>
+        </div>
 
-          <div id="dictResults"></div>
-        </section>
-      </div>
+        <p style="font-size:13px;color:var(--gray);">Cross-reference and search across classical Hebrew texts. Data sourced from Sefaria and open-access repositories.</p>
+      </section>
     </div>
   </main>
 
@@ -2160,26 +2167,10 @@
         const text = await new Response(blob.stream().pipeThrough(ds)).text();
         dictData = JSON.parse(text);
         dictLoaded = true;
-
-        document.getElementById('dictLoading').style.display = 'none';
-        document.getElementById('dictContent').style.display = 'block';
-
-        // Stats
-        const entries = Object.keys(dictData).length;
-        const sources = {};
-        Object.values(dictData).forEach(entry => {
-          const src = entry.source || 'unknown';
-          sources[src] = (sources[src] || 0) + 1;
-        });
-        document.getElementById('dictStats').innerHTML = `
-          <div class="stat-box"><div class="value">${entries.toLocaleString()}</div><div class="label">Total Entries</div></div>
-          <div class="stat-box"><div class="value">${sources.bdb?.toLocaleString() || 0}</div><div class="label">BDB</div></div>
-          <div class="stat-box"><div class="value">${sources.strongs?.toLocaleString() || 0}</div><div class="label">Strong's</div></div>
-          <div class="stat-box"><div class="value">${sources.wiktionary?.toLocaleString() || 0}</div><div class="label">Wiktionary</div></div>
-          <div class="stat-box"><div class="value">${sources.wikipedia?.toLocaleString() || 0}</div><div class="label">Wikipedia</div></div>
-        `;
+        document.getElementById('dictLoading')?.remove();
+        document.getElementById('dictContent')?.style && (document.getElementById('dictContent').style.display = 'block');
       } catch (err) {
-        document.getElementById('dictLoading').innerHTML = `<div style="color:red;">Error: ${err.message}</div>`;
+        console.warn('Dictionary load deferred:', err.message);
       }
     }
 
