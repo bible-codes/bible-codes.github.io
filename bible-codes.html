@@ -367,22 +367,7 @@
     .matrix-cell.term-color-6 { background: #795548; color: #fff; font-weight: bold; }
     .matrix-cell.term-color-7 { background: #607d8b; color: #fff; font-weight: bold; }
     .matrix-cell.multi-term { background: #9c27b0; color: #fff; font-weight: bold; }
-    .scan-term-entries { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-    .scan-term-entry { display: flex; gap: 10px; align-items: center; }
-    .scan-term-entry input { flex: 1; }
-    .scan-term-entry .remove-btn {
-      background: var(--red);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 28px;
-      height: 28px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    .scan-term-entry .term-color-swatch {
-      width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
-    }
+    /* (scan-term-entries removed — replaced by unified textarea input) */
     .cluster-row { padding: 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
     .cluster-row:hover { background: var(--blue-light); }
     .cluster-span { font-weight: bold; color: var(--green); font-size: 16px; }
@@ -433,6 +418,52 @@
       border-radius: 4px;
       direction: rtl;
       resize: vertical;
+    }
+    /* Hebrew virtual keyboard */
+    .heb-kb-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--gray);
+      transition: background 0.15s, border-color 0.15s;
+      line-height: 1;
+    }
+    .heb-kb-toggle:hover { border-color: var(--blue); color: var(--blue); }
+    .heb-kb-toggle.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .heb-kb-panel {
+      display: none;
+      background: #f8f9fb;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 12px;
+      direction: ltr;
+    }
+    .heb-kb-panel.open { display: block; }
+    .heb-kb-row { display: flex; gap: 4px; justify-content: center; margin-bottom: 4px; }
+    .heb-kb-row:last-child { margin-bottom: 0; }
+    .heb-kb-key {
+      min-width: 32px; height: 36px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 18px;
+      font-family: 'SBL Hebrew', 'David', 'Noto Sans Hebrew', serif;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s, box-shadow 0.1s;
+      user-select: none;
+      padding: 0 6px;
+    }
+    .heb-kb-key:hover { background: #e3ecf7; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .heb-kb-key:active { background: var(--blue); color: #fff; }
+    .heb-kb-key.wide { min-width: 56px; font-size: 12px; color: var(--gray); }
+    @media (max-width: 500px) {
+      .heb-kb-key { min-width: 26px; height: 32px; font-size: 16px; padding: 0 3px; }
+      .heb-kb-key.wide { min-width: 42px; font-size: 10px; }
     }
     .batch-progress {
       width: 100%;
@@ -657,48 +688,74 @@
           Text: Koren Edition (Rips et al., 1994) - 304,805 letters
         </div>
 
-        <div class="scan-term-entries" id="scanTermEntries">
-          <div class="scan-term-entry">
-            <div class="term-color-swatch" style="background:#ffc107;"></div>
-            <input type="text" class="scan-term-input" placeholder="Term 1" dir="rtl">
-            <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
+        <!-- Search terms input -->
+        <div class="batch-panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <h3 style="margin:0;">Search Terms</h3>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="heb-kb-toggle" id="hebKbToggle" onclick="toggleHebrewKeyboard()" title="Hebrew Keyboard">⌨ אב</button>
+              <input type="file" id="batchFileInput" accept=".txt" onchange="loadBatchFile(this)" style="font-size:13px;max-width:180px;">
+              <button class="btn btn-small btn-secondary" onclick="clearBatchInput()">Clear</button>
+            </div>
           </div>
-          <div class="scan-term-entry">
-            <div class="term-color-swatch" style="background:#00bcd4;"></div>
-            <input type="text" class="scan-term-input" placeholder="Term 2" dir="rtl">
-            <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
+
+          <!-- Hebrew virtual keyboard -->
+          <div class="heb-kb-panel" id="hebKbPanel">
+            <div class="heb-kb-row">
+              <button class="heb-kb-key" data-char="ק">ק</button>
+              <button class="heb-kb-key" data-char="ר">ר</button>
+              <button class="heb-kb-key" data-char="א">א</button>
+              <button class="heb-kb-key" data-char="ט">ט</button>
+              <button class="heb-kb-key" data-char="ו">ו</button>
+              <button class="heb-kb-key" data-char="ן">ן</button>
+              <button class="heb-kb-key" data-char="ם">ם</button>
+              <button class="heb-kb-key" data-char="פ">פ</button>
+            </div>
+            <div class="heb-kb-row">
+              <button class="heb-kb-key" data-char="ש">ש</button>
+              <button class="heb-kb-key" data-char="ד">ד</button>
+              <button class="heb-kb-key" data-char="ג">ג</button>
+              <button class="heb-kb-key" data-char="כ">כ</button>
+              <button class="heb-kb-key" data-char="ע">ע</button>
+              <button class="heb-kb-key" data-char="י">י</button>
+              <button class="heb-kb-key" data-char="ח">ח</button>
+              <button class="heb-kb-key" data-char="ל">ל</button>
+              <button class="heb-kb-key" data-char="ך">ך</button>
+              <button class="heb-kb-key" data-char="ף">ף</button>
+            </div>
+            <div class="heb-kb-row">
+              <button class="heb-kb-key" data-char="ז">ז</button>
+              <button class="heb-kb-key" data-char="ס">ס</button>
+              <button class="heb-kb-key" data-char="ב">ב</button>
+              <button class="heb-kb-key" data-char="ה">ה</button>
+              <button class="heb-kb-key" data-char="נ">נ</button>
+              <button class="heb-kb-key" data-char="מ">מ</button>
+              <button class="heb-kb-key" data-char="צ">צ</button>
+              <button class="heb-kb-key" data-char="ת">ת</button>
+              <button class="heb-kb-key" data-char="ץ">ץ</button>
+            </div>
+            <div class="heb-kb-row">
+              <button class="heb-kb-key wide" data-action="newline">↵ New Line</button>
+              <button class="heb-kb-key wide" data-action="space">Space</button>
+              <button class="heb-kb-key wide" data-action="backspace">⌫</button>
+            </div>
           </div>
-        </div>
 
-        <div class="action-row" style="margin-bottom: 15px;">
-          <button class="btn btn-secondary" onclick="addScanTerm()">+ Add Term</button>
-          <button class="btn btn-secondary" onclick="toggleBatchPanel()" id="batchToggleBtn">Hide Batch</button>
-        </div>
-
-        <!-- Batch loader panel -->
-        <div id="batchPanel" class="batch-panel">
-          <h3>Batch Term Loader</h3>
           <p style="font-size:13px;color:var(--gray);margin-bottom:10px;">
-            Paste names (one per line) or load a .txt file. Names are auto-stripped to Hebrew consonants.
+            Enter Hebrew search terms, one per line. Names are auto-cleaned to Hebrew consonants.
           </p>
-          <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-            <input type="file" id="batchFileInput" accept=".txt" onchange="loadBatchFile(this)" style="font-size:13px;">
-            <button class="btn btn-small btn-secondary" onclick="clearBatchInput()">Clear</button>
-          </div>
-          <textarea id="batchTextarea" class="batch-textarea" placeholder="Enter terms, one per line...&#10;..."></textarea>
-          <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-            <button class="btn" id="batchParseBtn" onclick="parseBatchInput()">Parse Terms</button>
+          <textarea id="batchTextarea" class="batch-textarea" placeholder="Enter terms, one per line...&#10;e.g.&#10;משה&#10;אהרן&#10;ישראל"></textarea>
+          <div style="margin-top:8px;">
             <span id="batchParseStatus" style="font-size:13px;color:var(--gray);"></span>
           </div>
 
-          <!-- Parsed preview -->
-          <div id="batchPreview" style="display:none;margin-top:15px;">
+          <!-- Parsed preview (shown after search parses terms) -->
+          <div id="batchPreview" style="display:none;margin-top:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
               <strong id="batchPreviewCount" style="color:var(--blue);"></strong>
               <div style="font-size:12px;color:var(--gray);" id="batchTimeEstimate"></div>
             </div>
             <div id="batchPreviewList" class="results-scrollable" style="max-height:200px;margin:10px 0;font-size:13px;border:1px solid var(--border);border-radius:4px;background:white;padding:8px;direction:rtl;"></div>
-            <p style="font-size:13px;color:var(--green);margin-top:8px;">Click <strong>Search</strong> below to scan all parsed terms + any manual terms.</p>
           </div>
 
           <!-- Batch results table (populated during search) -->
@@ -1151,37 +1208,50 @@
     };
     const TORAH_BOOKS = ['genesis','exodus','leviticus','numbers','deuteronomy'];
 
-    // --- Scan term management ---
-    window.addScanTerm = function() {
-      const container = document.getElementById('scanTermEntries');
-      const n = container.querySelectorAll('.scan-term-entry').length;
-      if (n >= 8) { alert('Maximum 8 terms'); return; }
-      const div = document.createElement('div');
-      div.className = 'scan-term-entry';
-      div.innerHTML = `<div class="term-color-swatch" style="background:${TERM_COLORS[n % 8]};"></div>
-        <input type="text" class="scan-term-input" placeholder="Term ${n + 1}" dir="rtl">
-        <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>`;
-      container.appendChild(div);
-      updateScanTermColors();
-    };
+    // --- Hebrew virtual keyboard ---
+    let hebKbTarget = null; // the textarea/input that receives keyboard chars
 
-    window.removeScanTerm = function(btn) {
-      const container = document.getElementById('scanTermEntries');
-      if (container.querySelectorAll('.scan-term-entry').length > 1) {
-        btn.parentElement.remove();
-        updateScanTermColors();
+    window.toggleHebrewKeyboard = function() {
+      const panel = document.getElementById('hebKbPanel');
+      const btn = document.getElementById('hebKbToggle');
+      const isOpen = panel.classList.toggle('open');
+      btn.classList.toggle('active', isOpen);
+      if (isOpen) {
+        hebKbTarget = document.getElementById('batchTextarea');
+        hebKbTarget.focus();
       }
     };
 
-    function updateScanTermColors() {
-      const entries = document.querySelectorAll('.scan-term-entry');
-      entries.forEach((entry, i) => {
-        const swatch = entry.querySelector('.term-color-swatch');
-        if (swatch) swatch.style.background = TERM_COLORS[i % 8];
-        const input = entry.querySelector('input');
-        if (input) input.placeholder = `Term ${i + 1}`;
-      });
-    }
+    // Keyboard click handler — insert character at cursor position in target
+    document.addEventListener('click', function(e) {
+      const key = e.target.closest('.heb-kb-key');
+      if (!key) return;
+      e.preventDefault();
+      const target = hebKbTarget || document.getElementById('batchTextarea');
+      const action = key.dataset.action;
+      const ch = key.dataset.char;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const val = target.value;
+
+      if (action === 'backspace') {
+        if (start > 0 || start !== end) {
+          const delStart = start === end ? start - 1 : start;
+          target.value = val.slice(0, delStart) + val.slice(end);
+          target.selectionStart = target.selectionEnd = delStart;
+        }
+      } else if (action === 'newline') {
+        target.value = val.slice(0, start) + '\n' + val.slice(end);
+        target.selectionStart = target.selectionEnd = start + 1;
+      } else if (action === 'space') {
+        target.value = val.slice(0, start) + ' ' + val.slice(end);
+        target.selectionStart = target.selectionEnd = start + 1;
+      } else if (ch) {
+        target.value = val.slice(0, start) + ch + val.slice(end);
+        target.selectionStart = target.selectionEnd = start + 1;
+      }
+      target.focus();
+    });
 
     // --- Character database for verse attribution ---
     let charDatabase = null;
@@ -1336,15 +1406,18 @@
     }
 
     // --- ELS search ---
-    function findELS(text, term, skip) {
+    // Uses normalized text (sofiot → regular) for matching, original text for display
+    let torahTextNorm = null; // normalized version (sofiot replaced)
+
+    function findELS(normText, term, skip) {
       const results = [];
-      const len = text.length;
+      const len = normText.length;
       const termLen = term.length;
 
       if (skip === 1) {
         // Optimized forward open-text search using indexOf
         let idx = 0;
-        while ((idx = text.indexOf(term, idx)) !== -1) {
+        while ((idx = normText.indexOf(term, idx)) !== -1) {
           results.push(idx);
           idx++;
         }
@@ -1354,7 +1427,7 @@
           let match = true;
           for (let i = 0; i < termLen; i++) {
             const pos = start + i * skip;
-            if (pos < 0 || pos >= len || text[pos] !== term[i]) { match = false; break; }
+            if (pos < 0 || pos >= len || normText[pos] !== term[i]) { match = false; break; }
           }
           if (match) results.push(start);
         }
@@ -1375,18 +1448,21 @@
         const resp = await fetch('data/torahNoSpaces.txt');
         torahText = await resp.text();
       }
+      // Build normalized Torah text (sofiot → regular) once
+      if (!torahTextNorm) {
+        torahTextNorm = normalizeSofiot(torahText);
+      }
 
-      // Merge manual terms + batch terms
-      const inputs = document.querySelectorAll('.scan-term-input');
-      const manualTerms = Array.from(inputs).map(i => i.value.trim()).filter(t => t);
+      // Always parse from textarea (auto-parse on search)
+      parseBatchInput();
       const batchCleaned = batchTerms.filter(t => t.cleaned.length >= 2).map(t => t.cleaned);
 
       const seen = new Set();
       const terms = [];
-      for (const t of [...manualTerms, ...batchCleaned]) {
+      for (const t of batchCleaned) {
         if (!seen.has(t) && t.length >= 2) { seen.add(t); terms.push(t); }
       }
-      if (terms.length < 1) { alert('Enter at least one term or load a batch list'); return; }
+      if (terms.length < 1) { alert('Enter at least one Hebrew search term (one per line)'); return; }
 
       const minSkip = parseInt(document.getElementById('minSkip').value) || -500;
       const maxSkip = parseInt(document.getElementById('maxSkip').value) || 500;
@@ -1434,7 +1510,7 @@
         for (let skip = minSkip; skip <= maxSkip; skip++) {
           if (scanAbort) break;
           if (skip === 0) continue;
-          const found = findELS(torahText, term, skip);
+          const found = findELS(torahTextNorm, term, skip);
           for (const pos of found) results.push({ pos, skip });
         }
 
@@ -1784,17 +1860,7 @@
     let batchAllResults = {};  // cleaned term -> [{pos, skip}]
     let batchAbort = false;
 
-    window.toggleBatchPanel = function() {
-      const panel = document.getElementById('batchPanel');
-      const btn = document.getElementById('batchToggleBtn');
-      if (panel.style.display === 'none') {
-        panel.style.display = '';
-        btn.textContent = 'Hide Batch';
-      } else {
-        panel.style.display = 'none';
-        btn.textContent = 'Load Batch List';
-      }
-    };
+    // toggleBatchPanel removed — terms panel is always visible
 
     window.loadBatchFile = function(input) {
       const file = input.files[0];
@@ -1817,6 +1883,12 @@
     };
 
     // Strip name to consonantal Hebrew only
+    // Normalize sofit (final-form) letters to regular form for search matching
+    const SOFIT_MAP = { 'ך':'כ', 'ם':'מ', 'ן':'נ', 'ף':'פ', 'ץ':'צ' };
+    function normalizeSofiot(s) {
+      return s.replace(/[ךםןףץ]/g, ch => SOFIT_MAP[ch]);
+    }
+
     function cleanHebrewName(name) {
       // Remove parenthetical content: (אדריאן), (אלכסנדר), (ג'ימי), (נטלי)
       let s = name.replace(/\([^)]*\)/g, '');
@@ -1828,12 +1900,14 @@
       s = s.replace(/["״׳']/g, '');
       // Keep only Hebrew letters (strip spaces, punctuation, Latin chars, digits)
       s = s.replace(/[^\u05D0-\u05EA]/g, '');
+      // Normalize final-form letters to regular form for search
+      s = normalizeSofiot(s);
       return s;
     }
 
     window.parseBatchInput = function() {
       const text = document.getElementById('batchTextarea').value.trim();
-      if (!text) { alert('Paste or load names first'); return; }
+      if (!text) { batchTerms = []; return; }
 
       const lines = text.split('\n').map(l => l.trim()).filter(l => l);
       batchTerms = [];
@@ -1854,7 +1928,7 @@
         });
       }
 
-      if (batchTerms.length === 0) { alert('No valid terms found'); return; }
+      if (batchTerms.length === 0) return;
 
       // Show preview
       const preview = document.getElementById('batchPreview');
@@ -1862,8 +1936,8 @@
       document.getElementById('batchPreviewCount').textContent = `${batchTerms.length} terms parsed`;
 
       // Time estimate
-      const skipRange = Math.abs(parseInt(document.getElementById('maxSkip').value) || 100) -
-                         (parseInt(document.getElementById('minSkip').value) || -100) + 1;
+      const skipRange = Math.abs(parseInt(document.getElementById('maxSkip').value) || 500) -
+                         (parseInt(document.getElementById('minSkip').value) || -500) + 1;
       const estSec = Math.round(batchTerms.length * (skipRange / 200) * 4);
       const estMin = Math.floor(estSec / 60);
       const estRemSec = estSec % 60;
@@ -1986,17 +2060,10 @@
       scanAllResults = s.allResults;
       scanClusters = s.clusters || [];
 
-      // Restore term inputs
-      const container = document.getElementById('scanTermEntries');
-      container.innerHTML = '';
-      s.terms.forEach((term, i) => {
-        const div = document.createElement('div');
-        div.className = 'scan-term-entry';
-        div.innerHTML = `<div class="term-color-swatch" style="background:${TERM_COLORS[i % 8]};"></div>
-          <input type="text" class="scan-term-input" value="${term}" dir="rtl">
-          <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>`;
-        container.appendChild(div);
-      });
+      // Restore terms into textarea
+      document.getElementById('batchTextarea').value = s.terms.join('\n');
+      // Auto-parse so batch state is consistent
+      parseBatchInput();
 
       // Load char DB for verse attribution then display
       loadCharDB().then(() => {
@@ -2043,18 +2110,12 @@
 
     window.clearScanSession = function() {
       if (!confirm('Clear all terms and results?')) return;
-      const container = document.getElementById('scanTermEntries');
-      container.innerHTML = `
-        <div class="scan-term-entry">
-          <div class="term-color-swatch" style="background:#ffc107;"></div>
-          <input type="text" class="scan-term-input" placeholder="Term 1" dir="rtl">
-          <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
-        </div>
-        <div class="scan-term-entry">
-          <div class="term-color-swatch" style="background:#00bcd4;"></div>
-          <input type="text" class="scan-term-input" placeholder="Term 2" dir="rtl">
-          <button class="remove-btn" onclick="removeScanTerm(this)">&times;</button>
-        </div>`;
+      document.getElementById('batchTextarea').value = '';
+      batchTerms = [];
+      batchAllResults = {};
+      document.getElementById('batchPreview').style.display = 'none';
+      document.getElementById('batchResults').style.display = 'none';
+      document.getElementById('batchParseStatus').textContent = '';
       document.getElementById('scanResults').innerHTML = '';
       document.getElementById('scanMatrixView').style.display = 'none';
       scanTerms = [];

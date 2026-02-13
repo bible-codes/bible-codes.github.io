@@ -172,11 +172,14 @@ The main tool. It searches for Equidistant Letter Sequences in the Torah — pat
 **Purpose**: Search the Torah text in real time for up to 8 Hebrew terms simultaneously, across a configurable range of skip values (default: -500 to +500).
 
 **How to use**:
-1. Enter one or more Hebrew search terms (click "+ Add Term" for additional inputs).
-2. Set the skip range. Larger ranges search more thoroughly but take longer.
-3. Click "Search". A progress bar shows completion percentage. Click "Cancel" to abort.
+1. Enter Hebrew search terms in the text box, one per line. You can also upload a `.txt` file.
+2. Use the on-screen Hebrew keyboard (click the ⌨ button) if your device lacks a Hebrew keyboard.
+3. Set the skip range. Larger ranges search more thoroughly but take longer.
+4. Click "Search". Terms are automatically parsed, cleaned, and deduplicated. A progress bar shows completion percentage. Click "Cancel" to abort.
 
-**What happens internally**: For each term and each skip value in the range, the application extracts the letter sequence at that skip interval and runs pattern matching (see [Section 4.1](#41-els-search-algorithm) for details). When two or more terms are used, results are ranked by the **smallest cluster** — the tightest region of Torah text that contains at least one hit from every term.
+**Automatic input cleaning**: Non-Hebrew characters, spaces, punctuation, military ranks (אל"ם, סמ"ר, etc.), parenthetical notes, and the memorial suffix הי"ד are all stripped automatically. Final-form letters (sofiot: ך→כ, ם→מ, ן→נ, ף→פ, ץ→צ) are treated as equivalent to their regular forms during search, so searching for a word will find it regardless of letter form. The matrix display preserves the original Torah text with sofiot as they appear.
+
+**What happens internally**: For each term and each skip value in the range, the application extracts the letter sequence at that skip interval and runs pattern matching against a normalized version of the Torah text (see [Section 4.1](#41-els-search-algorithm) for details). When two or more terms are used, results are ranked by the **smallest cluster** — the tightest region of Torah text that contains at least one hit from every term.
 
 **Cluster ranking**: The sliding window algorithm (O(M log M) where M is total hits) merges all hits from all terms, sorts them by position, then finds the smallest windows containing all terms. This is described in detail in [Section 4.1.5](#415-n-term-cluster-discovery).
 
@@ -226,18 +229,11 @@ The main tool. It searches for Equidistant Letter Sequences in the Torah — pat
 3. Browse paginated results.
 4. Click any word to search it in the ELS index.
 
-#### 3.1.4 Batch Term Loader
+#### 3.1.4 Batch Search & Results Table
 
-**Purpose**: Search for many terms at once by uploading a text file or pasting a list.
+**Purpose**: Search for many terms at once. When multiple terms are searched, results appear in a sortable table showing hit counts, best skip values, and scan status for each term. Export results as CSV.
 
-**How to use**:
-1. In Full Scan mode, open the Batch panel.
-2. Paste a list of Hebrew terms (one per line) or upload a `.txt` file.
-3. The tool automatically cleans Hebrew names: it strips military ranks (אל"ם, סמ"ר, etc.), parenthetical notes, the memorial suffix הי"ד, and stray punctuation.
-4. Click Search. Each batch term is scanned and results appear in a sortable table.
-5. Export results as CSV.
-
-The batch terms are merged with any manual terms you entered and searched together.
+**Hebrew Virtual Keyboard**: Click the ⌨ button to toggle an on-screen Hebrew keyboard. This allows typing Hebrew on any device, regardless of whether Hebrew fonts or keyboard layouts are installed. The keyboard follows standard Israeli layout (top row: ק ר א ט ו ן ם פ) with New Line, Space, and Backspace keys.
 
 #### 3.1.5 Matrix Visualization
 
@@ -1191,6 +1187,9 @@ Consolidated content from all Bible-codes-related repositories into this single 
 - **heb_wiki_words**: Copied `extract_heb.py` word extraction script to `tools/`.
 - Created `other-resources.html` page linking all imported content.
 - Added "Other Resources" link to `bible-codes.html` footer.
+- **Unified term input**: Replaced individual term input fields with a single textarea (one term per line). Auto-parses on Search — no separate Parse button needed.
+- **Hebrew Virtual Keyboard**: On-screen keyboard toggle (⌨ button) for typing Hebrew on any device without a Hebrew keyboard installed. Standard Israeli layout.
+- **Sofit normalization**: Final-form letters (ך→כ, ם→מ, ן→נ, ף→פ, ץ→צ) treated as equivalent during search. Torah text displayed with original sofiot preserved.
 
 ### February 7–8, 2026: 3D Matrix, Batch Loader, Verse Hover
 
