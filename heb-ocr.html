@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hebrew OCR PDF/Image to text</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #output {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-top: 20px;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: scroll;
+        }
+        #fileInput, #urlInput, #processButton {
+            margin: 10px 0;
+        }
+        #processButton {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #processButton:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #spinner {
+            display: none;
+            margin-top: 20px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
+        #progressMessage {
+            font-size: 14px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>OCR Hebrew PDF or Image</h1>
+
+    <label for="fileInput">Upload PDF or Image File</label>
+    <input type="file" id="fileInput" accept="application/pdf, image/*" />
+    
+    <br>
+
+    <label for="urlInput">Or provide a URL (for PDF or image)</label>
+    <input type="text" id="urlInput" placeholder="Enter file URL" />
+    
+    <br>
+    
+    <!-- Process button (initially disabled) -->
+    <button id="processButton" disabled>Process</button>
+
+    <div id="spinner"></div> <!-- Spinner -->
+
+    <div id="output"></div>
+    
+    <button id="downloadButton" style="display:none;">Download OCR Output (.txt)</button>
+
+    <div id="errorMessage"></div> <!-- Error message -->
+    <div id="progressMessage"></div> <!-- Progress Message -->
+
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+    
+    <script>
+        let ocrText = '';  // Global variable to store OCR text
+        let currentPage = 1;
+        let numPages = 0;
+        let selectedFile = null;  // Holds the uploaded file or URL input
+        
+        // Handle file input
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            selectedFile = file;
+            enableProcessButton();
+        });
+
+        // Handle URL input
+        document.getElementById('urlInput').addEventListener('input', function() {
+            const url = document.getElementById('urlInput').value;
+            selectedFile = url;
+            enableProcessButton();
+        });
+
+        // Enable or disable the Process button based on whether a file is selected or URL is provided
+        function enableProcessButton() {
+            const processButton = document.getElementById('processButton');
+            if (selectedFile) {
+                processButton.disabled = false;  // Enable the button
+            } else {
+                processButton.disabled = true;  // Disable the button if no file or URL
+            }
+        }
+
+        // Handle the Process button click
+        document.getElementById('processButton').addEventListener('click', function() {
+            showSpinner(true);
+            clearErrorMessage();
+            clearProgressMessage();
+            if (selectedFile instanceof File) {
+                processPDF(selectedFile);
+            } else if (typeof selectedFile === 'string' && selectedFile) {
+                fetch(selectedFile)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const file = new File([blob], selectedFile.split('/').pop(), { type: blob.type });
+                        processPDF(file);
+                    })
+                    .catch(err => {
+                        showSpinner(false);
+                        showErrorMessage('Error loading the file from URL');
+                        console.error(err);
+                    });
+            }
+        });
+
+        // Function to process the selected PDF
+        function processPDF(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const pdfData = new Uint8Array(e.target.result);
+                
+                // Load PDF using PDF.js
+                pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
+                    numPages = pdf.numPages;
+                    ocrText = '';  // Reset OCR text
+                    currentPage = 1;
+                    processPage(pdf, currentPage);
+                }).catch(err => {
+                    showSpinner(false);
+                    showErrorMessage('Error loading PDF document');
+                    console.error(err);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Process a specific page of the PDF
+        function processPage(pdf, pageNumber) {
+            pdf.getPage(pageNumber).then(function(page) {
+                const scale = 1.5;
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                // Render the page to canvas
+                page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise.then(function() {
+                    // Perform OCR on the rendered canvas
+                    performOCR(canvas, pageNumber);
+                }).catch(err => {
+                    showSpinner(false);
+                    showErrorMessage('Error rendering page to canvas');
+                    console.error(err);
+                });
+            }).catch(err => {
+                showSpinner(false);
+                showErrorMessage('Error processing page ' + pageNumber);
+                console.error(err);
+            });
+        }
+
+        // Perform OCR on the current page using Tesseract.js
+        function performOCR(canvas, pageNumber) {
+            Tesseract.recognize(
+                canvas,
+                'heb',  // Hebrew language
+                {
+                    logger: (m) => {
+                        if (m.status === 'recognizing text') {
+                            updateProgressMessage(`Recognizing text... ${Math.round(m.progress * 100)}%`);
+                        }
+                    }  // Log OCR progress
+                }
+            ).then(({ data: { text } }) => {
+                // Append the text for the current page
+                ocrText += text + '\n--- End of Page ' + pageNumber + ' ---\n';
+                document.getElementById('output').textContent = ocrText;  // Update output in real-time
+
+                // Process the next page or finish
+                if (pageNumber < numPages) {
+                    currentPage++;
+                    processPage(pdf, currentPage);
+                } else {
+                    // Show the download button after processing is complete
+                    showSpinner(false);
+                    document.getElementById('downloadButton').style.display = 'inline-block';
+                }
+            }).catch(err => {
+                showSpinner(false);
+                showErrorMessage('OCR Error on page ' + pageNumber);
+                console.error("OCR Error on page " + pageNumber, err);
+            });
+        }
+
+        // Save OCR text as a .txt file
+        document.getElementById('downloadButton').addEventListener('click', function() {
+            const blob = new Blob([ocrText], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'ocr_output.txt';
+            link.click();
+        });
+
+        // Show or hide the spinner
+        function showSpinner(visible) {
+            const spinner = document.getElementById('spinner');
+            spinner.style.display = visible ? 'block' : 'none';
+        }
+
+        // Display error message
+        function showErrorMessage(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'block';
+            errorMessage.textContent = message;
+        }
+
+        // Clear the error message
+        function clearErrorMessage() {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+        }
+
+        // Update the progress message during OCR
+        function updateProgressMessage(message) {
+            const progressMessage = document.getElementById('progressMessage');
+            progressMessage.textContent = message;
+        }
+
+        // Clear the progress message
+        function clearProgressMessage() {
+            const progressMessage = document.getElementById('progressMessage');
+            progressMessage.textContent = '';
+        }
+    </script>
+</body>
+</html>

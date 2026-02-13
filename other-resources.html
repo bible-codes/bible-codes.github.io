@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e5aa8">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <title>Other Resources - Bible Codes</title>
+  <style>
+    :root {
+      --blue: #1e5aa8;
+      --blue-light: #e8f0f8;
+      --blue-dark: #174a8a;
+      --gray: #555;
+      --gray-light: #f5f5f5;
+      --border: #ccc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-light);
+      color: #333;
+      line-height: 1.6;
+    }
+    .header {
+      background: var(--blue);
+      color: white;
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .header h1 { font-size: 1.4em; font-weight: 600; }
+    .header p { font-size: 0.85em; opacity: 0.85; margin-top: 4px; }
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      color: var(--blue);
+      font-size: 1.15em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--blue-light);
+    }
+    .section h3 {
+      color: var(--gray);
+      font-size: 0.95em;
+      margin: 12px 0 6px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      display: block;
+      padding: 14px;
+      background: var(--gray-light);
+      border-radius: 6px;
+      text-decoration: none;
+      color: #333;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      border-color: var(--blue);
+      box-shadow: 0 2px 8px rgba(30,90,168,0.15);
+    }
+    .card .card-title {
+      font-weight: 600;
+      color: var(--blue);
+      margin-bottom: 4px;
+    }
+    .card .card-desc {
+      font-size: 0.85em;
+      color: var(--gray);
+    }
+    .file-list {
+      list-style: none;
+      padding: 0;
+    }
+    .file-list li {
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 0.9em;
+    }
+    .file-list li:last-child { border-bottom: none; }
+    .file-list a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .file-list a:hover { text-decoration: underline; }
+    .file-list .tag {
+      display: inline-block;
+      font-size: 0.75em;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .tag-data { background: #e8f5e9; color: #2e7d32; }
+    .tag-tool { background: #e3f2fd; color: #1565c0; }
+    .tag-ref { background: #fff3e0; color: #e65100; }
+    .tag-script { background: #f3e5f5; color: #7b1fa2; }
+    footer {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 12px 20px;
+      font-size: 13px;
+      color: #888;
+      text-align: center;
+      border-top: 1px solid #ddd;
+    }
+    footer a { color: var(--blue); margin: 0 6px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Other Resources</h1>
+  <p>Additional tools, data, and reference material — to be sorted</p>
+</div>
+
+<div class="container">
+
+  <!-- Legacy Tools -->
+  <div class="section">
+    <h2>Legacy Tools (from bible-data-science)</h2>
+    <div class="card-grid">
+      <a href="heb-ocr.html" class="card">
+        <div class="card-title">Hebrew OCR</div>
+        <div class="card-desc">Extract Hebrew text from PDF/image files using Tesseract.js OCR engine</div>
+      </a>
+      <a href="igeret.html" class="card">
+        <div class="card-title">Igeret HaRamban</div>
+        <div class="card-desc">Ramban's Letter to his son — Hebrew text with English &amp; Japanese translations, audio</div>
+      </a>
+      <a href="qa.html" class="card">
+        <div class="card-title">Q&amp;A / Bible Statistics</div>
+        <div class="card-desc">Hebrew Bible statistics from Wikipedia — letter counts, verse counts, Talmudic sources</div>
+      </a>
+      <a href="BCApp.html" class="card">
+        <div class="card-title">BCApp (Legacy ELS)</div>
+        <div class="card-desc">Original Bible Code search interface — predecessor to the current ELS search tool</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Manuscript Data -->
+  <div class="section">
+    <h2>Manuscript Variant Data</h2>
+    <p style="font-size:0.85em;color:var(--gray);margin-bottom:12px;">
+      Genesis text from multiple historical codices and editions. Compressed (.gz) format.
+    </p>
+
+    <h3>Koren Edition (all 5 Torah books)</h3>
+    <ul class="file-list">
+      <li><a href="data/manuscripts/genesis.koren.gz">Genesis (Koren)</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/exodus.koren.gz">Exodus (Koren)</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/leviticus.koren.gz">Leviticus (Koren)</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/numbers.koren.gz">Numbers (Koren)</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/deuteronomy.koren.gz">Deuteronomy (Koren)</a> <span class="tag tag-data">data</span></li>
+    </ul>
+
+    <h3>Genesis — Other Codices</h3>
+    <ul class="file-list">
+      <li><a href="data/manuscripts/genesis.sassoon.gz">Sassoon Codex</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.bhs.gz">BHS (Biblia Hebraica Stuttgartensia)</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.hilleli.gz">Hilleli Codex</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.jerus.gz">Jerusalem Codex</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.venice.gz">Venice Edition</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.yemen.gz">Yemen Manuscript</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.yemen1.gz">Yemen Manuscript (1)</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.yemen2.gz">Yemen Manuscript (2)</a> <span class="tag tag-data">data</span></li>
+      <li><a href="data/manuscripts/genesis.yemen3.gz">Yemen Manuscript (3)</a> <span class="tag tag-data">data</span></li>
+    </ul>
+  </div>
+
+  <!-- Full Tanach Text Data -->
+  <div class="section">
+    <h2>Full Tanach Text Data</h2>
+    <ul class="file-list">
+      <li><a href="data/tanach-texts/NoSpacesTanach.dat">NoSpacesTanach.dat</a> — Full Tanach without spaces (1.2M letters) <span class="tag tag-data">data</span></li>
+      <li><a href="data/tanach-texts/t3utf.dat">t3utf.dat</a> — Full Tanach UTF-8 with spaces/punctuation <span class="tag tag-data">data</span></li>
+      <li><a href="data/tanach-texts/tanach.zip">tanach.zip</a> — Zipped Tanach dataset <span class="tag tag-data">data</span></li>
+      <li><a href="data/tanach-texts/Unkelos.zip">Unkelos.zip</a> — Targum Onkelos (Aramaic translation of Torah) <span class="tag tag-data">data</span></li>
+    </ul>
+  </div>
+
+  <!-- Notebooks & Scripts -->
+  <div class="section">
+    <h2>Notebooks &amp; Scripts</h2>
+    <p style="font-size:0.85em;color:var(--gray);margin-bottom:12px;">
+      Jupyter notebooks and Python scripts from related repositories.
+    </p>
+    <ul class="file-list">
+      <li><a href="reference/notebooks/anagram.ipynb">anagram.ipynb</a> — Hebrew anagram analysis notebook <span class="tag tag-ref">notebook</span></li>
+      <li><a href="reference/notebooks/CleanBible.ipynb">CleanBible.ipynb</a> — Bible text cleaning/preprocessing <span class="tag tag-ref">notebook</span></li>
+      <li><a href="reference/notebooks/3d.ipynb">3d.ipynb</a> — 3D visualization of ELS results <span class="tag tag-ref">notebook</span></li>
+      <li><a href="tools/els-verify.py">els-verify.py</a> — Hebrew text verification script (Python) <span class="tag tag-script">script</span></li>
+      <li><a href="tools/extract_heb.py">extract_heb.py</a> — Extract Hebrew words from Wikipedia dump <span class="tag tag-script">script</span></li>
+    </ul>
+  </div>
+
+  <!-- Source Repositories -->
+  <div class="section">
+    <h2>Source Repositories</h2>
+    <p style="font-size:0.85em;color:var(--gray);margin-bottom:12px;">
+      Content on this page was consolidated from the following repositories:
+    </p>
+    <ul class="file-list">
+      <li><a href="https://github.com/bible-codes/bible-codes.github.io">bible-codes/bible-codes.github.io</a> — Main Bible Codes app (this repo)</li>
+      <li><a href="https://github.com/roni762583/bible-data-science.github.io">roni762583/bible-data-science.github.io</a> — Bible Codes and Data Science (legacy)</li>
+      <li><a href="https://github.com/roni762583/torahcodes_fork">roni762583/torahcodes_fork</a> — Python ELS search engine (already in torah-codes/)</li>
+      <li><a href="https://github.com/roni762583/heb_wiki_words">roni762583/heb_wiki_words</a> — Hebrew word extraction from Wikipedia</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer>
+  <a href="bible-codes.html">ELS Search</a> |
+  <a href="text-search.html">Text Search</a> |
+  <a href="gematria.html">Gematria</a> |
+  <a href="acronym.html">Acronyms</a> |
+  <a href="tsirufim.html">Tsirufim</a> |
+  <a href="matrix-view.html">Matrix View</a> |
+  <a href="book-view.html">Book View</a>
+</footer>
+
+</body>
+</html>
