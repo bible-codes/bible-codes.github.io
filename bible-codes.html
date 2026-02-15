@@ -2398,8 +2398,14 @@
           const lookups = dictService.lookup(item.word);
           if (lookups && lookups.length > 0) {
             inDict = true;
-            // Get source names (e.g. "BDB, Wiktionary")
-            const srcNames = [...new Set(lookups.map(l => l.sourceName || l.source || ''))].filter(Boolean);
+            // Get source names — use short abbreviations
+            const SHORT_SRC = {'Unified Hebrew Dictionary':'Unified','Brown-Driver-Briggs':'BDB',
+              "Strong's Hebrew Concordance":"Strong's",'Hebrew Wiktionary':'Wikt','Tanakh Extracted':'Tanakh',
+              'Hebrew Wikipedia':'Wiki','Wikipedia Full-Text':'Wiki-FT','Hebrew Names':'Names'};
+            const srcNames = [...new Set(lookups.map(l => {
+              const name = l.sourceName || l.source || '';
+              return SHORT_SRC[name] || name;
+            }))].filter(Boolean);
             dictSource = srcNames.join(', ');
             // Get best definition
             for (const l of lookups) {
@@ -2533,7 +2539,6 @@
         const d = filtered[i];
         const bgColor = d.isName ? '#e3f2fd' : d.isDate ? '#fff3e0' : d.inDict ? '#dcedc8' : '#fff';
         const zColor = d.zScore > 3 ? '#b71c1c' : d.zScore > 2 ? '#bf360c' : '#000';
-        const defText = d.definition ? d.definition.substring(0, 60) : '';
         const catBadge = d.isName ? '<span style="font-size:9px;background:#1565c0;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">Name</span>' :
                          d.isDate ? '<span style="font-size:9px;background:#e65100;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">Date</span>' : '';
         const safeWord = d.word.replace(/'/g, "\\'");
@@ -2546,8 +2551,8 @@
           <td style="padding:4px 6px;color:#000;">${d.bestOcc.skip}</td>
           <td style="padding:4px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
           <td style="padding:4px 6px;color:#000;">${d.totalOccurrences}</td>
-          <td style="padding:4px 6px;font-size:11px;color:#000;">${d.dictSource || (d.inDict ? '✓' : '')}</td>
-          <td style="padding:4px 6px;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">${defText}</td>
+          <td style="padding:4px 6px;font-size:10px;color:#555;white-space:nowrap;">${d.dictSource || (d.inDict ? '✓' : '')}</td>
+          <td style="padding:4px 6px;font-size:12px;color:#000;" title="${d.definition || ''}">${d.definition || ''}</td>
         </tr>`;
       }
 
