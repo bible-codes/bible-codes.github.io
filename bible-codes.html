@@ -850,10 +850,15 @@
             </div>
           </div>
 
-          <p style="font-size:13px;color:var(--gray);margin-bottom:10px;">
-            Enter Hebrew search terms, one per line. Names are auto-cleaned to Hebrew consonants.
-          </p>
-          <textarea id="batchTextarea" class="batch-textarea" placeholder="Enter terms, one per line...&#10;e.g.&#10;משה&#10;אהרן&#10;ישראל"></textarea>
+          <div style="font-size:13px;color:var(--gray);margin-bottom:10px;line-height:1.6;">
+            <strong>One term per line.</strong> Names are auto-cleaned to Hebrew consonants.<br>
+            <strong>Alternate spellings:</strong> put variants on the <em>same line</em> separated by spaces.<br>
+            <span style="font-size:12px;color:#999;">
+              All alternates are searched but only the best-matching one is used per cluster/matrix.<br>
+              Example: <code style="background:#f0f0f0;padding:1px 4px;border-radius:2px;direction:rtl;">גוטרי גות'רי</code> &larr; two spellings of Guthrie
+            </span>
+          </div>
+          <textarea id="batchTextarea" class="batch-textarea" placeholder="Enter terms, one per line...&#10;Alternate spellings: same line, space-separated&#10;e.g.&#10;ננסי&#10;גוטרי גות'רי&#10;סוואנה"></textarea>
           <div style="margin-top:8px;">
             <span id="batchParseStatus" style="font-size:13px;color:var(--gray);"></span>
           </div>
@@ -1719,12 +1724,18 @@
 
       // Always parse from textarea (auto-parse on search)
       parseBatchInput();
-      const batchCleaned = batchTerms.filter(t => t.cleaned.length >= 2).map(t => t.cleaned);
 
+      // Build term list: one entry per line (primary form), with alternates
       const seen = new Set();
-      const terms = [];
-      for (const t of batchCleaned) {
-        if (!seen.has(t) && t.length >= 2) { seen.add(t); terms.push(t); }
+      const terms = [];       // primary cleaned forms (for clustering)
+      const termAlts = {};    // primary -> [all alternate forms]
+      for (const bt of batchTerms) {
+        if (bt.alternates.length === 0) continue;
+        const primary = bt.cleaned;
+        if (seen.has(primary)) continue;
+        seen.add(primary);
+        terms.push(primary);
+        termAlts[primary] = bt.alternates;
       }
       if (terms.length < 1) { alert('Enter at least one Hebrew search term (one per line)'); return; }
 
@@ -1761,33 +1772,46 @@
         renderBatchTable();
       }
 
-      const totalTerms = terms.length;
+      // Count total search forms (including alternates) for progress
+      const totalForms = terms.reduce((s, t) => s + (termAlts[t] || [t]).length, 0);
+      let formsSearched = 0;
       const startTime = performance.now();
 
-      // Scan per-term (better progress for large batches)
-      for (let ti = 0; ti < totalTerms; ti++) {
+      // Scan per-term: search all alternates, merge results under primary key
+      for (let ti = 0; ti < terms.length; ti++) {
         if (scanAbort) break;
 
-        const term = terms[ti];
-        const results = [];
+        const primary = terms[ti];
+        const alts = termAlts[primary] || [primary];
+        const mergedResults = [];
 
-        for (let skip = minSkip; skip <= maxSkip; skip++) {
+        for (const form of alts) {
           if (scanAbort) break;
-          if (skip === 0) continue;
-          const found = findELS(torahTextNorm, term, skip);
-          for (const pos of found) results.push({ pos, skip });
+          for (let skip = minSkip; skip <= maxSkip; skip++) {
+            if (scanAbort) break;
+            if (skip === 0) continue;
+            const found = findELS(torahTextNorm, form, skip);
+            for (const pos of found) mergedResults.push({ pos, skip, form });
+          }
+          formsSearched++;
+          // Progress based on total forms searched
+          const pct = Math.round((formsSearched / totalForms) * 100);
+          progressBar.style.width = pct + '%';
+          progressBar.textContent = pct + '%';
+          await new Promise(r => setTimeout(r, 0));
         }
 
-        scanAllResults[term] = results;
+        // Store merged results under primary key
+        scanAllResults[primary] = mergedResults;
 
-        // Update batch table row if this term came from batch
+        // Update batch table row
         if (hasBatch) {
-          const bt = batchTerms.find(b => b.cleaned === term);
+          const bt = batchTerms.find(b => b.cleaned === primary);
           if (bt) {
-            batchAllResults[term] = results;
-            bt.hits = results.length;
-            if (results.length > 0) {
-              const sorted = [...results].sort((a, b) => Math.abs(a.skip) - Math.abs(b.skip));
+            batchAllResults[primary] = mergedResults;
+            bt.hits = mergedResults.length;
+            if (mergedResults.length > 0) {
+              const sorted = [...mergedResults].sort((a, b) => Math.abs(a.skip) - Math.abs(b.skip));
               bt.bestSkip = sorted[0].skip;
               bt.bestPos = sorted[0].pos;
             }
@@ -1797,17 +1821,18 @@
           }
         }
 
-        // Progress
-        const pct = Math.round(((ti + 1) / totalTerms) * 100);
+        // Progress (keep pct updated even if no alternates)
+        const pct = Math.round((formsSearched / totalForms) * 100);
         progressBar.style.width = pct + '%';
         progressBar.textContent = pct + '%';
 
         const elapsed = (performance.now() - startTime) / 1000;
-        const perTerm = elapsed / (ti + 1);
-        const remaining = Math.round(perTerm * (totalTerms - ti - 1));
+        const perForm = elapsed / formsSearched;
+        const remaining = Math.round(perForm * (totalForms - formsSearched));
         const remMin = Math.floor(remaining / 60);
         const remSec = remaining % 60;
-        status.textContent = `Term ${ti + 1}/${totalTerms}: "${term}" — ${results.length} hits` +
+        const altInfo = alts.length > 1 ? ` (${alts.length} forms)` : '';
+        status.textContent = `Term ${ti + 1}/${terms.length}: "${primary}"${altInfo} — ${mergedResults.length} hits` +
           (remaining > 0 ? ` | ~${remMin}m ${remSec}s remaining` : '');
 
         await new Promise(r => setTimeout(r, 0));
@@ -1822,7 +1847,7 @@
       const totalHits = Object.values(scanAllResults).reduce((s, r) => s + r.length, 0);
       status.textContent = scanAbort
         ? 'Cancelled.'
-        : `Done! ${totalTerms} terms, ${totalHits.toLocaleString()} hits in ${Math.floor(totalTime/60)}m ${totalTime%60}s`;
+        : `Done! ${terms.length} terms (${totalForms} forms), ${totalHits.toLocaleString()} hits in ${Math.floor(totalTime/60)}m ${totalTime%60}s`;
 
       // Auto-cluster all terms with hits (if 2+)
       scanClusters = [];
@@ -2120,7 +2145,10 @@
     }
 
     // ============= BATCH TERM LOADER =============
-    let batchTerms = [];       // [{original, cleaned, hits, bestSkip, bestPos, status}]
+    // batchTerms: each entry is one "term slot" (one line from textarea).
+    // If a line has space-separated words, they're alternate spellings.
+    // alternates: array of cleaned forms (all searched, best used in matrix).
+    let batchTerms = [];       // [{original, cleaned, alternates, hits, bestSkip, bestPos, status}]
     let batchAllResults = {};  // cleaned term -> [{pos, skip}]
     let batchAbort = false;
 
@@ -2178,13 +2206,22 @@
       const seen = new Set();
 
       for (const line of lines) {
-        const cleaned = cleanHebrewName(line);
-        if (cleaned.length < 2) continue;    // skip single-letter or empty
-        if (seen.has(cleaned)) continue;      // deduplicate
-        seen.add(cleaned);
+        // Space-separated words on same line = alternate spellings
+        const parts = line.split(/\s+/);
+        const alternates = [];
+        for (const part of parts) {
+          const c = cleanHebrewName(part);
+          if (c.length >= 2 && !seen.has(c)) {
+            alternates.push(c);
+            seen.add(c);
+          }
+        }
+        if (alternates.length === 0) continue;
+        // Primary form = first alternate; others are alt spellings
         batchTerms.push({
           original: line,
-          cleaned,
+          cleaned: alternates[0],
+          alternates,    // all cleaned forms for this term slot
           hits: 0,
           bestSkip: null,
           bestPos: null,
@@ -2197,23 +2234,31 @@
       // Show preview
       const preview = document.getElementById('batchPreview');
       preview.style.display = '';
-      document.getElementById('batchPreviewCount').textContent = `${batchTerms.length} terms parsed`;
+      const totalForms = batchTerms.reduce((s, t) => s + t.alternates.length, 0);
+      document.getElementById('batchPreviewCount').textContent =
+        `${batchTerms.length} terms parsed` + (totalForms > batchTerms.length ? ` (${totalForms} forms incl. alternates)` : '');
 
-      // Time estimate
+      // Time estimate (count all forms)
       const skipRange = (parseInt(document.getElementById('maxSkip').value) || 500) -
                          (parseInt(document.getElementById('minSkip').value) || -500) + 1;
-      const estSec = Math.round(batchTerms.length * (skipRange / 200) * 4);
+      const estSec = Math.round(totalForms * (skipRange / 200) * 4);
       const estMin = Math.floor(estSec / 60);
       const estRemSec = estSec % 60;
       document.getElementById('batchTimeEstimate').textContent =
         `Est. ~${estMin}m ${estRemSec}s (${skipRange} skip values)`;
 
       // Preview list
-      let previewHtml = batchTerms.map((t, i) =>
-        `<div style="display:inline-block;padding:3px 8px;margin:2px;background:#e3ecf7;border-radius:3px;font-size:12px;">
-          <strong>${t.cleaned}</strong> <span style="color:#999;">← ${t.original}</span>
-        </div>`
-      ).join('');
+      let previewHtml = batchTerms.map((t, i) => {
+        if (t.alternates.length > 1) {
+          const altStr = t.alternates.map((a, j) => j === 0 ? `<strong>${a}</strong>` : a).join(' / ');
+          return `<div style="display:inline-block;padding:3px 8px;margin:2px;background:#e3ecf7;border-radius:3px;font-size:12px;">
+            ${altStr} <span style="color:#999;font-size:10px;">(alt)</span>
+          </div>`;
+        }
+        return `<div style="display:inline-block;padding:3px 8px;margin:2px;background:#e3ecf7;border-radius:3px;font-size:12px;">
+          <strong>${t.cleaned}</strong> <span style="color:#999;">\u2190 ${t.original}</span>
+        </div>`;
+      }).join('');
       document.getElementById('batchPreviewList').innerHTML = previewHtml;
       document.getElementById('batchParseStatus').textContent = `${batchTerms.length} terms ready`;
 
@@ -3971,7 +4016,9 @@
 
     window.vidShowPanel = function() {
       const panel = document.getElementById('videoControlPanel');
-      panel.style.display = panel.style.display === 'none' ? '' : 'none';
+      // Use getComputedStyle to detect CSS-hidden panels (not just inline style)
+      const isHidden = getComputedStyle(panel).display === 'none';
+      panel.style.display = isHidden ? 'block' : 'none';
     };
 
     function vidUpdateStatus(text) {

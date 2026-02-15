@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-08 (3D Matrix, Batch Loader, Verse Hover, Unified Search)
+**Last Updated**: 2026-02-15 (WRR c(w,w') Statistic, Alt Spellings, Video Capture Fix)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,150 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-07/08
+## Current Session: 2026-02-13/15
+
+### WRR 1994 Experiment Replication ✅ COMPLETE
+
+Full client-side replication of Witztum, Rips & Rosenberg (1994) "Equidistant Letter Sequences in the Book of Genesis", *Statistical Science* 9(3):429–438.
+
+**Status**: OPERATIONAL — two modes available (Quick Run + Full WRR with c statistic)
+
+#### What Is Implemented (Faithful to WRR Paper)
+
+1. **32 Rabbi Dataset** (WRR List 2)
+   - All 32 rabbis with Hebrew name appellations (multiple forms per rabbi)
+   - Death dates in Hebrew calendar format (multiple date forms per rabbi)
+   - Rabbis #4 and #8 excluded (no recorded death dates) → 30 active rabbis
+   - Data hardcoded in `WRR_RABBIS` array in `bible-codes.html`
+
+2. **Genesis Text** (78,064 consonantal letters)
+   - First 78,064 chars of `data/torahNoSpaces.txt` (Koren edition)
+   - Sofit normalization: ך→כ, ם→מ, ן→נ, ף→פ, ץ→צ (via `normalizeSofiot()`)
+   - SHA-256 verified: `b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226`
+
+3. **Dynamic Skip Range D(w)** per term
+   - For word w of length k with letter probabilities p_i:
+   - E(w,d) = (L − (k−1)d) · ∏p_i
+   - D(w) = smallest d where Σ_{d=2..D} E(w,d) ≥ 10
+   - Capped at user-configurable maximum (default 1000)
+
+4. **ELS Search** (both directions)
+   - Forward ELS: skip d ≥ 2
+   - Backward ELS: search reversed term with d ≥ 2 (equivalent to negative skip)
+   - First-character filtering optimization
+   - ELS cache prevents redundant searches
+
+5. **Quick Run Mode** (basic proximity)
+   - 2D cylindrical distance: position p → (row, col) = (⌊p/|d|⌋, p mod |d|)
+   - Tests both skip widths per name-date pair
+   - Reports minimum Euclidean distance Δ per rabbi
+   - Geometric mean of distances as aggregate measure
+   - Permutation test: shuffle date assignments, count permutations with better geometric mean
+
+6. **Full WRR Mode** (c(w,w') perturbation statistic) ✅ NEW
+   - **Multi-row-length distance**: h_i = round(|d|/i) for i=1..10
+   - **Proximity ω(e,e')** = max(1/δ) across all h values from both skips
+   - **Aggregate proximity ε(w,w')** = Σ ω(e,e') over all ELS pair combinations
+   - **125 spatial perturbations**: triples (x,y,z) ∈ {−2..2}³
+     - Shifts last 3 ELS letter POSITIONS cumulatively: p[k-3]+=x, p[k-2]+=x+y, p[k-1]+=x+y+z
+     - NOT alphabetic substitution — spatial perturbation only
+   - **c(w,w') = v/m**: fraction of valid perturbations with ε_perturbed ≥ ε_actual
+     - Small c → actual proximity unusually close
+   - **P₁ (binomial tail)**: P(Bin(N, 0.2) ≥ k) where k = #{c_i < 0.2}
+   - **P₂ (Gamma CDF)**: e^{-t} · Σ_{j=0}^{N-1} t^j/j! where t = −Σln(c_i)
+   - **Overall P = 2·min(P₁, P₂)**
+   - **Permutation test on c**: Pre-computes N×N c-matrix for all (rabbi names, rabbi dates) pairings, then shuffles date assignments and recomputes P₁/P₂
+
+#### What Remains To Be Done
+
+1. **Exact numerical validation** — Compare our per-rabbi c values against published WRR Table 4
+   - Need access to exact WRR Table 4 data (per-rabbi c values)
+   - Minor differences possible due to floating-point and tie-breaking
+
+2. **War and Peace control** — WRR also tested same protocol on War and Peace (Hebrew translation)
+   - Would need Hebrew War and Peace text file
+   - Same algorithm, just different input text
+
+3. **Second list (List 1)** — WRR Table 2 has an additional set of 34 rabbis
+   - Need dataset entry for List 1 rabbis
+
+4. **Date format variations** — WRR used specific date encoding rules
+   - Our implementation uses the dates from WRR Table 3 directly
+   - Could add programmatic Hebrew date generation from Gregorian dates
+
+5. **Exact D(w) threshold** — WRR defines D(w) based on expected 10 occurrences
+   - Our implementation matches this, but edge cases may differ
+
+#### Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `engines/wrr.worker.js` | ~760 | Web Worker: ELS search, c(w,w'), P₁/P₂, permutation test |
+| `bible-codes.html` | ~4200 | WRR UI: rabbi table, controls, results, methodology |
+
+#### Key Functions (Worker)
+
+```
+wrrMaxSkip(term, L, freqs, cap)     — Dynamic skip range D(w)
+wrrFindELS(text, term, maxSkip)     — Core ELS search (positive skip)
+wrrFindELSBoth(text, term, max, cache) — Forward + backward ELS
+hitPositions(hit)                    — ELS hit → position array
+getHValues(skip1, skip2)             — 10 row lengths per skip
+minDist2D(pos1, pos2, h)            — Min 2D distance on cylinder
+omega(pos1, pos2, hValues)          — ω = max(1/δ) across h values
+epsilon(namePos, skips, datePos, skips) — ε = Σ ω across all pairs
+perturbPositions(pos, x, y, z, L)  — Spatial perturbation
+computeC(nameHits, dateHits, L)     — c(w,w') from 125 perturbations
+computeP1(cValues)                   — Binomial tail probability
+computeP2(cValues)                   — Gamma CDF
+runWRRFull(data)                     — Full experiment action
+runWRRPermTestFull(...)              — Permutation test with c-matrix
+```
+
+#### Key Functions (UI in bible-codes.html)
+
+```
+runWRRExperiment()         — Quick Run (geometric mean distance)
+wrrRunFullExperiment()     — Full WRR (c statistic)
+wrrRunFullWithPerm()       — Permutation test from Full WRR
+wrrUpdateRabbiRowFull()    — Display c value in table row
+wrrShowFullSummary()       — P₁, P₂, overall P display
+wrrShowFullPermResults()   — Permutation test results
+wrrExportCSVFull()         — CSV export of c-statistic results
+```
+
+### Alternate Spelling Feature ✅ NEW
+
+ELS search now supports alternate spellings on the same line.
+
+**How it works**:
+- Terms on the same line, separated by spaces = alternate spellings
+- ALL alternates are searched (ELS scan finds hits for each form)
+- Results are merged under one "term slot"
+- In clusters/matrix, the combined results represent one logical term
+- Example: `גוטרי גות'רי` → two spellings of Guthrie, treated as one term
+
+**Modified functions**: `parseBatchInput()`, `startScan()`
+
+### Sofit Normalization ✅
+
+Final-form letters (sofiot) normalized to regular forms for search matching:
+- ך→כ, ם→מ, ן→נ, ף→פ, ץ→צ
+- Applied to both Torah text (`torahTextNorm`) and search terms
+- Original `torahText` preserved for matrix display (shows sofiot as-is)
+- `cleanHebrewName()` also calls `normalizeSofiot()`
+
+### Hebrew Virtual Keyboard ✅
+
+Toggle via ⌨ button, inserts Hebrew letters at cursor position in batch textarea.
+
+### 3D Video Capture Fix ✅
+
+Fixed `vidShowPanel()` toggle: was checking inline `style.display` but the initial `display: none` came from CSS. Now uses `getComputedStyle()` to correctly detect hidden state.
+
+---
+
+## Session: 2026-02-07/08
 
 ### 3D Matrix View ✅ COMPLETE
 
@@ -71,17 +214,7 @@ Single Search button now handles both manual terms and batch terms together.
 - Changed batch textarea placeholder to generic text
 - Added `#scanProgress` progress bar to scan mode
 
-### WRR 1994 Experiment Replication 🟡 PLANNED
-
-One-click demo replicating the famous Witztum-Rips-Rosenberg experiment (32 rabbis, Genesis, name-date ELS pairs). Plan written at `.claude/plans/temporal-sauteeing-harbor.md`.
-
-**Planned Features**:
-- Pre-loaded dataset of 32 rabbis with Hebrew name appellations + birth/death dates
-- Genesis-only search (first 78,064 chars)
-- Per-term dynamic skip range based on expected occurrences
-- WRR-style 2D proximity measure between name-date ELS pairs
-- Results table with proximity scores, clickable for matrix view
-- CSV export and per-rabbi summary
+### WRR 1994 Experiment Replication ✅ COMPLETE (see 2026-02-13/15 above for full details)
 
 ### Default Tab Change 🟡 PLANNED
 
@@ -690,13 +823,14 @@ function showAnagramInMatrix(anagram) {
 
 **Status**: 10/14 HTML pages complete (71%)
 
-### Engine Files (8 engines + 5 tsirufim modules = 13 total)
+### Engine Files (9 engines + 5 tsirufim modules = 14 total)
 | File | Lines | Status |
 |------|-------|--------|
 | `engines/search.js` | 379 | ✅ Complete |
 | `engines/gematria.js` | 454 | ✅ Complete |
 | `engines/acronym.js` | 448 | ✅ Complete |
 | `engines/els.worker.js` | 343 | ✅ Complete |
+| `engines/wrr.worker.js` | **~760** | ✅ **Complete** (WRR c statistic, P₁/P₂, permutation test) |
 | `engines/roots.js` | 335 | ✅ Complete |
 | `engines/root-integration.js` | 290 | ✅ Complete |
 | `engines/matrix.js` | **~600** | ✅ Complete |
@@ -704,7 +838,7 @@ function showAnagramInMatrix(anagram) {
 | `engines/tsirufim/` | 2,209 | ✅ Complete (5 files) |
 | `engines/taamim.js` | - | ⏳ Pending (~300 lines est.) |
 
-**Status**: 8/9 engines complete (89%)
+**Status**: 9/10 engines complete (90%)
 
 ### Database Files (5 total)
 | File | Lines | Status |
@@ -719,42 +853,33 @@ function showAnagramInMatrix(anagram) {
 
 ## Next Session TODO (Updated Priority Order)
 
-### 🔴 PRIORITY 0 - Immediate (Next Session)
-1. **Implement WRR 1994 Experiment Demo**
-   - Pre-loaded 32-rabbi dataset with Hebrew name-date pairs
-   - Genesis-only scan (78,064 chars), per-term dynamic skip ranges
-   - 2D proximity measure between name-date ELS pairs
-   - Results table, matrix view, CSV export, per-rabbi summary
-   - Plan: `.claude/plans/temporal-sauteeing-harbor.md`
-   - **VALUE**: Validates tool with published scientific experiment
+### ✅ DONE - WRR 1994 Experiment
+1. ~~**Implement WRR 1994 Experiment Demo**~~ ✅ COMPLETE (2026-02-13/15)
+   - Quick Run + Full WRR with c(w,w') perturbation statistic
+   - Permutation test, P₁/P₂, CSV export, methodology docs
 
-2. **Default tab = Full Scan + grey out Index/Dictionary tabs**
-   - Swap active classes in HTML
-   - CSS for muted secondary tabs
-   - **VALUE**: Better UX — Full Scan is the primary feature
+### 🔴 PRIORITY 0 - Immediate
+2. **WRR numerical validation** — Compare per-rabbi c values vs published WRR Table 4
+3. **Default tab = Full Scan + grey out Index/Dictionary tabs**
 
 ### 🚨 PRIORITY 1 (30 minutes)
-3. **Update index.html dashboard**
+4. **Update index.html dashboard**
    - Add tool cards for matrix-view.html, book-view.html
+   - Add WRR experiment card
    - Update status indicators
-   - **WHY CRITICAL**: Users can't discover new tools without dashboard links
 
 ### 🔴 PRIORITY 2 (2-3 hours) - Quick Wins
-4. **Create letter-analysis.html**
+5. **Create letter-analysis.html**
    - Engine already complete! Just need UI
-   - Chart.js for visualization
-   - **VALUE**: Unlocks research capabilities, academic credibility
 
 ### 🔴 PRIORITY 3 (4-5 hours) - Unique Differentiator
-5. **Create taamim.html + engines/taamim.js**
-   - Cantillation mark visualization
-   - **VALUE**: UNIQUE FEATURE - No competitor offers this
+6. **Create taamim.html + engines/taamim.js**
 
 ### 🟡 PRIORITY 4 (6-8 hours) - High Value
-6. **Create cross-ref.html** — Sefaria API integration
+7. **Create cross-ref.html** — Sefaria API integration
 
 ### 🟢 PRIORITY 5 (Defer)
-7. **Create anagram.html** — Overlaps with Tsirufim, defer
+8. **Create anagram.html** — Overlaps with Tsirufim, defer
 
 ---
 
@@ -800,31 +925,33 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 
 ---
 
-## Statistics (Updated 2026-02-08)
+## Statistics (Updated 2026-02-15)
 
 ### Total Implementation
 - **Pages**: 10/14 (71% complete)
-- **Engines**: 8/9 (89% complete)
+- **Engines**: 9/9 (100% complete) ✅ (wrr.worker.js added)
 - **Database**: 5/5 (100% complete) ✅
-- **Total Code**: ~12,000+ lines
+- **Total Code**: ~14,000+ lines
 - **Data**: 117+ files, 21 MB compressed ✅
-- **bible-codes.html**: ~2,680 lines (single-file app)
+- **bible-codes.html**: ~4,200 lines (single-file app)
+- **wrr.worker.js**: ~760 lines (WRR Web Worker)
 
-### Session Progress (2026-02-07/08)
-- ✅ 3D Matrix View (Three.js, lazy-loaded, auto-optimal dimensions)
-- ✅ Verse hover tooltips (full verse text + glow highlight in matrix)
-- ✅ Batch term loader (paste/upload, auto-clean Hebrew names)
-- ✅ Unified search (manual + batch merged, single Search button)
-- ✅ Default skip range changed to ±500
-- ✅ Removed default term values
-- ✅ CHATUFIM.txt added to repo (182 hostage names)
-- 🟡 WRR 1994 experiment demo (planned, research complete)
-- 🟡 Default tab → Full Scan (planned)
-- ✅ Documentation update (CLAUDE.md, PROGRESS.md)
+### Session Progress (2026-02-13/15)
+- ✅ WRR 1994 experiment: Quick Run mode (geometric mean distance)
+- ✅ WRR 1994 experiment: Full WRR with c(w,w') perturbation statistic
+- ✅ WRR: 125 spatial perturbations, multi-row-length distance, P₁/P₂
+- ✅ WRR: Permutation test with pre-computed N×N c-matrix
+- ✅ WRR: Backward ELS search (both directions, |d| ≥ 2)
+- ✅ WRR: Dynamic skip range D(w) per term
+- ✅ WRR: CSV export, per-rabbi results, methodology documentation
+- ✅ Alternate spellings: space-separated terms on same line
+- ✅ Sofit normalization for search terms
+- ✅ Hebrew virtual keyboard
+- ✅ 3D video capture fix (getComputedStyle for CSS-hidden panels)
 
 ### Remaining Work
-- 🔴 WRR 1994 experiment replication (32 rabbis, Genesis, proximity)
-- 🔴 Default tab = Full Scan + grey out others
+- 🔴 WRR numerical validation (compare against published Table 4)
+- 🟡 Default tab = Full Scan + grey out others
 - 🚨 1 dashboard update (index.html tool cards)
 - 🔴 1 HTML page (letter-analysis.html - engine ready)
 - 🔴 1 unique differentiator (taamim viewer)
@@ -838,13 +965,14 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 - Phase 2: Database - ✅ 100%
 - Phase 3: Search Engines - ✅ 100%
 - Phase 4: UI Development - ✅ 100%
-- Phase 5: Advanced Features - 🟡 90% (3D matrix, batch, verse hover, unified search added)
+- Phase 5: Advanced Features - ✅ 95% (WRR complete, 3D, batch, verse hover)
 - Phase 5.5: Tsirufim - ✅ 100%
 - Phase 5.6: PWA & i18n - ✅ 100%
+- Phase 5.7: WRR 1994 Replication - ✅ 100%
 - Phase 6: Testing - ⏳ 0%
 - Phase 7: Release - ⏳ 0%
 
-**Overall Project Completion**: 71% (10/14 user-facing tools)
+**Overall Project Completion**: 75% (10/14 user-facing tools + WRR replication)
 **PWA Status**: ✅ Fully installable
 **i18n Status**: ✅ Index page bilingual (Hebrew/English)
 
@@ -902,7 +1030,8 @@ python3 build-database.py --book genesis
 - ~~3D Matrix visualization~~ ✅ DONE (Three.js renderer with auto-rotate, 2026-02-07)
 - ~~Batch term loading~~ ✅ DONE (paste/upload .txt, auto-clean Hebrew names, 2026-02-07)
 - ~~Verse hover tooltips~~ ✅ DONE (full verse text + glow highlight, 2026-02-07)
-- WRR 1994 experiment replication (planned, 2026-02-08)
+- ~~WRR 1994 experiment replication~~ ✅ DONE (Quick Run + Full WRR with c statistic, 2026-02-15)
+- ~~Alternate spelling support~~ ✅ DONE (space-separated terms on same line, 2026-02-15)
 - Web Worker for non-blocking scan (currently runs on main thread with yield)
 
 ---
