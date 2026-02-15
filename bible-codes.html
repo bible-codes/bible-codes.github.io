@@ -2521,18 +2521,30 @@
         <button class="btn btn-small" style="padding:3px 10px;font-size:11px;background:#2e7d32;" onclick="addSelectedTerms()">Add Selected</button>
         <span id="discSelectedCount" style="font-size:11px;color:#555;">0 selected</span>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;color:#000;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;color:#000;table-layout:fixed;">
+        <colgroup>
+          <col style="width:28px;">
+          <col style="width:30px;">
+          <col style="width:70px;">
+          <col style="width:50px;">
+          <col style="width:36px;">
+          <col style="width:42px;">
+          <col style="width:46px;">
+          <col style="width:34px;">
+          <col style="width:80px;">
+          <col>
+        </colgroup>
         <thead><tr style="background:#d0d0d0;text-align:left;color:#000;font-weight:bold;">
-          <th style="padding:5px 4px;width:28px;"><input type="checkbox" id="discCheckAllHeader" onchange="discSelectAll(this.checked)" title="Check/uncheck all"></th>
-          <th style="padding:5px 6px;">#</th>
+          <th style="padding:5px 4px;"><input type="checkbox" id="discCheckAllHeader" onchange="discSelectAll(this.checked)" title="Check/uncheck all"></th>
+          <th style="padding:5px 3px;">#</th>
           <th style="${thStyle}" onclick="sortDiscovered('length')">Term${arrow('length')}</th>
-          <th style="padding:5px 6px;">Root</th>
+          <th style="padding:5px 3px;">Root</th>
           <th style="${thStyle}" onclick="sortDiscovered('distance')">Dist${arrow('distance')}</th>
           <th style="${thStyle}" onclick="sortDiscovered('skip')">Skip${arrow('skip')}</th>
-          <th style="${thStyle}" onclick="sortDiscovered('zscore')">z-Score${arrow('zscore')}</th>
+          <th style="${thStyle}" onclick="sortDiscovered('zscore')">z${arrow('zscore')}</th>
           <th style="${thStyle}" onclick="sortDiscovered('occurrences')">Occ${arrow('occurrences')}</th>
-          <th style="padding:5px 6px;">Source</th>
-          <th style="padding:5px 6px;">Definition</th>
+          <th style="padding:5px 3px;">Src</th>
+          <th style="padding:5px 3px;">Definition</th>
         </tr></thead><tbody>`;
 
       for (let i = 0; i < filtered.length; i++) {
@@ -2543,16 +2555,16 @@
                          d.isDate ? '<span style="font-size:9px;background:#e65100;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">Date</span>' : '';
         const safeWord = d.word.replace(/'/g, "\\'");
         html += `<tr style="background:${bgColor};border-bottom:1px solid #ccc;color:#000;" title="Position: ${d.bestOcc.pos}, Total ELS occurrences: ${d.totalOccurrences}">
-          <td style="padding:4px 4px;text-align:center;"><input type="checkbox" class="disc-term-cb" data-word="${safeWord}" data-pos="${d.bestOcc.pos}" data-skip="${d.bestOcc.skip}" onchange="updateDiscSelectedCount()"></td>
-          <td style="padding:4px 6px;">${i + 1}</td>
-          <td style="padding:4px 6px;font-weight:bold;font-size:15px;direction:rtl;color:#000;">${d.word}<span style="font-size:9px;color:#888;margin-left:2px;">${d.word.length}</span>${catBadge}</td>
-          <td style="padding:4px 6px;direction:rtl;color:#000;font-weight:600;">${d.root}</td>
-          <td style="padding:4px 6px;color:#000;">${d.minDistance}</td>
-          <td style="padding:4px 6px;color:#000;">${d.bestOcc.skip}</td>
-          <td style="padding:4px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
-          <td style="padding:4px 6px;color:#000;">${d.totalOccurrences}</td>
-          <td style="padding:4px 6px;font-size:10px;color:#555;white-space:nowrap;">${d.dictSource || (d.inDict ? '✓' : '')}</td>
-          <td style="padding:4px 6px;font-size:12px;color:#000;" title="${d.definition || ''}">${d.definition || ''}</td>
+          <td style="padding:4px 3px;text-align:center;"><input type="checkbox" class="disc-term-cb" data-word="${safeWord}" data-pos="${d.bestOcc.pos}" data-skip="${d.bestOcc.skip}" onchange="updateDiscSelectedCount()"></td>
+          <td style="padding:4px 3px;font-size:11px;">${i + 1}</td>
+          <td style="padding:4px 3px;font-weight:bold;font-size:14px;direction:rtl;color:#000;overflow:hidden;">${d.word}<span style="font-size:9px;color:#888;margin-left:2px;">${d.word.length}</span>${catBadge}</td>
+          <td style="padding:4px 3px;direction:rtl;color:#000;font-weight:600;font-size:12px;overflow:hidden;">${d.root}</td>
+          <td style="padding:4px 3px;color:#000;font-size:11px;">${d.minDistance}</td>
+          <td style="padding:4px 3px;color:#000;font-size:11px;">${d.bestOcc.skip}</td>
+          <td style="padding:4px 3px;color:${zColor};font-weight:bold;font-size:11px;">${d.zScore.toFixed(1)}</td>
+          <td style="padding:4px 3px;color:#000;font-size:11px;">${d.totalOccurrences}</td>
+          <td style="padding:4px 3px;font-size:10px;color:#555;overflow:hidden;text-overflow:ellipsis;" title="${d.dictSource || ''}">${d.dictSource || (d.inDict ? '✓' : '')}</td>
+          <td style="padding:4px 4px;font-size:12px;color:#000;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;line-height:1.3;">${d.definition || ''}</td>
         </tr>`;
       }
 
