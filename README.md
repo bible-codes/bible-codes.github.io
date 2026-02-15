@@ -289,10 +289,11 @@ Automatically discovers additional dictionary-validated ELS terms within a matri
 - Searches ±radius around the cluster center for all indexed ELS words.
 - Validates against 7 dictionary sources (Wikipedia full-text 718K, unified 82K, names 8.7K, BDB, Strong's, Wiktionary, Tanakh).
 - Shows root, z-score significance, definition, source dictionary, distance, occurrences, and term length.
+- **English equivalents**: Discovered names display their English transliteration (e.g., חווה → Eve/Chava, משה → Moshe, רחל → Rachel). 613 Hebrew-to-English name mappings covering biblical, Israeli, Arabic, and international names.
 - **Sortable columns**: Click Term (by length), Distance, Skip, z-Score, or Occurrences headers to sort ascending/descending.
 - **Filter checkboxes**: Toggle between All / Names / Dates to focus results on names from the names dictionary or date-related Hebrew terms (months, birth/death words).
 - **Multi-select**: Checkboxes on each row with Check All / Clear All / Add Selected buttons. Adding terms auto-triggers re-scan and updates 2D/3D matrix views.
-- Names highlighted in blue, dates in orange, dictionary words in green.
+- Names highlighted in blue with English equivalent, dates in orange, dictionary words in green.
 - **Export**: PNG export includes full matrix, all search terms with verse references, full verse texts, and all discovered terms with definitions. JSON export provides complete structured data for further analysis.
 - **URL API**: Search via URL parameters for sharing, bookmarking, or automation. See [3.1.9 URL API](#319-url-api).
 
@@ -927,7 +928,10 @@ The `data/manuscripts/` directory contains Genesis text from multiple historical
 │   │   ├── unified/            # Merged 82K-entry dictionary
 │   │   ├── openscriptures-bdb.json.gz
 │   │   ├── strongs-hebrew.json.gz
-│   │   └── hebrew-wiktionary.json.gz
+│   │   ├── hebrew-wiktionary.json.gz
+│   │   ├── names-combined.json.gz     # 8.7K Hebrew names
+│   │   ├── names-english.json         # 613 Hebrew→English name mappings
+│   │   └── wikipedia-fulltext.json.gz # 718K Wikipedia vocabulary
 │   ├── embeddings/             # Hebrew word vectors
 │   ├── manuscripts/            # Torah text variants (multiple codices)
 │   └── tanach-texts/           # Full Tanakh data and Targum Onkelos
@@ -1286,6 +1290,7 @@ python3 p.py
 - **Discover Terms — Name/Date Filters**: Checkboxes to filter discovered terms by category: All, Names (from names dictionary), or Dates (Hebrew months, birth/death words). Color-coded rows (blue=names, orange=dates, green=dictionary).
 - **Discover Terms — High Contrast**: Panel explicitly sets dark text colors (was inheriting white from dark matrix-view parent). Increased results panel height.
 - **Comprehensive Matrix Export**: PNG export now includes all search terms with verse references, full verse texts, and all discovered terms with definitions/sources. New JSON export button for structured data.
+- **Discover Terms — English Names**: Discovered names display their English transliteration below the Hebrew (e.g., חווה → Eve/Chava, משה → Moshe). 613 Hebrew-to-English mappings covering biblical, Israeli, Arabic, and international names. Also included in PNG and JSON exports.
 - **URL API**: Search via URL parameters (`?terms=משה,אברהם&skip=500&discover=names`). Auto-runs scan and Discover Terms on page load. Enables shareable search links and external automation.
 - **Alt Spellings Display Fix**: Space-separated alternate spellings on the same line now correctly display all forms in results.
 - **Video Format Options**: 3D matrix video capture supports WebM format selection.
