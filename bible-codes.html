@@ -5434,7 +5434,7 @@
 
       // Auto-discover if requested
       const discoverParam = params.get('discover');
-      if (discoverParam && scanClusters && scanClusters.length > 0) {
+      if (discoverParam && current3DHits && current3DHits.length > 0) {
         // Set filter before discovering
         const fAll = document.getElementById('discFilterAll');
         const fNames = document.getElementById('discFilterNames');
@@ -5447,6 +5447,8 @@
           fAll.checked = true; if (fNames) fNames.checked = false; if (fDates) fDates.checked = false;
         }
 
+        // Small delay to ensure DOM has updated after scan
+        await new Promise(r => setTimeout(r, 100));
         await discoverMatrixTerms();
       }
     }
