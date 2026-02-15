@@ -988,12 +988,12 @@
             </div>
           </div>
           <div class="matrix-legend" id="scanMatrixLegend"></div>
-          <div id="discoverTermsPanel" style="display:none;margin-top:12px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#f9f9f9;">
+          <div id="discoverTermsPanel" style="display:none;margin-top:12px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#f9f9f9;color:#000;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <h4 style="margin:0;font-size:14px;">Discovered ELS Terms in Matrix Region</h4>
-              <span id="discoverTermsStatus" style="font-size:12px;color:#666;"></span>
+              <h4 style="margin:0;font-size:14px;color:#000;">Discovered ELS Terms in Matrix Region</h4>
+              <span id="discoverTermsStatus" style="font-size:12px;color:#444;"></span>
             </div>
-            <div id="discoverTermsResults" style="max-height:300px;overflow-y:auto;"></div>
+            <div id="discoverTermsResults" style="max-height:500px;overflow-y:auto;"></div>
           </div>
         </div>
       </section>
@@ -1752,6 +1752,8 @@
     let scanClusters = [];
     let clusterPermRunning = false;
     let discoveredResults = []; // stored for filter toggling
+    let discSortCol = 'default'; // current sort column
+    let discSortAsc = true;      // sort direction
 
     window.cancelScan = function() { scanAbort = true; batchAbort = true; };
 
@@ -2450,7 +2452,7 @@
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
 
-    // --- Render discovered results with active filter ---
+    // --- Render discovered results with active filter and sorting ---
     function renderDiscoveredResults() {
       const resultsDiv = document.getElementById('discoverTermsResults');
       const statusSpan = document.getElementById('discoverTermsStatus');
@@ -2463,14 +2465,35 @@
       const fAll = document.getElementById('discFilterAll');
       const fNames = document.getElementById('discFilterNames');
       const fDates = document.getElementById('discFilterDates');
-      let filtered = discoveredResults;
+      let filtered = discoveredResults.slice(); // copy for sorting
       let filterLabel = '';
       if (fNames && fNames.checked) {
-        filtered = discoveredResults.filter(d => d.isName);
+        filtered = filtered.filter(d => d.isName);
         filterLabel = ' (Names only)';
       } else if (fDates && fDates.checked) {
-        filtered = discoveredResults.filter(d => d.isDate);
+        filtered = filtered.filter(d => d.isDate);
         filterLabel = ' (Dates only)';
+      }
+
+      // Apply sort
+      const col = discSortCol;
+      const dir = discSortAsc ? 1 : -1;
+      if (col === 'length') {
+        filtered.sort((a, b) => dir * (a.word.length - b.word.length));
+      } else if (col === 'distance') {
+        filtered.sort((a, b) => dir * (a.minDistance - b.minDistance));
+      } else if (col === 'skip') {
+        filtered.sort((a, b) => dir * (Math.abs(a.bestOcc.skip) - Math.abs(b.bestOcc.skip)));
+      } else if (col === 'zscore') {
+        filtered.sort((a, b) => dir * (a.zScore - b.zScore));
+      } else if (col === 'occurrences') {
+        filtered.sort((a, b) => dir * (a.totalOccurrences - b.totalOccurrences));
+      } else {
+        // default: dict words first, then z-score descending
+        filtered.sort((a, b) => {
+          if (a.inDict !== b.inDict) return a.inDict ? -1 : 1;
+          return b.zScore - a.zScore;
+        });
       }
 
       const dictCount = filtered.filter(d => d.inDict).length;
@@ -2482,6 +2505,10 @@
         return;
       }
 
+      // Sort arrow indicator
+      const arrow = (c) => discSortCol === c ? (discSortAsc ? ' ▲' : ' ▼') : '';
+      const thStyle = 'padding:5px 6px;cursor:pointer;user-select:none;';
+
       let html = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
         <button class="btn btn-small" style="padding:3px 10px;font-size:11px;background:#1565c0;" onclick="discSelectAll(true)">Check All</button>
         <button class="btn btn-small" style="padding:3px 10px;font-size:11px;background:#666;" onclick="discSelectAll(false)">Clear All</button>
@@ -2492,11 +2519,12 @@
         <thead><tr style="background:#d0d0d0;text-align:left;color:#000;font-weight:bold;">
           <th style="padding:5px 4px;width:28px;"><input type="checkbox" id="discCheckAllHeader" onchange="discSelectAll(this.checked)" title="Check/uncheck all"></th>
           <th style="padding:5px 6px;">#</th>
-          <th style="padding:5px 6px;">Term</th>
+          <th style="${thStyle}" onclick="sortDiscovered('length')">Term${arrow('length')}</th>
           <th style="padding:5px 6px;">Root</th>
-          <th style="padding:5px 6px;">Distance</th>
-          <th style="padding:5px 6px;">Skip</th>
-          <th style="padding:5px 6px;">z-Score</th>
+          <th style="${thStyle}" onclick="sortDiscovered('distance')">Dist${arrow('distance')}</th>
+          <th style="${thStyle}" onclick="sortDiscovered('skip')">Skip${arrow('skip')}</th>
+          <th style="${thStyle}" onclick="sortDiscovered('zscore')">z-Score${arrow('zscore')}</th>
+          <th style="${thStyle}" onclick="sortDiscovered('occurrences')">Occ${arrow('occurrences')}</th>
           <th style="padding:5px 6px;">Source</th>
           <th style="padding:5px 6px;">Definition</th>
         </tr></thead><tbody>`;
@@ -2512,11 +2540,12 @@
         html += `<tr style="background:${bgColor};border-bottom:1px solid #ccc;color:#000;" title="Position: ${d.bestOcc.pos}, Total ELS occurrences: ${d.totalOccurrences}">
           <td style="padding:4px 4px;text-align:center;"><input type="checkbox" class="disc-term-cb" data-word="${safeWord}" data-pos="${d.bestOcc.pos}" data-skip="${d.bestOcc.skip}" onchange="updateDiscSelectedCount()"></td>
           <td style="padding:4px 6px;">${i + 1}</td>
-          <td style="padding:4px 6px;font-weight:bold;font-size:15px;direction:rtl;color:#000;">${d.word}${catBadge}</td>
+          <td style="padding:4px 6px;font-weight:bold;font-size:15px;direction:rtl;color:#000;">${d.word}<span style="font-size:9px;color:#888;margin-left:2px;">${d.word.length}</span>${catBadge}</td>
           <td style="padding:4px 6px;direction:rtl;color:#000;font-weight:600;">${d.root}</td>
           <td style="padding:4px 6px;color:#000;">${d.minDistance}</td>
           <td style="padding:4px 6px;color:#000;">${d.bestOcc.skip}</td>
           <td style="padding:4px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
+          <td style="padding:4px 6px;color:#000;">${d.totalOccurrences}</td>
           <td style="padding:4px 6px;font-size:11px;color:#000;">${d.dictSource || (d.inDict ? '✓' : '')}</td>
           <td style="padding:4px 6px;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">${defText}</td>
         </tr>`;
@@ -2539,6 +2568,17 @@
       // If nothing checked, default to All
       if (!fAll.checked && !fNames.checked && !fDates.checked) fAll.checked = true;
       if (discoveredResults.length > 0) renderDiscoveredResults();
+    };
+
+    // --- Sort discovered terms by column ---
+    window.sortDiscovered = function(col) {
+      if (discSortCol === col) {
+        discSortAsc = !discSortAsc; // toggle direction
+      } else {
+        discSortCol = col;
+        discSortAsc = col === 'length' || col === 'occurrences' ? false : true; // default desc for length/occ
+      }
+      renderDiscoveredResults();
     };
 
     // --- Check/uncheck all discovered term checkboxes ---
@@ -3028,9 +3068,9 @@
       // --- Build discovered terms lines ---
       const discLines = [];
       if (discoveredResults && discoveredResults.length > 0) {
-        const top = discoveredResults.filter(d => d.inDict).slice(0, 20);
-        for (const d of top) {
-          let line = `${d.word}  skip:${d.bestOcc.skip}  dist:${d.minDistance}  z:${d.zScore.toFixed(1)}`;
+        const allDisc = discoveredResults.filter(d => d.inDict);
+        for (const d of allDisc) {
+          let line = `${d.word}(${d.word.length})  skip:${d.bestOcc.skip}  dist:${d.minDistance}  z:${d.zScore.toFixed(1)}  occ:${d.totalOccurrences}`;
           if (d.dictSource) line += `  [${d.dictSource}]`;
           if (d.definition) line += `  — ${d.definition.substring(0, 50)}`;
           discLines.push(line);
@@ -3152,7 +3192,7 @@
         ctx.font = 'bold 13px sans-serif';
         ctx.fillStyle = '#ffcc80';
         ctx.textAlign = 'left';
-        ctx.fillText(`Discovered Terms (top ${discLines.length}):`, padding, yPos);
+        ctx.fillText(`Discovered Terms (${discLines.length}):`, padding, yPos);
         yPos += lineH;
         ctx.font = '11px Courier New';
         ctx.fillStyle = '#ddd';
@@ -3195,7 +3235,7 @@
       });
 
       // Discovered terms
-      const discovered = (discoveredResults || []).filter(d => d.inDict).slice(0, 50).map(d => ({
+      const discovered = (discoveredResults || []).filter(d => d.inDict).map(d => ({
         word: d.word, skip: d.bestOcc.skip, position: d.bestOcc.pos, distance: d.minDistance,
         zScore: d.zScore, source: d.dictSource, definition: d.definition, root: d.root,
         isName: d.isName, isDate: d.isDate,
