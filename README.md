@@ -30,6 +30,7 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
      - 3.1.6 [3D Matrix View](#316-3d-matrix-view)
      - 3.1.7 [Cluster Significance Test](#317-cluster-significance-test)
      - 3.1.8 [Discover Terms](#318-discover-terms)
+     - 3.1.9 [URL API](#319-url-api)
    - 3.2 [WRR 1994 Experiment](#32-wrr-1994-experiment)
    - 3.3 [Text Search](#33-text-search)
    - 3.4 [Gematria Calculator](#34-gematria-calculator)
@@ -293,6 +294,37 @@ Automatically discovers additional dictionary-validated ELS terms within a matri
 - **Multi-select**: Checkboxes on each row with Check All / Clear All / Add Selected buttons. Adding terms auto-triggers re-scan and updates 2D/3D matrix views.
 - Names highlighted in blue, dates in orange, dictionary words in green.
 - **Export**: PNG export includes full matrix, all search terms with verse references, full verse texts, and all discovered terms with definitions. JSON export provides complete structured data for further analysis.
+- **URL API**: Search via URL parameters for sharing, bookmarking, or automation. See [3.1.9 URL API](#319-url-api).
+
+#### 3.1.9 URL API
+
+Run searches via URL parameters — useful for sharing links, bookmarking searches, or external automation.
+
+**Format**:
+```
+bible-codes.html?terms=TERM1,TERM2 ALT,TERM3&skip=500&discover=names
+```
+
+**Parameters**:
+
+| Parameter | Description | Default | Example |
+|-----------|-------------|---------|---------|
+| `terms` | Comma-separated search terms. Space within a term = alt spellings. | *(required)* | `משה,אברהם אברם` |
+| `skip` | Max skip range (± value) | 500 | `1000` |
+| `discover` | Auto-run Discover Terms with filter | *(off)* | `all`, `names`, `dates` |
+| `tab` | Which tab to open | `scan` | `scan`, `index`, `dict`, `wrr` |
+
+**Examples**:
+```
+# Search for Moses and Abraham (with alt spelling) in Genesis
+bible-codes.html?terms=משה,אברהם אברם
+
+# Search and auto-discover names
+bible-codes.html?terms=משה,אהרן&discover=names
+
+# Wide skip range search
+bible-codes.html?terms=ירושלים,בית המקדש&skip=2000
+```
 
 ### 3.2 WRR 1994 Experiment
 
@@ -1254,6 +1286,7 @@ python3 p.py
 - **Discover Terms — Name/Date Filters**: Checkboxes to filter discovered terms by category: All, Names (from names dictionary), or Dates (Hebrew months, birth/death words). Color-coded rows (blue=names, orange=dates, green=dictionary).
 - **Discover Terms — High Contrast**: Panel explicitly sets dark text colors (was inheriting white from dark matrix-view parent). Increased results panel height.
 - **Comprehensive Matrix Export**: PNG export now includes all search terms with verse references, full verse texts, and all discovered terms with definitions/sources. New JSON export button for structured data.
+- **URL API**: Search via URL parameters (`?terms=משה,אברהם&skip=500&discover=names`). Auto-runs scan and Discover Terms on page load. Enables shareable search links and external automation.
 - **Alt Spellings Display Fix**: Space-separated alternate spellings on the same line now correctly display all forms in results.
 - **Video Format Options**: 3D matrix video capture supports WebM format selection.
 - **Backward ELS Search**: WRR worker searches reversed terms (equivalent to negative skip) for complete coverage.

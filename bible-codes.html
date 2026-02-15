@@ -5393,8 +5393,67 @@
       if (vidTimerInterval) { clearInterval(vidTimerInterval); vidTimerInterval = null; }
     }
 
+    // ============= URL PARAMETER API =============
+    // Usage: bible-codes.html?terms=משה,אברהם אברם,ירושלים&skip=500&discover=names
+    //   terms   — comma-separated search terms; space within a term = alt spellings
+    //   skip    — max skip range (default ±500)
+    //   discover — auto-run Discover Terms: 'all', 'names', or 'dates'
+    //   tab     — which tab to open: 'scan' (default), 'index', 'dict', 'wrr'
+    async function handleUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has('terms')) return;
+
+      // Switch to Full Scan tab
+      const tabParam = params.get('tab') || 'scan';
+      const tabBtn = document.querySelector(`.mode-tab[data-mode="${tabParam}"]`);
+      if (tabBtn) tabBtn.click();
+
+      // Set skip range
+      const skipVal = parseInt(params.get('skip')) || 500;
+      const minSkipEl = document.getElementById('minSkip');
+      const maxSkipEl = document.getElementById('maxSkip');
+      if (minSkipEl) minSkipEl.value = -Math.abs(skipVal);
+      if (maxSkipEl) maxSkipEl.value = Math.abs(skipVal);
+
+      // Fill textarea with terms (comma → newline)
+      const termsStr = decodeURIComponent(params.get('terms'));
+      const textarea = document.getElementById('batchTextarea');
+      if (textarea) {
+        textarea.value = termsStr.split(',').map(t => t.trim()).filter(Boolean).join('\n');
+      }
+
+      // Wait for init to complete (Torah text + ELS index loaded)
+      const waitForInit = () => new Promise(resolve => {
+        const check = () => { if (torahText && elsService) resolve(); else setTimeout(check, 200); };
+        check();
+      });
+      await waitForInit();
+
+      // Run search
+      await startScan();
+
+      // Auto-discover if requested
+      const discoverParam = params.get('discover');
+      if (discoverParam && scanClusters && scanClusters.length > 0) {
+        // Set filter before discovering
+        const fAll = document.getElementById('discFilterAll');
+        const fNames = document.getElementById('discFilterNames');
+        const fDates = document.getElementById('discFilterDates');
+        if (discoverParam === 'names' && fNames) {
+          fAll.checked = false; fNames.checked = true; fDates.checked = false;
+        } else if (discoverParam === 'dates' && fDates) {
+          fAll.checked = false; fNames.checked = false; fDates.checked = true;
+        } else if (fAll) {
+          fAll.checked = true; if (fNames) fNames.checked = false; if (fDates) fDates.checked = false;
+        }
+
+        await discoverMatrixTerms();
+      }
+    }
+
     // ============= INIT ON LOAD =============
     init();
+    handleUrlParams();
   </script>
 </body>
 </html>
