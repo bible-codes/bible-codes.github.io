@@ -1048,7 +1048,10 @@
         <!-- Controls -->
         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
           <button class="btn" id="wrrRunBtn" onclick="runWRRExperiment()" style="background:linear-gradient(135deg,#667eea,#764ba2);font-size:15px;padding:10px 24px;">
-            Run Experiment
+            Quick Run
+          </button>
+          <button class="btn" id="wrrFullBtn" onclick="wrrRunFullExperiment()" style="background:linear-gradient(135deg,#1b5e20,#388e3c);font-size:15px;padding:10px 24px;color:#fff;border:none;border-radius:6px;cursor:pointer;" title="Full WRR replication with c(w,w') perturbation statistic, P&#8321; and P&#8322;">
+            Run Full WRR (c statistic)
           </button>
           <button class="btn btn-secondary" id="wrrCancelBtn" onclick="cancelWRR()" style="display:none;">Cancel</button>
           <label style="font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;" title="Maximum |skip| searched per term. Higher = more thorough but slower.">
@@ -1083,7 +1086,7 @@
                 <th style="padding:8px 4px;text-align:right;font-weight:600;direction:rtl;">Date</th>
                 <th style="padding:8px 4px;text-align:center;font-weight:600;">Pairs</th>
                 <th style="padding:8px 4px;text-align:center;font-weight:600;" title="Dynamic max |skip| searched (based on expected ELS occurrences)">D(w)</th>
-                <th style="padding:8px 4px;text-align:center;font-weight:600;" title="Minimum 2D Euclidean distance between name and date ELS letters on cylindrical array">&Delta;</th>
+                <th style="padding:8px 4px;text-align:center;font-weight:600;" title="Quick Run: Δ = min 2D distance. Full WRR: c(w,w') = perturbation rank (0..1, lower = more significant)" id="wrrColHeader">&Delta;</th>
               </tr>
             </thead>
             <tbody id="wrrTableBody"></tbody>
@@ -1109,10 +1112,14 @@
             Both array widths (|d<sub>name</sub>| and |d<sub>date</sub>|) tested; smaller distance reported.</p>
             <p><strong>Original significance:</strong> 999,999 random permutations of name-date assignments tested.
             Actual assignment ranked 4th of 1,000,000, yielding <strong>p &lt; 1/62,500</strong>.</p>
-            <p><strong>This replication:</strong> Implements the 2D cylindrical proximity measure with dynamic D(w),
-            both forward and backward ELS (|d|&nbsp;&ge;&nbsp;2), and the aggregate permutation test for P-value estimation.
-            Does <em>not</em> yet implement the c(w,w&prime;) perturbation statistic (125 letter-substitution variants),
-            which is planned for a future update.</p>
+            <p><strong>This replication:</strong> Two modes available:
+            <em>Quick Run</em> uses the 2D cylindrical proximity measure with dynamic D(w) and
+            both forward and backward ELS (|d|&nbsp;&ge;&nbsp;2).
+            <em>Full WRR</em> additionally computes the <strong>c(w,w&prime;) perturbation statistic</strong>:
+            125 spatial perturbations (triples (x,y,z) &isin; {&minus;2..2}&sup3;) shift the last 3 ELS letter positions
+            by cumulative (x, x+y, x+y+z). Proximity &omega; = max(1/&delta;) across 10 row lengths
+            h<sub>i</sub>&nbsp;=&nbsp;round(|d|/i). Then P&#8321; (binomial tail on c&lt;0.2 count) and
+            P&#8322; (Gamma CDF on &prod;c) yield the overall statistic P&nbsp;=&nbsp;2&middot;min(P&#8321;,P&#8322;).</p>
             <p><strong>Data:</strong> Appellations and dates from WRR Table 3 (Appendix). Rabbis #4 and #8
             excluded&mdash;no recorded death dates.</p>
           </div>
@@ -3060,8 +3067,18 @@
         wrrActiveWorker.terminate();
         wrrActiveWorker = null;
       }
+      if (wrrFullWorker) {
+        wrrFullWorker.terminate();
+        wrrFullWorker = null;
+      }
+      if (wrrPermWorker) {
+        wrrPermWorker.terminate();
+        wrrPermWorker = null;
+      }
       document.getElementById('wrrCancelBtn').style.display = 'none';
       document.getElementById('wrrRunBtn').disabled = false;
+      const fullBtn = document.getElementById('wrrFullBtn');
+      if (fullBtn) fullBtn.disabled = false;
       document.getElementById('wrrProgressBar').style.display = 'none';
       document.getElementById('wrrProgress').textContent = 'Cancelled';
     };
@@ -3238,6 +3255,299 @@
           P = fraction of permutations with geometric mean \u0394 \u2264 actual.
         </div>`;
     }
+
+    // ---- Full WRR experiment with c(w,w') perturbation statistic ----
+    let wrrFullWorker = null;
+
+    window.wrrRunFullExperiment = async function() {
+      const runBtn = document.getElementById('wrrRunBtn');
+      const fullBtn = document.getElementById('wrrFullBtn');
+      const cancelBtn = document.getElementById('wrrCancelBtn');
+      const progressBar = document.getElementById('wrrProgressBar');
+      const progressFill = document.getElementById('wrrProgressFill');
+      const progressText = document.getElementById('wrrProgressText');
+      const summary = document.getElementById('wrrSummary');
+
+      runBtn.disabled = true;
+      fullBtn.disabled = true;
+      cancelBtn.style.display = '';
+      progressBar.style.display = '';
+      summary.style.display = 'none';
+
+      progressText.textContent = 'Loading Genesis (78,064 letters)...';
+      await wrrLoadGenesis();
+
+      const skipCap = parseInt(document.getElementById('wrrSkipCap')?.value) || 1000;
+      wrrT0 = performance.now();
+      populateWRRTable();
+
+      try {
+        const worker = new Worker('engines/wrr.worker.js');
+        wrrFullWorker = worker;
+
+        worker.onmessage = function(e) {
+          const msg = e.data;
+
+          if (msg.type === 'wrr-phase') {
+            progressText.textContent = msg.message;
+
+          } else if (msg.type === 'wrr-rabbi-done') {
+            const pct = Math.round((msg.completed / msg.total) * 100);
+            progressFill.style.width = pct + '%';
+            const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
+            progressText.textContent = `c(w,w') — ${msg.completed}/${msg.total} rabbis (${elapsed}s)`;
+            // Update table row with c value
+            wrrUpdateRabbiRowFull(msg.result);
+
+          } else if (msg.type === 'wrr-complete') {
+            wrrShowFullSummary(msg, skipCap);
+
+          } else if (msg.type === 'wrr-perm-precompute-progress') {
+            const pct = Math.round((msg.completed / msg.total) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = msg.message;
+
+          } else if (msg.type === 'wrr-perm-progress') {
+            const pct = Math.round((msg.completed / msg.total) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = `Permutation ${msg.completed}/${msg.total} — P \u2248 ${msg.currentPValue.toFixed(6)}`;
+
+          } else if (msg.type === 'wrr-perm-complete') {
+            wrrShowFullPermResults(msg);
+            progressBar.style.display = 'none';
+
+          } else if (msg.type === 'error') {
+            progressText.textContent = 'Error: ' + msg.message;
+            console.error('WRR Full error:', msg.message);
+          }
+        };
+
+        worker.onerror = function(err) {
+          progressText.textContent = 'Worker error: ' + err.message;
+          console.error('WRR Full worker error:', err);
+          runBtn.disabled = false;
+          fullBtn.disabled = false;
+          cancelBtn.style.display = 'none';
+        };
+
+        const numPerm = parseInt(document.getElementById('wrrPermN2')?.value) || 0;
+
+        worker.postMessage({
+          action: 'run-wrr-full',
+          genesisNorm: wrrGenesisNorm,
+          rabbis: WRR_RABBIS,
+          skipCap,
+          letterFreqs: wrrLetterFreqs,
+          runPermTest: numPerm > 0,
+          numPermutations: numPerm
+        });
+
+      } catch (e) {
+        progressText.textContent = 'Could not start worker: ' + e.message;
+        runBtn.disabled = false;
+        fullBtn.disabled = false;
+        cancelBtn.style.display = 'none';
+      }
+    };
+
+    // Update table row with c(w,w') result
+    function wrrUpdateRabbiRowFull(result) {
+      if (!result) return;
+      const row = document.getElementById(`wrrRow${result.rabbiId}`);
+      if (!row) return;
+      const cells = row.querySelectorAll('td');
+      // The delta column is the last one (index 6)
+      const deltaCell = cells[6];
+      if (deltaCell) {
+        const c = result.c;
+        const color = c < 0.05 ? '#1b5e20' : c < 0.2 ? '#2e7d32' : c < 0.5 ? '#f57f17' : '#888';
+        deltaCell.innerHTML = result.name
+          ? `<span style="color:${color};font-weight:bold;cursor:pointer;" title="c(w,w') = ${c.toFixed(4)} | Name: ${result.name} (${result.nameHitCount} hits) | Date: ${result.date} (${result.dateHitCount} hits)">${c.toFixed(3)}</span>`
+          : '<span style="color:#ccc;">\u2014</span>';
+      }
+    }
+
+    // Show full WRR summary with P₁, P₂
+    function wrrShowFullSummary(msg, skipCap) {
+      const summary = document.getElementById('wrrSummary');
+      const runBtn = document.getElementById('wrrRunBtn');
+      const fullBtn = document.getElementById('wrrFullBtn');
+      const cancelBtn = document.getElementById('wrrCancelBtn');
+      const progressBar = document.getElementById('wrrProgressBar');
+
+      const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
+
+      // Color-code overall P
+      const p = msg.overallP;
+      const pColor = p < 0.001 ? '#1b5e20' : p < 0.01 ? '#2e7d32' : p < 0.05 ? '#f57f17' : '#c62828';
+      const sigLabel = p < 0.001 ? 'Highly significant' :
+                       p < 0.01  ? 'Very significant' :
+                       p < 0.05  ? 'Significant' :
+                       p < 0.1   ? 'Marginally significant' : 'Not significant';
+
+      const kLow = msg.cValues.filter(c => c < 0.2).length;
+      const cProduct = msg.cValues.reduce((a, b) => a * b, 1);
+
+      summary.style.display = '';
+      summary.style.background = 'linear-gradient(135deg,#e8f5e9,#c8e6c9)';
+      summary.style.border = '1px solid #a5d6a7';
+
+      summary.innerHTML = `
+        <div style="font-weight:bold;color:#1b5e20;font-size:16px;margin-bottom:8px;">Full WRR Experiment — c(w,w') Statistic (${elapsed}s)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:13px;">
+          <div><strong>${msg.matchedCount}</strong> / ${msg.totalRabbis} rabbis matched (c &lt; 1.0)</div>
+          <div>c &lt; 0.2 count: <strong>${kLow}</strong> / ${msg.cValues.length}</div>
+          <div>P\u2081 (binomial): <strong>${msg.p1.toExponential(4)}</strong></div>
+          <div>P\u2082 (Gamma): <strong>${msg.p2.toExponential(4)}</strong></div>
+          <div style="font-size:15px;">Overall P = 2\u00b7min(P\u2081,P\u2082): <strong style="color:${pColor};font-size:17px;">${p.toExponential(4)}</strong></div>
+          <div>Significance: <strong style="color:${pColor};">${sigLabel}</strong></div>
+          <div>Skip cap: <strong>${skipCap}</strong></div>
+          <div>\u220Fc values: <strong>${cProduct.toExponential(4)}</strong></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="wrrExportCSVFull()" style="font-size:12px;padding:6px 12px;">Export CSV</button>
+          <label style="font-size:11px;color:#555;">
+            Permutation test N=<input type="number" id="wrrPermN2" value="1000" min="100" max="100000" step="100" style="width:70px;font-size:11px;padding:2px 4px;">
+            <button class="btn" onclick="wrrRunFullWithPerm()" style="font-size:11px;padding:4px 10px;background:linear-gradient(135deg,#1b5e20,#388e3c);color:#fff;border:none;border-radius:4px;cursor:pointer;">
+              Run Permutation Test
+            </button>
+          </label>
+        </div>
+        <div id="wrrFullPermResults" style="display:none;margin-top:10px;padding:10px;background:#e8f5e9;border-radius:6px;border:1px solid #a5d6a7;"></div>
+        <div style="margin-top:8px;font-size:12px;color:#555;">
+          c(w,w') = rank of actual \u03b5 proximity among 125 spatial perturbations.
+          Small c \u2192 unusually close name-date ELS proximity. 10 row lengths h<sub>i</sub>=round(|d|/i) tested per pair.
+        </div>`;
+
+      runBtn.disabled = false;
+      fullBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      if (!msg.runPermTest) progressBar.style.display = 'none';
+
+      // Store results for re-use
+      window._wrrFullResults = msg;
+    }
+
+    // Run permutation test from Full WRR summary button
+    window.wrrRunFullWithPerm = function() {
+      const numPerm = parseInt(document.getElementById('wrrPermN2')?.value) || 1000;
+      if (numPerm < 10) { alert('Need at least 10 permutations.'); return; }
+
+      const fullBtn = document.getElementById('wrrFullBtn');
+      const progressBar = document.getElementById('wrrProgressBar');
+      const progressFill = document.getElementById('wrrProgressFill');
+      const progressText = document.getElementById('wrrProgressText');
+
+      fullBtn.disabled = true;
+      progressBar.style.display = '';
+      progressFill.style.width = '0%';
+
+      const skipCap = parseInt(document.getElementById('wrrSkipCap')?.value) || 1000;
+      wrrT0 = performance.now();
+
+      wrrLoadGenesis().then(() => {
+        try {
+          const worker = new Worker('engines/wrr.worker.js');
+          wrrFullWorker = worker;
+
+          worker.onmessage = function(e) {
+            const msg = e.data;
+            if (msg.type === 'wrr-phase') {
+              progressText.textContent = msg.message;
+            } else if (msg.type === 'wrr-rabbi-done') {
+              const pct = Math.round((msg.completed / msg.total) * 100);
+              progressFill.style.width = (pct * 0.3) + '%';  // 0-30% for c computation
+              progressText.textContent = `c(w,w') — ${msg.completed}/${msg.total} rabbis`;
+            } else if (msg.type === 'wrr-complete') {
+              // c computation done, permutation test starting
+              window._wrrFullResults = msg;
+            } else if (msg.type === 'wrr-perm-precompute-progress') {
+              const pct = Math.round((msg.completed / msg.total) * 100);
+              progressFill.style.width = (30 + pct * 0.3) + '%'; // 30-60%
+              progressText.textContent = msg.message;
+            } else if (msg.type === 'wrr-perm-progress') {
+              const pct = Math.round((msg.completed / msg.total) * 100);
+              progressFill.style.width = (60 + pct * 0.4) + '%'; // 60-100%
+              progressText.textContent = `Permutation ${msg.completed}/${msg.total} — P \u2248 ${msg.currentPValue.toFixed(6)}`;
+            } else if (msg.type === 'wrr-perm-complete') {
+              wrrShowFullPermResults(msg);
+              progressBar.style.display = 'none';
+              fullBtn.disabled = false;
+            } else if (msg.type === 'error') {
+              progressText.textContent = 'Error: ' + msg.message;
+              fullBtn.disabled = false;
+            }
+          };
+
+          worker.onerror = function(err) {
+            progressText.textContent = 'Worker error: ' + err.message;
+            fullBtn.disabled = false;
+          };
+
+          worker.postMessage({
+            action: 'run-wrr-full',
+            genesisNorm: wrrGenesisNorm,
+            rabbis: WRR_RABBIS,
+            skipCap,
+            letterFreqs: wrrLetterFreqs,
+            runPermTest: true,
+            numPermutations: numPerm
+          });
+        } catch (e) {
+          progressText.textContent = 'Worker error: ' + e.message;
+          fullBtn.disabled = false;
+        }
+      });
+    };
+
+    // Show permutation test results for Full WRR
+    function wrrShowFullPermResults(msg) {
+      const permDiv = document.getElementById('wrrFullPermResults');
+      if (!permDiv) return;
+      const pVal = msg.pValue;
+      const pColor = pVal < 0.001 ? '#1b5e20' : pVal < 0.01 ? '#2e7d32' : pVal < 0.05 ? '#f57f17' : '#c62828';
+      const sigLabel = pVal < 0.001 ? 'Highly significant' :
+                       pVal < 0.01  ? 'Very significant' :
+                       pVal < 0.05  ? 'Significant' :
+                       pVal < 0.1   ? 'Marginally significant' : 'Not significant';
+      const ratio = pVal > 0 ? Math.round(1 / pVal) : msg.numPermutations;
+
+      permDiv.style.display = '';
+      permDiv.innerHTML = `
+        <div style="font-weight:bold;color:#1b5e20;font-size:14px;margin-bottom:6px;">Permutation Test (c statistic)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;font-size:13px;">
+          <div>P-value: <strong style="color:${pColor};font-size:15px;">${pVal.toFixed(6)}</strong></div>
+          <div>Significance: <strong style="color:${pColor};">${sigLabel}</strong></div>
+          <div>Rank: <strong>${msg.betterCount}</strong> / ${msg.numPermutations} (1/${ratio})</div>
+          <div>Actual P(c): <strong>${msg.actualOverallP.toExponential(4)}</strong></div>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:#777;">
+          ${msg.numPermutations} random permutations of rabbi\u2194date assignments.
+          Each permutation: compute c(w,w') for all pairings, then P\u2081/P\u2082.
+          P-value = fraction with overall P \u2264 actual.
+        </div>`;
+    }
+
+    // CSV export for Full WRR results
+    window.wrrExportCSVFull = function() {
+      const results = window._wrrFullResults;
+      if (!results) { alert('No full WRR results to export.'); return; }
+      const rows = [['Rabbi', 'Name', 'Date', 'c(w,w\')', 'Name Hits', 'Date Hits']];
+      for (const r of results.rabbiResults) {
+        rows.push([r.en || r.rabbiId, r.name || '', r.date || '', r.c.toFixed(6), r.nameHitCount, r.dateHitCount]);
+      }
+      rows.push([]);
+      rows.push(['P1 (binomial)', results.p1.toExponential(6)]);
+      rows.push(['P2 (Gamma)', results.p2.toExponential(6)]);
+      rows.push(['Overall P', results.overallP.toExponential(6)]);
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'wrr-full-c-statistic.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
 
     // Initialize WRR table
     populateWRRTable();
@@ -3688,10 +3998,36 @@
       if (!renderer3D) { alert('3D view not active'); return; }
 
       const canvas = renderer3D.domElement;
-      const fps = parseInt(document.getElementById('vidFPSSelect').value) || 30;
+      const fps = parseInt(document.getElementById('vidFPSSelect')?.value) || 30;
+
+      // Verify canvas is valid and has dimensions
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        alert('Canvas not ready. Try rotating the 3D view first.');
+        return;
+      }
+
+      // Check browser support
+      if (typeof canvas.captureStream !== 'function') {
+        alert('captureStream() not supported. Use Chrome or Firefox.');
+        return;
+      }
+      if (typeof MediaRecorder === 'undefined') {
+        alert('MediaRecorder not supported. Use Chrome or Firefox.');
+        return;
+      }
 
       // Capture stream from the WebGL canvas
-      vidStream = canvas.captureStream(fps);
+      try {
+        vidStream = canvas.captureStream(fps);
+      } catch (e) {
+        alert('Failed to capture canvas stream: ' + e.message);
+        return;
+      }
+      if (!vidStream || vidStream.getVideoTracks().length === 0) {
+        alert('No video tracks in canvas stream. Try Chrome or Firefox.');
+        return;
+      }
+
       vidChunks = [];
       vidBlob = null;
       vidFrameCount = 0;
@@ -3708,7 +4044,7 @@
         if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
       }
       if (!mimeType) {
-        alert('Video recording not supported in this browser. Try Chrome or Firefox.');
+        alert('No supported video codec. Try Chrome or Firefox.');
         return;
       }
 

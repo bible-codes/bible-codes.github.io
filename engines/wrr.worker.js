@@ -3,22 +3,11 @@
 // =============================================================================
 //
 // Runs the full WRR experiment off the main thread for responsive UI.
-// Supports two actions:
-//   'run'             — Run the main experiment (per-rabbi proximity)
-//   'permutation-test' — Run aggregate permutation test for P-value
-//
-// Message protocol:
-//   IN:  { action:'run', genesisNorm, rabbis, skipCap, letterFreqs }
-//   OUT: { type:'rabbi-done', rabbiId, completed, total, maxDw, result }
-//   OUT: { type:'complete' }
-//   OUT: { type:'error', message }
-//
-//   IN:  { action:'permutation-test', genesisNorm, rabbis, skipCap,
-//          letterFreqs, numPermutations, actualGeoMean }
-//   OUT: { type:'perm-progress', completed, total, betterCount, currentPValue }
-//   OUT: { type:'perm-complete', pValue, numPermutations, betterCount,
-//          distribution }
-//   OUT: { type:'error', message }
+// Supports three actions:
+//   'run'              — Basic experiment (per-rabbi proximity, geometric mean)
+//   'permutation-test' — Aggregate permutation test on geometric mean
+//   'run-wrr-full'     — Full WRR replication with c(w,w') perturbation statistic,
+//                         P₁/P₂ statistics, and optional permutation test
 // =============================================================================
 
 'use strict';
@@ -181,6 +170,176 @@ function geoMean(results) {
   return Math.exp(logSum / results.length);
 }
 
+// =============================================================================
+// WRR 1994 Faithful Replication — c(w,w') Perturbation Statistic
+// =============================================================================
+// Reference: Witztum, Rips, Rosenberg (1994) "Equidistant Letter Sequences
+// in the Book of Genesis", Statistical Science 9(3):429–438
+//
+// Key formulas:
+//   h_i = round(|d|/i) for i=1..10 — row lengths for cylinder wrapping
+//   δ(e,e',h) = min 2D distance between letter positions on cylinder width h
+//   ω(e,e') = max over all h of 1/δ(e,e',h) — proximity measure
+//   ε(w,w') = Σ ω(e,e') over all ELS pairs (e of w, e' of w')
+//   c(w,w') = v/m — rank of actual ε among 125 spatial perturbations
+//     where v = # perturbations with ε_pert ≥ ε_actual, m = # valid perturbations
+//   Perturbation: shift last 3 letter POSITIONS by cumulative (x, x+y, x+y+z)
+//     for (x,y,z) ∈ {-2..2}³ (125 triples total)
+//   P₁ = binomial tail: P(Bin(N, 0.2) ≥ k) where k = #{c_i < 0.2}
+//   P₂ = Gamma CDF: e^{-t} · Σ_{j=0}^{N-1} t^j/j! where t = -Σln(c_i)
+//   Overall P = 2·min(P₁, P₂)
+// =============================================================================
+
+// ---- Get position array for an ELS hit ----
+function hitPositions(hit) {
+  const pos = new Array(hit.len);
+  for (let i = 0; i < hit.len; i++) pos[i] = hit.pos + i * hit.skip;
+  return pos;
+}
+
+// ---- Row lengths h_i = round(|d|/i) for i=1..10 from both skips ----
+function getHValues(skip1, skip2) {
+  const hSet = new Set();
+  const abs1 = Math.abs(skip1), abs2 = Math.abs(skip2);
+  for (let i = 1; i <= 10; i++) {
+    const h1 = Math.round(abs1 / i);
+    if (h1 >= 2) hSet.add(h1);
+    const h2 = Math.round(abs2 / i);
+    if (h2 >= 2) hSet.add(h2);
+  }
+  return [...hSet];
+}
+
+// ---- Min 2D distance between two position arrays on cylinder width h ----
+function minDist2D(pos1, pos2, h) {
+  let bestSq = Infinity;
+  for (let a = 0; a < pos1.length; a++) {
+    const ra = Math.floor(pos1[a] / h), ca = pos1[a] % h;
+    for (let b = 0; b < pos2.length; b++) {
+      const rb = Math.floor(pos2[b] / h), cb = pos2[b] % h;
+      const dr = ra - rb, dc = ca - cb;
+      const dSq = dr * dr + dc * dc;
+      if (dSq < bestSq) bestSq = dSq;
+    }
+  }
+  return Math.sqrt(bestSq);
+}
+
+// ---- ω(e,e') = max(1/δ) across all h values ----
+function omega(pos1, pos2, hValues) {
+  let maxOmega = 0;
+  for (let hi = 0; hi < hValues.length; hi++) {
+    const delta = minDist2D(pos1, pos2, hValues[hi]);
+    if (delta > 0) {
+      const o = 1 / delta;
+      if (o > maxOmega) maxOmega = o;
+    }
+  }
+  return maxOmega;
+}
+
+// ---- ε(w,w') = Σ ω(e,e') across all name×date ELS pair combinations ----
+function epsilon(namePositions, nameSkips, datePositions, dateSkips) {
+  let total = 0;
+  for (let ni = 0; ni < namePositions.length; ni++) {
+    for (let di = 0; di < datePositions.length; di++) {
+      const hVals = getHValues(nameSkips[ni], dateSkips[di]);
+      total += omega(namePositions[ni], datePositions[di], hVals);
+    }
+  }
+  return total;
+}
+
+// ---- Perturb last 3 ELS positions by cumulative (x, x+y, x+y+z) ----
+// Returns new position array, or null if out of bounds or word too short.
+function perturbPositions(positions, x, y, z, textLen) {
+  const k = positions.length;
+  if (k < 3) return null;
+
+  const perturbed = positions.slice();
+  perturbed[k - 3] += x;
+  perturbed[k - 2] += x + y;
+  perturbed[k - 1] += x + y + z;
+
+  for (let i = k - 3; i < k; i++) {
+    if (perturbed[i] < 0 || perturbed[i] >= textLen) return null;
+  }
+  return perturbed;
+}
+
+// ---- c(w,w') — perturbation-based proximity rank ----
+// Small c means actual proximity is unusually good (close to 0 = very significant).
+function computeC(nameHits, dateHits, textLen) {
+  // Pre-compute positions and skips
+  const namePos = nameHits.map(hitPositions);
+  const nameSkips = nameHits.map(h => h.skip);
+  const datePos = dateHits.map(hitPositions);
+  const dateSkips = dateHits.map(h => h.skip);
+
+  const actualEps = epsilon(namePos, nameSkips, datePos, dateSkips);
+  if (actualEps === 0) return 1.0;
+
+  let v = 0, m = 0;
+
+  for (let x = -2; x <= 2; x++) {
+    for (let y = -2; y <= 2; y++) {
+      for (let z = -2; z <= 2; z++) {
+        // Perturb all name hits with same (x,y,z)
+        const pertNamePos = [];
+        let valid = true;
+        for (let ni = 0; ni < namePos.length; ni++) {
+          const pp = perturbPositions(namePos[ni], x, y, z, textLen);
+          if (!pp) { valid = false; break; }
+          pertNamePos.push(pp);
+        }
+        if (!valid) continue;
+
+        m++;
+        const pertEps = epsilon(pertNamePos, nameSkips, datePos, dateSkips);
+        if (pertEps >= actualEps) v++;
+      }
+    }
+  }
+
+  return m > 0 ? v / m : 1.0;
+}
+
+// ---- P₁: binomial tail P(Bin(N, 0.2) ≥ k) ----
+function computeP1(cValues) {
+  const N = cValues.length;
+  if (N === 0) return 1.0;
+  const k = cValues.filter(c => c < 0.2).length;
+  if (k === 0) return 1.0;
+
+  let pTail = 0;
+  for (let j = k; j <= N; j++) {
+    let logProb = 0;
+    for (let i = 0; i < j; i++) logProb += Math.log(N - i) - Math.log(i + 1);
+    logProb += j * Math.log(0.2) + (N - j) * Math.log(0.8);
+    pTail += Math.exp(logProb);
+  }
+  return Math.min(pTail, 1.0);
+}
+
+// ---- P₂: Gamma upper-tail CDF ----
+// t = -Σ ln(c_i), P₂ = e^{-t} · Σ_{j=0}^{N-1} t^j/j!
+function computeP2(cValues) {
+  const N = cValues.length;
+  if (N === 0) return 1.0;
+
+  const safeC = cValues.map(c => Math.max(c, 1e-10));
+  let t = 0;
+  for (const c of safeC) t -= Math.log(c);
+  if (t <= 0) return 1.0;
+
+  let sum = 0, term = 1;
+  for (let j = 0; j < N; j++) {
+    sum += term;
+    term *= t / (j + 1);
+  }
+  return Math.min(Math.max(Math.exp(-t) * sum, 0), 1.0);
+}
+
 // ---- Main message handler ----
 self.onmessage = function(e) {
   const { action } = e.data;
@@ -189,6 +348,8 @@ self.onmessage = function(e) {
     runExperiment(e.data);
   } else if (action === 'permutation-test') {
     runPermutationTest(e.data);
+  } else if (action === 'run-wrr-full') {
+    runWRRFull(e.data);
   }
 };
 
@@ -386,4 +547,210 @@ function runPermutationTest(data) {
   } catch (err) {
     self.postMessage({ type: 'error', message: err.message || String(err) });
   }
+}
+
+// =============================================================================
+// ACTION: run-wrr-full — Full WRR replication with c(w,w') statistic
+// =============================================================================
+//
+// Message protocol:
+//   IN:  { action:'run-wrr-full', genesisNorm, rabbis, skipCap, letterFreqs,
+//          runPermTest, numPermutations }
+//   OUT: { type:'wrr-phase', phase, message }
+//   OUT: { type:'wrr-rabbi-done', completed, total, result }
+//   OUT: { type:'wrr-complete', rabbiResults, cValues, p1, p2, overallP }
+//   OUT: { type:'wrr-perm-precompute-progress', completed, total }
+//   OUT: { type:'wrr-perm-progress', completed, total, betterCount, currentPValue }
+//   OUT: { type:'wrr-perm-complete', pValue, numPermutations, betterCount }
+//
+function runWRRFull(data) {
+  const { genesisNorm, rabbis, skipCap, letterFreqs,
+          runPermTest, numPermutations } = data;
+
+  try {
+    const L = genesisNorm.length;
+    const rabbisWithDates = rabbis.filter(r => r.dates.length > 0);
+    const elsCache = new Map();
+
+    // ---- Phase 1: Find all ELS hits ----
+    self.postMessage({
+      type: 'wrr-phase', phase: 'els-search',
+      message: 'Finding ELS occurrences (forward + backward)...'
+    });
+
+    const processed = [];
+
+    for (const rabbi of rabbisWithDates) {
+      const nameNorms = [], nameHitsArr = [];
+      for (const nameRaw of rabbi.names) {
+        const nn = normalizeSofiot(nameRaw.replace(/\s+/g, ''));
+        if (nn.length < 2) continue;
+        const dw = wrrMaxSkip(nn, L, letterFreqs, skipCap);
+        const hits = wrrFindELSBoth(genesisNorm, nn, dw, elsCache);
+        nameNorms.push(nn);
+        nameHitsArr.push(hits);
+      }
+
+      const dateNorms = [], dateHitsArr = [];
+      for (const dateRaw of rabbi.dates) {
+        const dn = normalizeSofiot(dateRaw.replace(/\s+/g, ''));
+        if (dn.length < 2) continue;
+        const dw = wrrMaxSkip(dn, L, letterFreqs, skipCap);
+        const hits = wrrFindELSBoth(genesisNorm, dn, dw, elsCache);
+        dateNorms.push(dn);
+        dateHitsArr.push(hits);
+      }
+
+      processed.push({
+        id: rabbi.id, en: rabbi.en,
+        names: rabbi.names, dates: rabbi.dates,
+        nameNorms, dateNorms, nameHitsArr, dateHitsArr
+      });
+    }
+
+    // ---- Phase 2: Compute c(w,w') for each rabbi ----
+    self.postMessage({
+      type: 'wrr-phase', phase: 'computing-c',
+      message: 'Computing c(w,w\') perturbation statistics (125 perturbations each)...'
+    });
+
+    const rabbiResults = [];
+    let completed = 0;
+
+    for (const r of processed) {
+      let bestC = 1.0, bestNameIdx = -1, bestDateIdx = -1;
+      let bestNameHitCount = 0, bestDateHitCount = 0;
+
+      for (let ni = 0; ni < r.nameHitsArr.length; ni++) {
+        if (r.nameHitsArr[ni].length === 0) continue;
+        for (let di = 0; di < r.dateHitsArr.length; di++) {
+          if (r.dateHitsArr[di].length === 0) continue;
+          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L);
+          if (c < bestC) {
+            bestC = c;
+            bestNameIdx = ni;
+            bestDateIdx = di;
+            bestNameHitCount = r.nameHitsArr[ni].length;
+            bestDateHitCount = r.dateHitsArr[di].length;
+          }
+        }
+      }
+
+      completed++;
+      const result = {
+        rabbiId: r.id, en: r.en, c: bestC,
+        name: bestNameIdx >= 0 ? r.names[bestNameIdx] : null,
+        date: bestDateIdx >= 0 ? r.dates[bestDateIdx] : null,
+        nameHitCount: bestNameHitCount,
+        dateHitCount: bestDateHitCount
+      };
+      rabbiResults.push(result);
+
+      self.postMessage({
+        type: 'wrr-rabbi-done', completed, total: processed.length, result
+      });
+    }
+
+    // ---- Phase 3: Compute P₁ and P₂ ----
+    const cValues = rabbiResults.filter(r => r.c < 1.0).map(r => r.c);
+    const p1 = computeP1(cValues);
+    const p2 = computeP2(cValues);
+    const overallP = 2 * Math.min(p1, p2);
+
+    self.postMessage({
+      type: 'wrr-complete',
+      rabbiResults, cValues, p1, p2, overallP,
+      matchedCount: cValues.length,
+      totalRabbis: processed.length
+    });
+
+    // ---- Phase 4: Optional permutation test ----
+    if (runPermTest && numPermutations > 0) {
+      runWRRPermTestFull(processed, overallP, numPermutations, L);
+    }
+
+  } catch (err) {
+    self.postMessage({ type: 'error', message: err.message || String(err) });
+  }
+}
+
+// ---- Permutation test using c(w,w') — pre-compute then shuffle ----
+function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen) {
+  const N = processed.length;
+
+  // Step 1: Pre-compute c for ALL possible (rabbi_i names, rabbi_j dates) pairings
+  self.postMessage({
+    type: 'wrr-phase', phase: 'perm-precompute',
+    message: `Pre-computing c values for all ${N}x${N} name-date pairings...`
+  });
+
+  // cMatrix[i][j] = best c when rabbi_i's names paired with rabbi_j's dates
+  const cMatrix = new Array(N);
+
+  for (let ni = 0; ni < N; ni++) {
+    cMatrix[ni] = new Float64Array(N);
+    for (let di = 0; di < N; di++) {
+      let bestC = 1.0;
+      for (let nf = 0; nf < processed[ni].nameHitsArr.length; nf++) {
+        if (processed[ni].nameHitsArr[nf].length === 0) continue;
+        for (let df = 0; df < processed[di].dateHitsArr.length; df++) {
+          if (processed[di].dateHitsArr[df].length === 0) continue;
+          const c = computeC(
+            processed[ni].nameHitsArr[nf],
+            processed[di].dateHitsArr[df],
+            textLen
+          );
+          if (c < bestC) bestC = c;
+        }
+      }
+      cMatrix[ni][di] = bestC;
+    }
+
+    self.postMessage({
+      type: 'wrr-perm-precompute-progress',
+      completed: ni + 1, total: N,
+      message: `Pre-computed pairings for rabbi ${ni + 1}/${N}`
+    });
+  }
+
+  // Step 2: Run permutations — shuffle date assignments, look up c values
+  self.postMessage({
+    type: 'wrr-phase', phase: 'permuting',
+    message: `Running ${numPermutations.toLocaleString()} permutations...`
+  });
+
+  let betterCount = 0;
+  const progressInterval = Math.max(1, Math.floor(numPermutations / 100));
+  const dateIndices = Array.from({ length: N }, (_, i) => i);
+
+  for (let p = 0; p < numPermutations; p++) {
+    shuffle(dateIndices);
+
+    // Collect c values for this permutation
+    const permC = [];
+    for (let i = 0; i < N; i++) {
+      const c = cMatrix[i][dateIndices[i]];
+      if (c < 1.0) permC.push(c);
+    }
+
+    const permP1 = computeP1(permC);
+    const permP2 = computeP2(permC);
+    const permP = 2 * Math.min(permP1, permP2);
+
+    if (permP <= actualOverallP) betterCount++;
+
+    if ((p + 1) % progressInterval === 0 || p === numPermutations - 1) {
+      self.postMessage({
+        type: 'wrr-perm-progress',
+        completed: p + 1, total: numPermutations,
+        betterCount, currentPValue: betterCount / (p + 1)
+      });
+    }
+  }
+
+  self.postMessage({
+    type: 'wrr-perm-complete',
+    pValue: betterCount / numPermutations,
+    numPermutations, betterCount, actualOverallP
+  });
 }
