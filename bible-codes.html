@@ -1109,10 +1109,10 @@
             Both array widths (|d<sub>name</sub>| and |d<sub>date</sub>|) tested; smaller distance reported.</p>
             <p><strong>Original significance:</strong> 999,999 random permutations of name-date assignments tested.
             Actual assignment ranked 4th of 1,000,000, yielding <strong>p &lt; 1/62,500</strong>.</p>
-            <p><strong>This replication:</strong> Implements the 2D cylindrical proximity measure with dynamic D(w).
-            Does <em>not</em> yet implement the c(w,w&prime;) perturbation statistic (125 letter-substitution variants)
-            or the aggregate permutation test. These require extended computation and are planned for a future
-            Web Worker implementation.</p>
+            <p><strong>This replication:</strong> Implements the 2D cylindrical proximity measure with dynamic D(w),
+            both forward and backward ELS (|d|&nbsp;&ge;&nbsp;2), and the aggregate permutation test for P-value estimation.
+            Does <em>not</em> yet implement the c(w,w&prime;) perturbation statistic (125 letter-substitution variants),
+            which is planned for a future update.</p>
             <p><strong>Data:</strong> Appellations and dates from WRR Table 3 (Appendix). Rabbis #4 and #8
             excluded&mdash;no recorded death dates.</p>
           </div>
@@ -2725,29 +2725,21 @@
     }
 
     // ---- Optimized ELS search with first-character filter ----
-    // Finds all ELS of termNorm in text with |skip| in [2, maxSkip]
-    // Results cached by term+maxSkip to avoid duplicate searches
-    function wrrFindELS(text, termNorm, maxSkip) {
-      const cacheKey = termNorm + ':' + maxSkip;
-      const cached = wrrELSCache.get(cacheKey);
-      if (cached) return cached;
-
+    // Finds all ELS of termNorm in text with skip in [2, maxSkip] (forward only)
+    function wrrFindELSForward(text, termNorm, maxSkip) {
       const k = termNorm.length;
       const L = text.length;
       const results = [];
-
-      // Pre-compute positions of first character for fast filtering
       const ch0 = termNorm[0];
       const ch0Pos = [];
       for (let i = 0; i < L; i++) {
         if (text[i] === ch0) ch0Pos.push(i);
       }
-
       for (let d = 2; d <= maxSkip; d++) {
         const maxStart = L - (k - 1) * d;
         if (maxStart <= 0) break;
         for (const s of ch0Pos) {
-          if (s >= maxStart) break; // ch0Pos is sorted ascending
+          if (s >= maxStart) break;
           let match = true;
           for (let i = 1; i < k; i++) {
             if (text[s + i * d] !== termNorm[i]) { match = false; break; }
@@ -2755,7 +2747,24 @@
           if (match) results.push({ pos: s, skip: d, len: k });
         }
       }
+      return results;
+    }
 
+    // ---- Search both forward and backward ELS (|skip| >= 2) ----
+    // Backward ELS = reversed term with positive skip. Cached by term+maxSkip.
+    function wrrFindELS(text, termNorm, maxSkip) {
+      const cacheKey = termNorm + ':' + maxSkip;
+      const cached = wrrELSCache.get(cacheKey);
+      if (cached) return cached;
+
+      const forward = wrrFindELSForward(text, termNorm, maxSkip);
+      const rev = [...termNorm].reverse().join('');
+      let results;
+      if (rev === termNorm) {
+        results = forward;
+      } else {
+        results = forward.concat(wrrFindELSForward(text, rev, maxSkip));
+      }
       wrrELSCache.set(cacheKey, results);
       return results;
     }
@@ -2879,9 +2888,16 @@
           <div>\u0394 < 20: <strong>${close20}</strong> | \u0394 < 100: <strong>${close100}</strong></div>
           <div>Skip cap: <strong>${skipCap}</strong></div>
         </div>
-        <div style="margin-top:10px;">
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-secondary" onclick="wrrExportCSV()" style="font-size:12px;padding:6px 12px;">Export CSV</button>
+          <button class="btn" onclick="wrrRunPermTest()" id="wrrPermBtn" style="font-size:12px;padding:6px 12px;background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff;border:none;border-radius:6px;cursor:pointer;">
+            \u{1F3B2} Permutation Test
+          </button>
+          <label style="font-size:11px;color:#555;">
+            N=<input type="number" id="wrrPermN" value="1000" min="100" max="100000" step="100" style="width:70px;font-size:11px;padding:2px 4px;">
+          </label>
         </div>
+        <div id="wrrPermResults" style="display:none;margin-top:10px;padding:10px;background:#f3e5f5;border-radius:6px;border:1px solid #ce93d8;"></div>
         <div style="margin-top:8px;font-size:12px;color:#555;">
           \u0394 = min 2D Euclidean distance on cylindrical array (width = |skip|), testing both array widths per pair.
           Geometric mean is the WRR aggregate proximity measure. Click any \u0394 value to view the pair in the ELS matrix.
@@ -3063,6 +3079,8 @@
       document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
       document.querySelector('[data-mode="scan"]').classList.add('active');
       document.getElementById('scan-mode').classList.add('active');
+      // Auto-trigger the scan after UI updates
+      setTimeout(() => { if (typeof startScan === 'function') startScan(); }, 150);
     };
 
     // Export results as CSV
@@ -3079,6 +3097,147 @@
       a.click();
       URL.revokeObjectURL(a.href);
     };
+
+    // ---- Permutation test: shuffle rabbi↔date assignments, compute P-value ----
+    let wrrPermWorker = null;
+
+    window.wrrRunPermTest = function() {
+      if (!wrrResults.length) {
+        alert('Run the experiment first to get baseline results.');
+        return;
+      }
+      const numPerm = parseInt(document.getElementById('wrrPermN')?.value) || 1000;
+      const permBtn = document.getElementById('wrrPermBtn');
+      const permDiv = document.getElementById('wrrPermResults');
+      const skipCap = parseInt(document.getElementById('wrrSkipCap')?.value) || 1000;
+
+      // Compute actual geometric mean from current results
+      const actualGeoMean = Math.exp(
+        wrrResults.reduce((s, r) => s + Math.log(r.dist), 0) / wrrResults.length
+      );
+
+      permBtn.disabled = true;
+      permBtn.textContent = 'Running...';
+      permDiv.style.display = '';
+      permDiv.innerHTML = `<div style="font-size:13px;color:#6a1b9a;">
+        <strong>Permutation Test</strong> — Pre-computing ELS hits for all terms...
+        <div style="margin-top:6px;background:#e1bee7;border-radius:4px;overflow:hidden;height:8px;">
+          <div id="wrrPermFill" style="width:0%;height:100%;background:linear-gradient(90deg,#7b1fa2,#ce93d8);transition:width 0.3s;"></div>
+        </div>
+        <div id="wrrPermStatus" style="margin-top:4px;font-size:12px;">0 / ${numPerm} permutations</div>
+      </div>`;
+
+      try {
+        const worker = new Worker('engines/wrr.worker.js');
+        wrrPermWorker = worker;
+
+        worker.onmessage = function(e) {
+          const msg = e.data;
+          if (msg.type === 'perm-progress') {
+            const fill = document.getElementById('wrrPermFill');
+            const status = document.getElementById('wrrPermStatus');
+            if (msg.phase === 'precomputing') {
+              if (status) status.textContent = 'Pre-computing ELS hits for all terms...';
+            } else {
+              const pct = Math.round((msg.completed / msg.total) * 100);
+              if (fill) fill.style.width = pct + '%';
+              if (status) status.textContent = `${msg.completed} / ${msg.total} permutations — P \u2248 ${msg.currentPValue.toFixed(4)} (${msg.betterCount} better)`;
+            }
+          } else if (msg.type === 'perm-complete') {
+            wrrShowPermResults(msg);
+            permBtn.disabled = false;
+            permBtn.textContent = '\u{1F3B2} Permutation Test';
+            wrrPermWorker = null;
+          } else if (msg.type === 'error') {
+            permDiv.innerHTML = `<div style="color:#c62828;font-weight:bold;">Error: ${msg.message}</div>`;
+            permBtn.disabled = false;
+            permBtn.textContent = '\u{1F3B2} Permutation Test';
+            wrrPermWorker = null;
+          }
+        };
+
+        worker.onerror = function(err) {
+          permDiv.innerHTML = `<div style="color:#c62828;">Worker error: ${err.message}</div>`;
+          permBtn.disabled = false;
+          permBtn.textContent = '\u{1F3B2} Permutation Test';
+          wrrPermWorker = null;
+        };
+
+        // Ensure Genesis is loaded, then start
+        wrrLoadGenesis().then(() => {
+          worker.postMessage({
+            action: 'permutation-test',
+            genesisNorm: wrrGenesisNorm,
+            rabbis: WRR_RABBIS,
+            skipCap,
+            letterFreqs: wrrLetterFreqs,
+            numPermutations: numPerm,
+            actualGeoMean
+          });
+        });
+
+      } catch (e) {
+        permDiv.innerHTML = `<div style="color:#c62828;">Could not start permutation test: ${e.message}</div>`;
+        permBtn.disabled = false;
+        permBtn.textContent = '\u{1F3B2} Permutation Test';
+      }
+    };
+
+    function wrrShowPermResults(msg) {
+      const permDiv = document.getElementById('wrrPermResults');
+      const pVal = msg.pValue;
+      const pColor = pVal < 0.01 ? '#1b5e20' : pVal < 0.05 ? '#2e7d32' : pVal < 0.1 ? '#f57f17' : '#c62828';
+      const sigLabel = pVal < 0.001 ? 'Highly significant' :
+                       pVal < 0.01  ? 'Very significant' :
+                       pVal < 0.05  ? 'Significant' :
+                       pVal < 0.1   ? 'Marginally significant' : 'Not significant';
+      const ratio = pVal > 0 ? Math.round(1 / pVal) : msg.numPermutations;
+
+      // Build mini histogram from distribution
+      let histHTML = '';
+      if (msg.distribution && msg.distribution.length > 10) {
+        const dist = msg.distribution;
+        const minV = dist[0], maxV = dist[dist.length - 1];
+        const bins = 30;
+        const binW = (maxV - minV) / bins || 1;
+        const counts = new Array(bins).fill(0);
+        for (const v of dist) {
+          const bi = Math.min(bins - 1, Math.floor((v - minV) / binW));
+          counts[bi]++;
+        }
+        const maxCount = Math.max(...counts);
+        const actualBin = Math.min(bins - 1, Math.floor((msg.actualGeoMean - minV) / binW));
+
+        histHTML = '<div style="margin-top:8px;"><div style="font-size:11px;color:#555;margin-bottom:4px;">Distribution of permuted geometric means:</div>';
+        histHTML += '<div style="display:flex;align-items:flex-end;height:60px;gap:1px;">';
+        for (let b = 0; b < bins; b++) {
+          const h = maxCount > 0 ? Math.round((counts[b] / maxCount) * 56) : 0;
+          const isActual = b === actualBin;
+          const bg = isActual ? '#c62828' : '#ce93d8';
+          const title = `${(minV + b * binW).toFixed(1)}\u2013${(minV + (b + 1) * binW).toFixed(1)}: ${counts[b]}`;
+          histHTML += `<div style="width:${Math.max(4, Math.floor(200 / bins))}px;height:${Math.max(1, h)}px;background:${bg};border-radius:1px 1px 0 0;" title="${title}"></div>`;
+        }
+        histHTML += '</div>';
+        histHTML += `<div style="font-size:10px;color:#999;display:flex;justify-content:space-between;"><span>${minV.toFixed(1)}</span><span>Red = actual (${msg.actualGeoMean.toFixed(2)})</span><span>${maxV.toFixed(1)}</span></div>`;
+        histHTML += '</div>';
+      }
+
+      permDiv.innerHTML = `
+        <div style="font-weight:bold;color:#6a1b9a;font-size:14px;margin-bottom:6px;">Permutation Test Results</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;font-size:13px;">
+          <div>P-value: <strong style="color:${pColor};font-size:15px;">${pVal.toFixed(6)}</strong></div>
+          <div>Significance: <strong style="color:${pColor};">${sigLabel}</strong></div>
+          <div>Rank: <strong>${msg.betterCount}</strong> / ${msg.numPermutations} (1/${ratio})</div>
+          <div>Actual geo. mean: <strong>${msg.actualGeoMean.toFixed(2)}</strong></div>
+          <div>Permuted median: <strong>${msg.median.toFixed(2)}</strong></div>
+          <div>Permuted mean: <strong>${msg.mean.toFixed(2)}</strong></div>
+        </div>
+        ${histHTML}
+        <div style="margin-top:6px;font-size:11px;color:#777;">
+          ${msg.numPermutations} random permutations of rabbi\u2194date assignments.
+          P = fraction of permutations with geometric mean \u0394 \u2264 actual.
+        </div>`;
+    }
 
     // Initialize WRR table
     populateWRRTable();
