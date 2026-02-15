@@ -889,7 +889,7 @@
       <section class="section">
         <h2 style="display:flex;align-items:center;gap:10px;">
           WRR 1994 Experiment
-          <span style="font-size:12px;padding:3px 8px;background:var(--blue);color:white;border-radius:12px;">Interactive Demo</span>
+          <span style="font-size:12px;padding:3px 8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:12px;">Academic Replication</span>
         </h2>
         <p style="font-size:14px;color:var(--gray);margin-bottom:16px;">
           Replication of the famous experiment by Witztum, Rips &amp; Rosenberg published in
@@ -919,6 +919,11 @@
             Run Experiment
           </button>
           <button class="btn btn-secondary" id="wrrCancelBtn" onclick="cancelWRR()" style="display:none;">Cancel</button>
+          <label style="font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;" title="Maximum |skip| searched per term. Higher = more thorough but slower.">
+            Skip cap:
+            <input type="number" id="wrrSkipCap" value="1000" min="100" max="10000" step="100"
+              style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
+          </label>
           <span id="wrrProgress" style="font-size:13px;color:var(--gray);"></span>
         </div>
 
@@ -938,14 +943,15 @@
         <div style="margin-bottom:8px;font-weight:600;color:var(--blue);">Rabbi List (WRR List 2)</div>
         <div style="overflow-x:auto;max-height:500px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
           <table id="wrrTable" style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead style="position:sticky;top:0;background:var(--blue);color:white;">
+            <thead style="position:sticky;top:0;background:var(--blue);color:white;z-index:1;">
               <tr>
-                <th style="padding:8px 6px;text-align:center;font-weight:600;">#</th>
-                <th style="padding:8px 6px;text-align:right;font-weight:600;">Name (English)</th>
-                <th style="padding:8px 6px;text-align:right;font-weight:600;direction:rtl;">Appellations</th>
-                <th style="padding:8px 6px;text-align:right;font-weight:600;direction:rtl;">Date</th>
-                <th style="padding:8px 6px;text-align:center;font-weight:600;">Pairs</th>
-                <th style="padding:8px 6px;text-align:center;font-weight:600;">Result</th>
+                <th style="padding:8px 4px;text-align:center;font-weight:600;">#</th>
+                <th style="padding:8px 4px;text-align:left;font-weight:600;">Rabbi</th>
+                <th style="padding:8px 4px;text-align:right;font-weight:600;direction:rtl;">Appellations</th>
+                <th style="padding:8px 4px;text-align:right;font-weight:600;direction:rtl;">Date</th>
+                <th style="padding:8px 4px;text-align:center;font-weight:600;">Pairs</th>
+                <th style="padding:8px 4px;text-align:center;font-weight:600;" title="Dynamic max |skip| searched (based on expected ELS occurrences)">D(w)</th>
+                <th style="padding:8px 4px;text-align:center;font-weight:600;" title="Minimum 2D Euclidean distance between name and date ELS letters on cylindrical array">&Delta;</th>
               </tr>
             </thead>
             <tbody id="wrrTableBody"></tbody>
@@ -956,17 +962,27 @@
         <details style="margin-top:16px;">
           <summary style="cursor:pointer;font-weight:600;color:var(--blue);font-size:14px;">Methodology Details</summary>
           <div style="padding:12px;font-size:13px;color:#555;line-height:1.7;">
-            <p><strong>Source:</strong> Witztum, Rips &amp; Rosenberg, "Equidistant Letter Sequences in the Book of Genesis",
-            <em>Statistical Science</em>, Vol. 9, No. 3, August 1994, pp. 429-438.</p>
-            <p><strong>Text:</strong> Genesis, Koren edition, 78,064 consonantal letters (no spaces).</p>
-            <p><strong>Method:</strong> For each rabbi, multiple name forms (appellations) and Hebrew death date forms are searched as
-            Equidistant Letter Sequences (ELS) in Genesis. The proximity of each name-date pair is measured using the
-            c(w,w') statistic, which normalizes the raw distance by comparing it against 125 perturbation variants.</p>
-            <p><strong>Significance:</strong> 999,999 random permutations of the name-date assignments were tested.
-            The actual assignment ranked 4th out of 1,000,000, yielding <strong>p = 0.000016</strong> after Bonferroni correction.</p>
-            <p><strong>This demo:</strong> Performs a simplified proximity search. For each rabbi, we find the closest ELS occurrences
-            of their name(s) and date(s) in Genesis, and compute a basic proximity score. The full c(w,w') statistic
-            requires extensive computation (cylindrical arrays, perturbation tests) which is beyond this interactive demo.</p>
+            <p><strong>Source:</strong> Witztum, Rips &amp; Rosenberg, &ldquo;Equidistant Letter Sequences in the Book of Genesis&rdquo;,
+            <em>Statistical Science</em>, Vol. 9, No. 3, August 1994, pp. 429&ndash;438.</p>
+            <p><strong>Text:</strong> Genesis (Koren edition), 78,064 consonantal Hebrew letters. Final letter forms (sofiot)
+            normalized to standard forms for matching.</p>
+            <p><strong>ELS Definition:</strong> For skip value d (|d| &ge; 2), letters at positions h, h+d, h+2d, &hellip;, h+(n&minus;1)d.
+            Skip &plusmn;1 (open text) is excluded per the WRR protocol.</p>
+            <p><strong>Skip Range D(w):</strong> Dynamic per term. For word w of length k with letter probabilities p<sub>i</sub>,
+            expected ELS count at skip d: E(w,d) = (L &minus; (k&minus;1)d) &sdot; &prod;p<sub>i</sub>.
+            D(w) is the smallest d where &sum;<sub>d=2..D</sub> E(w,d) &ge; 10, capped at user maximum.</p>
+            <p><strong>Distance &Delta;:</strong> Text arranged as 2D array with |d| columns. Position p maps to
+            row&nbsp;=&nbsp;&lfloor;p/|d|&rfloor;, col&nbsp;=&nbsp;p&nbsp;mod&nbsp;|d|.
+            &Delta; = min Euclidean distance between any name-ELS letter and any date-ELS letter.
+            Both array widths (|d<sub>name</sub>| and |d<sub>date</sub>|) tested; smaller distance reported.</p>
+            <p><strong>Original significance:</strong> 999,999 random permutations of name-date assignments tested.
+            Actual assignment ranked 4th of 1,000,000, yielding <strong>p &lt; 1/62,500</strong>.</p>
+            <p><strong>This replication:</strong> Implements the 2D cylindrical proximity measure with dynamic D(w).
+            Does <em>not</em> yet implement the c(w,w&prime;) perturbation statistic (125 letter-substitution variants)
+            or the aggregate permutation test. These require extended computation and are planned for a future
+            Web Worker implementation.</p>
+            <p><strong>Data:</strong> Appellations and dates from WRR Table 3 (Appendix). Rabbis #4 and #8
+            excluded&mdash;no recorded death dates.</p>
           </div>
         </details>
       </section>
@@ -2466,11 +2482,25 @@
       container.appendChild(div);
     };
 
-    // ============= WRR 1994 EXPERIMENT =============
-    // Rabbi dataset from WRR List 2 (Statistical Science 1994)
-    // Transliterated from Michigan-Claremont scheme to Hebrew
+    // ============= WRR 1994 EXPERIMENT — ACADEMIC REPLICATION =============
+    // Reference: Witztum, Rips & Rosenberg, "Equidistant Letter Sequences in
+    // the Book of Genesis", Statistical Science, Vol. 9, No. 3, 1994, 429-438.
+    //
+    // Algorithm:
+    // 1. Dynamic skip range D(w) per term based on expected ELS occurrence count
+    // 2. Find ALL ELS occurrences of each name/date form with |skip| in [2, D(w)]
+    // 3. 2D Euclidean distance on cylindrical array (width = |skip|)
+    // 4. Both array orientations tested (width = |d_name| and |d_date|)
+    // 5. Only |skip| >= 2 (open text excluded per WRR definition)
+    // 6. Sofiot normalized to standard forms for matching
+
+    const WRR_GENESIS_LEN = 78064;
+
+    // WRR List 2: 32 rabbis from Encyclopedia of Great Men in Israel.
+    // Appellations and date forms are consonantal Hebrew (spaces stripped at search time).
+    // Rabbis 4 and 8 have no recorded death dates — excluded from analysis.
     const WRR_RABBIS = [
-      { id:1, en:"Abraham ben David (RABaD)", names:["רבי אברהם","הראבי","הרבאבד","הראבד","האשכול","בעל האשכול","ראבי","הרב אב בית דין","ראבד"], dates:["כ חשון","כ בחשון","בכ חשון"] },
+      { id:1, en:"Abraham ben David (RABaD)", names:["רבי אברהם","הראבד","בעל האשכול","ראבד"], dates:["כ חשון","כ בחשון","בכ חשון"] },
       { id:2, en:"Abraham Yitzhaki", names:["רבי אברהם","יצחקי","זרע אברהם","בעל זרע אברהם","אברהם יצחקי"], dates:["יג סיון","יג בסיון","ביג סיון"] },
       { id:3, en:"Abraham HaMalakh", names:["רבי אברהם","המלאך","חסד לאברהם","בעל חסד לאברהם"], dates:["יב תשרי","יב בתשרי","ביב תשרי"] },
       { id:4, en:"Abraham Saba", names:["רבי אברהם","אברהם סבע","צרור המר","בעל צרור המר"], dates:[] },
@@ -2505,10 +2535,133 @@
     ];
 
     let wrrAbort = false;
-    let wrrGenesisText = null;
-    let wrrGenesisNorm = null;
+    let wrrGenesisNorm = null;   // Genesis text with sofiot normalized
+    let wrrLetterFreqs = null;   // letter frequency map for Genesis
+    let wrrResults = [];         // stored results for export/view
+    let wrrELSCache = new Map(); // termNorm:maxSkip → hits (avoid re-searching shared terms)
 
-    // Populate the WRR table on load
+    // ---- Load Genesis text and compute letter frequencies ----
+    async function wrrLoadGenesis() {
+      if (wrrGenesisNorm) return;
+      let raw;
+      if (torahText && torahText.length >= WRR_GENESIS_LEN) {
+        raw = torahText.slice(0, WRR_GENESIS_LEN);
+      } else {
+        const resp = await fetch('data/torahNoSpaces.txt');
+        raw = (await resp.text()).trim().slice(0, WRR_GENESIS_LEN);
+      }
+      wrrGenesisNorm = normalizeSofiot(raw);
+      // Compute letter frequencies for D(w) calculation
+      wrrLetterFreqs = {};
+      for (const ch of wrrGenesisNorm) {
+        wrrLetterFreqs[ch] = (wrrLetterFreqs[ch] || 0) + 1;
+      }
+    }
+
+    // ---- Dynamic skip range D(w) ----
+    // D(w) = smallest D such that sum_{d=2}^{D} E(w,d) >= 10
+    // where E(w,d) = (L - (k-1)*d) * prod(freq[letter_i] / L)
+    function wrrMaxSkip(termNorm, cap) {
+      const k = termNorm.length;
+      const L = WRR_GENESIS_LEN;
+      // Compute log-probability of match at any position
+      let logP = 0;
+      for (const ch of termNorm) {
+        const f = wrrLetterFreqs[ch];
+        if (!f) return 2; // letter not in Genesis text
+        logP += Math.log(f / L);
+      }
+      const pMatch = Math.exp(logP);
+      let cumExpected = 0;
+      for (let d = 2; d <= cap; d++) {
+        const validStarts = L - (k - 1) * d;
+        if (validStarts <= 0) return Math.max(d - 1, 2);
+        cumExpected += validStarts * pMatch;
+        if (cumExpected >= 10) return d;
+      }
+      return cap; // rare word: search full range
+    }
+
+    // ---- Optimized ELS search with first-character filter ----
+    // Finds all ELS of termNorm in text with |skip| in [2, maxSkip]
+    // Results cached by term+maxSkip to avoid duplicate searches
+    function wrrFindELS(text, termNorm, maxSkip) {
+      const cacheKey = termNorm + ':' + maxSkip;
+      const cached = wrrELSCache.get(cacheKey);
+      if (cached) return cached;
+
+      const k = termNorm.length;
+      const L = text.length;
+      const results = [];
+
+      // Pre-compute positions of first character for fast filtering
+      const ch0 = termNorm[0];
+      const ch0Pos = [];
+      for (let i = 0; i < L; i++) {
+        if (text[i] === ch0) ch0Pos.push(i);
+      }
+
+      for (let d = 2; d <= maxSkip; d++) {
+        const maxStart = L - (k - 1) * d;
+        if (maxStart <= 0) break;
+        for (const s of ch0Pos) {
+          if (s >= maxStart) break; // ch0Pos is sorted ascending
+          let match = true;
+          for (let i = 1; i < k; i++) {
+            if (text[s + i * d] !== termNorm[i]) { match = false; break; }
+          }
+          if (match) results.push({ pos: s, skip: d, len: k });
+        }
+      }
+
+      wrrELSCache.set(cacheKey, results);
+      return results;
+    }
+
+    // ---- 2D Euclidean distance on cylindrical array ----
+    // Position p on array of width w maps to row=floor(p/w), col=p%w
+    function wrr2DDist(p1, p2, w) {
+      const r1 = Math.floor(p1 / w), c1 = p1 % w;
+      const r2 = Math.floor(p2 / w), c2 = p2 % w;
+      return Math.sqrt((r1 - r2) * (r1 - r2) + (c1 - c2) * (c1 - c2));
+    }
+
+    // Min 2D distance between two ELS words, testing both array widths
+    function wrrPairDist(h1, h2) {
+      let minDist = Infinity;
+      // Get letter positions for each ELS occurrence
+      const pos1 = [];
+      for (let i = 0; i < h1.len; i++) pos1.push(h1.pos + i * h1.skip);
+      const pos2 = [];
+      for (let i = 0; i < h2.len; i++) pos2.push(h2.pos + i * h2.skip);
+      // Test both array widths: |skip1| and |skip2|
+      const widths = new Set();
+      if (h1.skip >= 2) widths.add(h1.skip);
+      if (h2.skip >= 2) widths.add(h2.skip);
+      for (const w of widths) {
+        for (const a of pos1) {
+          for (const b of pos2) {
+            const d = wrr2DDist(a, b, w);
+            if (d < minDist) minDist = d;
+          }
+        }
+      }
+      return minDist;
+    }
+
+    // Find best proximity across all name×date ELS hit combinations
+    function wrrBestProximity(nameHits, dateHits) {
+      let best = { dist: Infinity, nameHit: null, dateHit: null };
+      for (const nh of nameHits) {
+        for (const dh of dateHits) {
+          const d = wrrPairDist(nh, dh);
+          if (d < best.dist) best = { dist: d, nameHit: nh, dateHit: dh };
+        }
+      }
+      return best.dist < Infinity ? best : null;
+    }
+
+    // ---- Populate rabbi table ----
     function populateWRRTable() {
       const tbody = document.getElementById('wrrTableBody');
       if (!tbody) return;
@@ -2517,83 +2670,26 @@
         const hasDates = r.dates.length > 0;
         const pairCount = hasDates ? r.names.length * r.dates.length : 0;
         const dateStr = hasDates ? r.dates[0] : '—';
-        html += `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:6px;text-align:center;color:var(--gray);">${r.id}</td>
-          <td style="padding:6px;font-size:12px;">${r.en}</td>
-          <td style="padding:6px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${r.names[0]}${r.names.length > 1 ? ` <span style="color:#999;font-size:11px;">(+${r.names.length - 1})</span>` : ''}</td>
-          <td style="padding:6px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${dateStr}</td>
-          <td style="padding:6px;text-align:center;">${pairCount || '—'}</td>
-          <td style="padding:6px;text-align:center;" id="wrrResult${r.id}"><span style="color:#ccc;">—</span></td>
+        const rowStyle = hasDates ? '' : 'opacity:0.5;';
+        html += `<tr style="border-bottom:1px solid #eee;${rowStyle}">
+          <td style="padding:6px 4px;text-align:center;color:var(--gray);">${r.id}</td>
+          <td style="padding:6px 4px;font-size:12px;">${r.en}</td>
+          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${r.names[0]}${r.names.length > 1 ? ` <span style="color:#999;font-size:11px;">(+${r.names.length - 1})</span>` : ''}</td>
+          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${dateStr}</td>
+          <td style="padding:6px 4px;text-align:center;">${pairCount || '—'}</td>
+          <td style="padding:6px 4px;text-align:center;font-size:11px;color:var(--gray);" id="wrrDw${r.id}">—</td>
+          <td style="padding:6px 4px;text-align:center;" id="wrrResult${r.id}"><span style="color:#ccc;">—</span></td>
         </tr>`;
       });
       tbody.innerHTML = html;
     }
 
-    // Get Genesis text (first 78,064 chars of Torah)
-    async function getGenesisText() {
-      if (wrrGenesisNorm) return;
-      if (torahText && torahText.length >= 78064) {
-        wrrGenesisText = torahText.slice(0, 78064);
-        wrrGenesisNorm = normalizeSofiot(wrrGenesisText);
-        return;
-      }
-      // Load Torah text if not loaded
-      const resp = await fetch('data/torahNoSpaces.txt');
-      const full = await resp.text();
-      wrrGenesisText = full.trim().slice(0, 78064);
-      wrrGenesisNorm = normalizeSofiot(wrrGenesisText);
-    }
-
-    // Find ELS occurrences of a word in text, limited to first few per skip for speed
-    function findClosestELS(text, word, maxSkip) {
-      const norm = normalizeSofiot(word.replace(/\s+/g, ''));
-      if (norm.length < 2) return [];
-      const results = [];
-      // Skip 1 (open text)
-      let idx = 0;
-      while ((idx = text.indexOf(norm, idx)) !== -1) {
-        results.push({ pos: idx, skip: 1 });
-        idx++;
-      }
-      // ELS skips 2..maxSkip (positive only — negative skips produce same letter positions)
-      for (let skip = 2; skip <= maxSkip; skip++) {
-        const found = findELS(text, norm, skip);
-        for (const pos of found) {
-          results.push({ pos, skip });
-        }
-      }
-      return results;
-    }
-
-    // Compute minimum distance between two sets of ELS occurrences
-    function minPairDistance(nameHits, dateHits) {
-      let minDist = Infinity;
-      let bestPair = null;
-      for (const n of nameHits) {
-        const nPositions = [];
-        const nLen = typeof n.termLen === 'number' ? n.termLen : 1;
-        for (let i = 0; i < nLen; i++) nPositions.push(n.pos + i * (n.skip || 1));
-        for (const d of dateHits) {
-          const dPositions = [];
-          const dLen = typeof d.termLen === 'number' ? d.termLen : 1;
-          for (let i = 0; i < dLen; i++) dPositions.push(d.pos + i * (d.skip || 1));
-          // Min distance between any letter of name and any letter of date
-          for (const np of nPositions) {
-            for (const dp of dPositions) {
-              const dist = Math.abs(np - dp);
-              if (dist < minDist) {
-                minDist = dist;
-                bestPair = { name: n, date: d, dist };
-              }
-            }
-          }
-        }
-      }
-      return bestPair;
-    }
-
+    // ---- Main experiment ----
     window.runWRRExperiment = async function() {
       wrrAbort = false;
+      wrrResults = [];
+      wrrELSCache.clear();
+
       const runBtn = document.getElementById('wrrRunBtn');
       const cancelBtn = document.getElementById('wrrCancelBtn');
       const progressBar = document.getElementById('wrrProgressBar');
@@ -2606,94 +2702,113 @@
       progressBar.style.display = '';
       summary.style.display = 'none';
 
-      // Load Genesis
-      progressText.textContent = 'Loading Genesis text (78,064 letters)...';
-      await getGenesisText();
+      progressText.textContent = 'Loading Genesis (78,064 letters)...';
+      await wrrLoadGenesis();
 
-      const maxSkip = 100; // Search skips 2..100 (full WRR used much larger range)
+      const skipCap = parseInt(document.getElementById('wrrSkipCap')?.value) || 1000;
       const rabbisWithDates = WRR_RABBIS.filter(r => r.dates.length > 0);
-      const totalPairs = rabbisWithDates.length;
       let completed = 0;
-      let totalClose = 0;
-      const results = [];
+      const t0 = performance.now();
+
+      // Reset table
+      populateWRRTable();
 
       for (const rabbi of rabbisWithDates) {
         if (wrrAbort) break;
 
-        const cell = document.getElementById(`wrrResult${rabbi.id}`);
-        cell.innerHTML = '<span style="color:var(--orange);">Scanning...</span>';
+        const resultCell = document.getElementById(`wrrResult${rabbi.id}`);
+        const dwCell = document.getElementById(`wrrDw${rabbi.id}`);
+        resultCell.innerHTML = '<span style="color:var(--orange);">&#9203;</span>';
 
-        let bestOverall = null;
+        let bestResult = null;
         let bestDist = Infinity;
+        let maxDw = 0;
 
-        // For each name-date pair
-        for (const name of rabbi.names) {
+        for (const nameRaw of rabbi.names) {
           if (wrrAbort) break;
-          const nameNorm = normalizeSofiot(name.replace(/\s+/g, ''));
+          const nameNorm = normalizeSofiot(nameRaw.replace(/\s+/g, ''));
           if (nameNorm.length < 2) continue;
 
-          // Find ELS occurrences of name
-          const nameHits = findClosestELS(wrrGenesisNorm, name, maxSkip);
+          const dName = wrrMaxSkip(nameNorm, skipCap);
+          if (dName > maxDw) maxDw = dName;
+          const nameHits = wrrFindELS(wrrGenesisNorm, nameNorm, dName);
           if (nameHits.length === 0) continue;
-          nameHits.forEach(h => h.termLen = nameNorm.length);
-          await new Promise(r => setTimeout(r, 0)); // yield for UI
+          await new Promise(r => setTimeout(r, 0)); // yield
 
-          for (const date of rabbi.dates) {
+          for (const dateRaw of rabbi.dates) {
             if (wrrAbort) break;
-            const dateNorm = normalizeSofiot(date.replace(/\s+/g, ''));
+            const dateNorm = normalizeSofiot(dateRaw.replace(/\s+/g, ''));
             if (dateNorm.length < 2) continue;
 
-            const dateHits = findClosestELS(wrrGenesisNorm, date, maxSkip);
+            const dDate = wrrMaxSkip(dateNorm, skipCap);
+            if (dDate > maxDw) maxDw = dDate;
+            const dateHits = wrrFindELS(wrrGenesisNorm, dateNorm, dDate);
             if (dateHits.length === 0) continue;
-            dateHits.forEach(h => h.termLen = dateNorm.length);
 
-            const pair = minPairDistance(nameHits, dateHits);
+            const pair = wrrBestProximity(nameHits, dateHits);
             if (pair && pair.dist < bestDist) {
               bestDist = pair.dist;
-              bestOverall = { ...pair, name: name, date: date, nameSkip: pair.name.skip, dateSkip: pair.date.skip };
+              bestResult = { ...pair, nameStr: nameRaw, dateStr: dateRaw };
             }
           }
         }
 
+        // Update UI
         completed++;
-        const pct = Math.round((completed / totalPairs) * 100);
+        const pct = Math.round((completed / rabbisWithDates.length) * 100);
         progressFill.style.width = pct + '%';
-        progressText.textContent = `${completed}/${totalPairs} rabbis processed...`;
+        const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+        progressText.textContent = `${completed}/${rabbisWithDates.length} rabbis (${elapsed}s)`;
+        if (dwCell) dwCell.textContent = maxDw;
 
-        if (bestOverall) {
-          const isClose = bestDist < 100;
-          if (isClose) totalClose++;
-          const color = bestDist < 10 ? '#2e7d32' : bestDist < 50 ? '#558b2f' : bestDist < 100 ? '#f57f17' : bestDist < 500 ? '#e65100' : '#c62828';
-          cell.innerHTML = `<span style="color:${color};font-weight:bold;cursor:pointer;" title="Name: ${bestOverall.name} (skip ${bestOverall.nameSkip})\nDate: ${bestOverall.date} (skip ${bestOverall.dateSkip})\nDistance: ${bestDist} letters" onclick="viewWRRPair(${rabbi.id})">${bestDist}</span>`;
-          results.push({ rabbi, dist: bestDist, pair: bestOverall });
+        if (bestResult) {
+          const d = bestDist;
+          const color = d < 5 ? '#1b5e20' : d < 20 ? '#2e7d32' : d < 50 ? '#558b2f' :
+                        d < 100 ? '#f57f17' : d < 500 ? '#e65100' : '#c62828';
+          const tip = `Name: ${bestResult.nameStr} (skip ${bestResult.nameHit.skip})\nDate: ${bestResult.dateStr} (skip ${bestResult.dateHit.skip})\n\u0394 = ${d.toFixed(2)} (2D Euclidean)\nArray width: min(${bestResult.nameHit.skip}, ${bestResult.dateHit.skip})`;
+          resultCell.innerHTML = `<span style="color:${color};font-weight:bold;cursor:pointer;" title="${tip}" onclick="viewWRRPair(${rabbi.id})">${d.toFixed(1)}</span>`;
+          wrrResults.push({
+            rabbiId: rabbi.id, en: rabbi.en, dist: d,
+            name: bestResult.nameStr, date: bestResult.dateStr,
+            nameSkip: bestResult.nameHit.skip, dateSkip: bestResult.dateHit.skip,
+            namePos: bestResult.nameHit.pos, datePos: bestResult.dateHit.pos, maxDw
+          });
         } else {
-          cell.innerHTML = '<span style="color:#ccc;">N/F</span>';
+          resultCell.innerHTML = '<span style="color:#ccc;" title="No ELS found in skip range">—</span>';
         }
 
-        // Yield to UI
         await new Promise(r => setTimeout(r, 0));
       }
 
-      // Show summary
+      // Summary
       runBtn.disabled = false;
       cancelBtn.style.display = 'none';
       progressBar.style.display = 'none';
 
-      if (!wrrAbort && results.length > 0) {
-        results.sort((a, b) => a.dist - b.dist);
-        const avgDist = Math.round(results.reduce((s, r) => s + r.dist, 0) / results.length);
-        const closeCount = results.filter(r => r.dist < 100).length;
+      if (!wrrAbort && wrrResults.length > 0) {
+        const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+        wrrResults.sort((a, b) => a.dist - b.dist);
+        const median = wrrResults[Math.floor(wrrResults.length / 2)].dist;
+        const avg = wrrResults.reduce((s, r) => s + r.dist, 0) / wrrResults.length;
+        const close20 = wrrResults.filter(r => r.dist < 20).length;
+        const close100 = wrrResults.filter(r => r.dist < 100).length;
         summary.style.display = '';
         summary.innerHTML = `
-          <div style="font-weight:bold;color:#2e7d32;font-size:16px;margin-bottom:8px;">Experiment Complete</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-            <div><strong>${results.length}</strong> rabbis with ELS pairs found</div>
-            <div><strong>${closeCount}</strong> pairs within 100 letters</div>
-            <div>Average closest distance: <strong>${avgDist}</strong> letters</div>
+          <div style="font-weight:bold;color:#2e7d32;font-size:16px;margin-bottom:8px;">Experiment Complete (${elapsed}s)</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;font-size:13px;">
+            <div><strong>${wrrResults.length}</strong> / ${rabbisWithDates.length} rabbis with ELS pairs</div>
+            <div>Median \u0394: <strong>${median.toFixed(1)}</strong></div>
+            <div>Mean \u0394: <strong>${avg.toFixed(1)}</strong></div>
+            <div>\u0394 < 20: <strong>${close20}</strong> pairs</div>
+            <div>\u0394 < 100: <strong>${close100}</strong> pairs</div>
+            <div>Skip cap: <strong>${skipCap}</strong></div>
           </div>
-          <div style="margin-top:10px;font-size:12px;color:#555;">
-            Click any distance value to view the name-date pair in the ELS matrix.
-            Lower distances indicate closer proximity of name and date ELS sequences.
+          <div style="margin-top:10px;">
+            <button class="btn btn-secondary" onclick="wrrExportCSV()" style="font-size:12px;padding:6px 12px;">Export CSV</button>
+          </div>
+          <div style="margin-top:8px;font-size:12px;color:#555;">
+            \u0394 = min 2D Euclidean distance between name-ELS and date-ELS letters on cylindrical array.
+            Click any \u0394 value to view the pair in the ELS matrix.
           </div>`;
       }
     };
@@ -2705,23 +2820,37 @@
       document.getElementById('wrrProgress').textContent = 'Cancelled';
     };
 
-    // View a specific rabbi's name-date pair in the scan matrix
+    // View a specific rabbi's best name-date pair in the scan matrix
     window.viewWRRPair = function(rabbiId) {
+      const res = wrrResults.find(r => r.rabbiId === rabbiId);
       const rabbi = WRR_RABBIS.find(r => r.id === rabbiId);
-      if (!rabbi || rabbi.dates.length === 0) return;
-      // Switch to scan mode with the best name and date as search terms
-      const nameToSearch = rabbi.names[0].replace(/\s+/g, '');
-      const dateToSearch = rabbi.dates[0].replace(/\s+/g, '');
-      // Put terms in textarea
+      if (!rabbi) return;
+      const nameToSearch = res ? res.name.replace(/\s+/g, '') : rabbi.names[0].replace(/\s+/g, '');
+      const dateToSearch = res ? res.date.replace(/\s+/g, '') : (rabbi.dates[0] || '').replace(/\s+/g, '');
+      if (!dateToSearch) return;
       document.getElementById('batchTextarea').value = nameToSearch + '\n' + dateToSearch;
-      // Switch to scan tab
       document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
       document.querySelector('[data-mode="scan"]').classList.add('active');
       document.getElementById('scan-mode').classList.add('active');
     };
 
-    // Initialize WRR table when tab is shown
+    // Export results as CSV
+    window.wrrExportCSV = function() {
+      if (!wrrResults.length) return;
+      const hdr = 'Rabbi ID,Name (English),Best Name Form,Best Date Form,Name Skip,Date Skip,Name Pos,Date Pos,Delta (2D Euclidean),Max D(w)\n';
+      const rows = wrrResults.map(r =>
+        `${r.rabbiId},"${r.en}","${r.name}","${r.date}",${r.nameSkip},${r.dateSkip},${r.namePos},${r.datePos},${r.dist.toFixed(4)},${r.maxDw}`
+      ).join('\n');
+      const blob = new Blob(['\ufeff' + hdr + rows], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'wrr-1994-replication.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    // Initialize WRR table
     populateWRRTable();
 
     // ============= 3D MATRIX VIEW =============
