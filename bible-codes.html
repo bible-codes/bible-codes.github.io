@@ -1625,7 +1625,14 @@
           break; // past our verse, stop early
         }
       }
-      if (text) verseTextCache.set(key, text);
+      if (text) {
+        // Cap cache at 500 entries to limit memory growth
+        if (verseTextCache.size > 500) {
+          const first = verseTextCache.keys().next().value;
+          verseTextCache.delete(first);
+        }
+        verseTextCache.set(key, text);
+      }
       return text || null;
     }
 
@@ -1746,8 +1753,80 @@
       return results;
     }
 
+    // --- IndexedDB for scan results (streaming storage) ---
+    const SCAN_DB_NAME = 'ELSScanResults';
+    const SCAN_DB_VER = 1;
+
+    function openScanResultsDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(SCAN_DB_NAME, SCAN_DB_VER);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('hits')) {
+            const store = db.createObjectStore('hits', { autoIncrement: true });
+            store.createIndex('by_term', 'term', { unique: false });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // Read all hits from IndexedDB, grouped by term
+    async function readAllFromScanDB(termsToLoad) {
+      const db = await openScanResultsDB();
+      const results = {};
+      for (const t of termsToLoad) results[t] = [];
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('hits', 'readonly');
+        const store = tx.objectStore('hits');
+        const req = store.openCursor();
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            const h = cursor.value;
+            if (results[h.term]) {
+              results[h.term].push({ pos: h.pos, skip: h.skip, form: h.form });
+            }
+            cursor.continue();
+          }
+        };
+        tx.oncomplete = () => { db.close(); resolve(results); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      });
+    }
+
+    // Read paginated hits for one term from IndexedDB
+    async function readTermHitsFromDB(term, offset, limit) {
+      const db = await openScanResultsDB();
+      return new Promise((resolve, reject) => {
+        const results = [];
+        let skipped = 0;
+        const tx = db.transaction('hits', 'readonly');
+        const idx = tx.objectStore('hits').index('by_term');
+        const req = idx.openCursor(IDBKeyRange.only(term));
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            if (skipped < offset) {
+              skipped++;
+              cursor.continue();
+            } else if (results.length < limit) {
+              const h = cursor.value;
+              results.push({ pos: h.pos, skip: h.skip, form: h.form });
+              cursor.continue();
+            }
+            // else: done collecting
+          }
+        };
+        tx.oncomplete = () => { db.close(); resolve(results); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      });
+    }
+
     // --- N-term scan ---
     let scanAbort = false;
+    let scanActiveWorker = null;     // Web Worker for scan
     let scanAllResults = {};  // { term: [{pos, skip}, ...] }
     let scanTerms = [];
     let scanClusters = [];
@@ -1760,7 +1839,14 @@
     let discSortAsc = true;      // sort direction
     let namesEnglishMap = null;  // Hebrew → English name lookup
 
-    window.cancelScan = function() { scanAbort = true; batchAbort = true; };
+    window.cancelScan = function() {
+      scanAbort = true;
+      batchAbort = true;
+      if (scanActiveWorker) {
+        scanActiveWorker.terminate();
+        scanActiveWorker = null;
+      }
+    };
 
     window.startScan = async function() {
       if (!torahText) {
@@ -1809,7 +1895,12 @@
       status.textContent = 'Loading verse database...';
       await loadCharDB();
 
+      // --- Memory cleanup before new scan ---
       scanAllResults = {};
+      scanClusters = [];
+      clusterPValues = [];
+      permSpanDistribution = null;
+      verseTextCache.clear();
       scanTerms = terms;
       for (const term of terms) scanAllResults[term] = [];
 
@@ -1817,75 +1908,171 @@
       const hasBatch = batchTerms.length > 0;
       if (hasBatch) {
         for (const t of batchTerms) { t.hits = 0; t.bestSkip = null; t.bestPos = null; t.status = 'pending'; }
-        batchAllResults = {};
         document.getElementById('batchResults').style.display = '';
         renderBatchTable();
       }
 
-      // Count total search forms (including alternates) for progress
       const totalForms = terms.reduce((s, t) => s + (termAlts[t] || [t]).length, 0);
-      let formsSearched = 0;
       const startTime = performance.now();
 
-      // Scan per-term: search all alternates, merge results under primary key
-      for (let ti = 0; ti < terms.length; ti++) {
-        if (scanAbort) break;
+      // --- Run scan in Web Worker (streams to IndexedDB) with main-thread fallback ---
+      const scanHitCounts = {};  // term -> hit count (for progress, before DB read)
+      let workerUsed = false;
+      try {
+        const worker = new Worker('engines/scan.worker.js');
+        scanActiveWorker = worker;
+        workerUsed = true;
 
-        const primary = terms[ti];
-        const alts = termAlts[primary] || [primary];
-        const mergedResults = [];
+        await new Promise((resolve, reject) => {
+          worker.onmessage = function(msg) {
+            const d = msg.data;
+            switch (d.type) {
+              case 'progress': {
+                const pct = Math.round((d.formsSearched / d.totalForms) * 100);
+                progressBar.style.width = pct + '%';
+                progressBar.textContent = pct + '%';
+                const elapsed = (performance.now() - startTime) / 1000;
+                const rate = d.formsSearched > 0 ? elapsed / d.formsSearched : 0;
+                const remaining = Math.round(rate * (d.totalForms - d.formsSearched));
+                const remMin = Math.floor(remaining / 60);
+                const remSec = remaining % 60;
+                status.textContent = `Term ${d.termIdx + 1}/${terms.length}: "${d.primary}" — ${d.hitsSoFar.toLocaleString()} hits` +
+                  (remaining > 0 ? ` | ~${remMin}m ${remSec}s remaining` : '');
+                break;
+              }
+              case 'term-done': {
+                scanHitCounts[d.primary] = d.hitCount;
+                if (hasBatch) {
+                  const bt = batchTerms.find(b => b.cleaned === d.primary);
+                  if (bt) {
+                    bt.hits = d.hitCount;
+                    bt.bestSkip = d.bestSkip;
+                    bt.bestPos = d.bestPos;
+                    bt.status = 'done';
+                    updateBatchRow(batchTerms.indexOf(bt));
+                  }
+                }
+                break;
+              }
+              case 'complete':
+              case 'cancelled':
+                resolve(d.type);
+                break;
+              case 'error':
+                reject(new Error(d.error));
+                break;
+            }
+          };
+          worker.onerror = function(err) { reject(err); };
+          worker.postMessage({
+            action: 'scan',
+            torahText: torahTextNorm,
+            terms,
+            termAlts,
+            minSkip,
+            maxSkip
+          });
+        });
 
-        for (const form of alts) {
+        worker.terminate();
+        scanActiveWorker = null;
+
+        // Read ALL results from IndexedDB into scanAllResults
+        if (!scanAbort) {
+          status.textContent = 'Loading results from database...';
+          await new Promise(r => setTimeout(r, 0));
+          scanAllResults = await readAllFromScanDB(terms);
+        }
+      } catch (workerErr) {
+        scanActiveWorker = null;
+        if (workerUsed) console.warn('Scan worker failed, falling back to main thread:', workerErr);
+
+        // --- Main-thread fallback: write to IndexedDB + memory with frequent yields ---
+        let fallbackDB = null;
+        try { fallbackDB = await openScanResultsDB(); } catch(e) { /* no DB, memory only */ }
+        if (fallbackDB) {
+          // Clear old data
+          await new Promise((resolve, reject) => {
+            const tx = fallbackDB.transaction('hits', 'readwrite');
+            tx.objectStore('hits').clear();
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        }
+
+        let formsSearched = 0;
+        for (let ti = 0; ti < terms.length; ti++) {
           if (scanAbort) break;
-          for (let skip = minSkip; skip <= maxSkip; skip++) {
+          const primary = terms[ti];
+          const alts = termAlts[primary] || [primary];
+          const mergedResults = [];
+          let dbBuffer = [];
+
+          for (const form of alts) {
             if (scanAbort) break;
-            if (skip === 0) continue;
-            const found = findELS(torahTextNorm, form, skip);
-            for (const pos of found) mergedResults.push({ pos, skip, form });
+            for (let skip = minSkip; skip <= maxSkip; skip++) {
+              if (scanAbort) break;
+              if (skip === 0) continue;
+              const found = findELS(torahTextNorm, form, skip);
+              for (const pos of found) {
+                mergedResults.push({ pos, skip, form });
+                if (fallbackDB) dbBuffer.push({ term: primary, pos, skip, form });
+              }
+              // Flush to IndexedDB + yield every 50 skips
+              if ((skip - minSkip) % 50 === 0) {
+                if (fallbackDB && dbBuffer.length > 0) {
+                  await new Promise((resolve, reject) => {
+                    const tx = fallbackDB.transaction('hits', 'readwrite');
+                    const store = tx.objectStore('hits');
+                    for (const h of dbBuffer) store.put(h);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                  });
+                  dbBuffer = [];
+                }
+                const pct = Math.round(((formsSearched + (skip - minSkip) / (maxSkip - minSkip + 1)) / totalForms) * 100);
+                progressBar.style.width = pct + '%';
+                progressBar.textContent = pct + '%';
+                await new Promise(r => setTimeout(r, 0));
+              }
+            }
+            formsSearched++;
           }
-          formsSearched++;
-          // Progress based on total forms searched
+          // Flush remaining
+          if (fallbackDB && dbBuffer.length > 0) {
+            await new Promise((resolve, reject) => {
+              const tx = fallbackDB.transaction('hits', 'readwrite');
+              const store = tx.objectStore('hits');
+              for (const h of dbBuffer) store.put(h);
+              tx.oncomplete = () => resolve();
+              tx.onerror = () => reject(tx.error);
+            });
+          }
+          scanAllResults[primary] = mergedResults;
+
+          if (hasBatch) {
+            const bt = batchTerms.find(b => b.cleaned === primary);
+            if (bt) {
+              bt.hits = mergedResults.length;
+              if (mergedResults.length > 0) {
+                let bestSkip = Infinity, bestPos = 0;
+                for (const r of mergedResults) {
+                  if (Math.abs(r.skip) < Math.abs(bestSkip)) { bestSkip = r.skip; bestPos = r.pos; }
+                }
+                bt.bestSkip = bestSkip;
+                bt.bestPos = bestPos;
+              }
+              bt.status = 'done';
+              updateBatchRow(batchTerms.indexOf(bt));
+            }
+          }
           const pct = Math.round((formsSearched / totalForms) * 100);
           progressBar.style.width = pct + '%';
           progressBar.textContent = pct + '%';
+          status.textContent = `Term ${ti + 1}/${terms.length}: "${primary}" — ${mergedResults.length.toLocaleString()} hits`;
           await new Promise(r => setTimeout(r, 0));
         }
-
-        // Store merged results under primary key
-        scanAllResults[primary] = mergedResults;
-
-        // Update batch table row
-        if (hasBatch) {
-          const bt = batchTerms.find(b => b.cleaned === primary);
-          if (bt) {
-            batchAllResults[primary] = mergedResults;
-            bt.hits = mergedResults.length;
-            if (mergedResults.length > 0) {
-              const sorted = [...mergedResults].sort((a, b) => Math.abs(a.skip) - Math.abs(b.skip));
-              bt.bestSkip = sorted[0].skip;
-              bt.bestPos = sorted[0].pos;
-            }
-            bt.status = 'done';
-            const btIdx = batchTerms.indexOf(bt);
-            updateBatchRow(btIdx);
-          }
-        }
-
-        // Progress (keep pct updated even if no alternates)
-        const pct = Math.round((formsSearched / totalForms) * 100);
-        progressBar.style.width = pct + '%';
-        progressBar.textContent = pct + '%';
-
-        const elapsed = (performance.now() - startTime) / 1000;
-        const perForm = elapsed / formsSearched;
-        const remaining = Math.round(perForm * (totalForms - formsSearched));
-        const remMin = Math.floor(remaining / 60);
-        const remSec = remaining % 60;
-        const altInfo = alts.length > 1 ? ` (${alts.length} forms)` : '';
-        status.textContent = `Term ${ti + 1}/${terms.length}: "${primary}"${altInfo} — ${mergedResults.length} hits` +
-          (remaining > 0 ? ` | ~${remMin}m ${remSec}s remaining` : '');
-
-        await new Promise(r => setTimeout(r, 0));
+        if (fallbackDB) fallbackDB.close();
       }
 
       btn.disabled = false;
@@ -1925,11 +2112,18 @@
 
     // --- Sliding window cluster finder ---
     function findClusters(terms, allResults, maxSpan) {
-      // Merge all hits tagged by term index
+      // Merge all hits tagged by term index, with per-term cap for memory safety
+      const MAX_HITS_FOR_CLUSTERING = 5000;
       const merged = [];
       terms.forEach((term, idx) => {
-        for (const hit of allResults[term]) {
-          // Use actual matched form if available (alternate spellings), else primary
+        const hits = allResults[term];
+        // If a term has too many hits, keep only the smallest-|skip| ones for clustering
+        let useHits = hits;
+        if (hits.length > MAX_HITS_FOR_CLUSTERING) {
+          useHits = hits.slice().sort((a, b) => Math.abs(a.skip) - Math.abs(b.skip));
+          useHits.length = MAX_HITS_FOR_CLUSTERING;
+        }
+        for (const hit of useHits) {
           merged.push({ pos: hit.pos, skip: hit.skip, termIdx: idx, term: hit.form || term });
         }
       });
@@ -2025,17 +2219,20 @@
         html += `<p>No clusters found — some terms may have no results.</p></div>`;
       }
 
-      // Individual term results
+      // Individual term results (paginated — render first 200 per term)
+      const DISPLAY_LIMIT = 200;
       terms.forEach((term, tIdx) => {
         const results = allResults[term];
         const color = TERM_COLORS[tIdx % 8];
-        // Count unique forms
         const forms = new Set(results.map(r => r.form || term));
         const formLabel = forms.size > 1 ? ` (${[...forms].join(' / ')})` : '';
-        html += `<h3 style="margin-top:20px;border-right:4px solid ${color};padding-right:10px;">${term}${formLabel}: ${results.length.toLocaleString()} occurrences</h3>`;
+        const capped = results.length > DISPLAY_LIMIT;
+        html += `<h3 style="margin-top:20px;border-right:4px solid ${color};padding-right:10px;">${term}${formLabel}: ${results.length.toLocaleString()} occurrences${capped ? ` (showing first ${DISPLAY_LIMIT})` : ''}</h3>`;
         if (results.length > 0) {
-          html += '<div class="results-scrollable" style="max-height:300px;">';
-          results.forEach((r, i) => {
+          html += `<div class="results-scrollable" style="max-height:300px;" id="termResults_${tIdx}">`;
+          const showCount = Math.min(results.length, DISPLAY_LIMIT);
+          for (let i = 0; i < showCount; i++) {
+            const r = results[i];
             const actualForm = r.form || term;
             const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
             const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
@@ -2044,7 +2241,14 @@
               <span class="term" style="color:${color};">${formNote}${actualForm}</span>
               <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}</span>
             </div>`;
-          });
+          }
+          if (capped) {
+            html += `<div style="text-align:center;padding:8px;">
+              <button onclick="loadMoreResults(${tIdx}, ${DISPLAY_LIMIT})" id="loadMoreBtn_${tIdx}"
+                style="background:#1976d2;color:#fff;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:12px;">
+                Show more (${(results.length - DISPLAY_LIMIT).toLocaleString()} remaining)
+              </button></div>`;
+          }
           html += '</div>';
         }
       });
@@ -2052,6 +2256,44 @@
       html += '</div>';
       document.getElementById('scanResults').innerHTML = html;
     }
+
+    // Load more results for a term (paginated display)
+    window.loadMoreResults = function(tIdx, alreadyShown) {
+      const term = scanTerms[tIdx];
+      const results = scanAllResults[term];
+      if (!results) return;
+      const color = TERM_COLORS[tIdx % 8];
+      const container = document.getElementById('termResults_' + tIdx);
+      if (!container) return;
+
+      // Remove the "load more" button
+      const btn = document.getElementById('loadMoreBtn_' + tIdx);
+      if (btn) btn.parentElement.remove();
+
+      // Render next batch (200 more at a time)
+      const BATCH = 200;
+      const end = Math.min(results.length, alreadyShown + BATCH);
+      let html = '';
+      for (let i = alreadyShown; i < end; i++) {
+        const r = results[i];
+        const actualForm = r.form || term;
+        const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
+        const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
+        const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${actualForm}]</span> ` : '';
+        html += `<div class="result-item" onclick="showSingleTermMatrix(${tIdx}, ${i})">
+          <span class="term" style="color:${color};">${formNote}${actualForm}</span>
+          <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}</span>
+        </div>`;
+      }
+      if (end < results.length) {
+        html += `<div style="text-align:center;padding:8px;">
+          <button onclick="loadMoreResults(${tIdx}, ${end})" id="loadMoreBtn_${tIdx}"
+            style="background:#1976d2;color:#fff;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:12px;">
+            Show more (${(results.length - end).toLocaleString()} remaining)
+          </button></div>`;
+      }
+      container.insertAdjacentHTML('beforeend', html);
+    };
 
     // --- Render cluster list (called initially and on sort change) ---
     function renderClusterList() {
@@ -3029,41 +3271,66 @@
       if (scanTerms.length === 0) { alert('No scan results to save'); return; }
       const name = document.getElementById('scanSessionName').value.trim() || `Scan ${new Date().toLocaleTimeString()}`;
       const sessions = JSON.parse(localStorage.getItem('elsScanSessions') || '[]');
+
+      // Save metadata + clusters to localStorage (small).
+      // Full hit data persists in IndexedDB (ELSScanResults) — no size limit.
+      const hitCounts = {};
+      for (const term of scanTerms) hitCounts[term] = (scanAllResults[term] || []).length;
+
       sessions.unshift({
         name,
         terms: scanTerms,
-        allResults: scanAllResults,
+        hitCounts,
         clusters: scanClusters,
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
+        source: 'indexeddb'  // flag: full results are in IndexedDB
       });
-      if (sessions.length > 20) sessions.length = 20;
+      if (sessions.length > 10) sessions.length = 10;
       try {
         localStorage.setItem('elsScanSessions', JSON.stringify(sessions));
       } catch (e) {
-        alert('Session too large to save. Try reducing the skip range or number of terms.');
-        return;
+        // Clusters might be large — save without them
+        sessions[0].clusters = [];
+        try {
+          localStorage.setItem('elsScanSessions', JSON.stringify(sessions));
+        } catch (e2) {
+          alert('Could not save session metadata.'); return;
+        }
       }
       loadSavedScanSessions();
       document.getElementById('scanSessionName').value = '';
     };
 
-    window.loadScanSession = function(idx) {
+    window.loadScanSession = async function(idx) {
       const sessions = JSON.parse(localStorage.getItem('elsScanSessions') || '[]');
       if (!sessions[idx]) return;
       const s = sessions[idx];
       scanTerms = s.terms;
-      scanAllResults = s.allResults;
       scanClusters = s.clusters || [];
 
       // Restore terms into textarea
       document.getElementById('batchTextarea').value = s.terms.join('\n');
-      // Auto-parse so batch state is consistent
       parseBatchInput();
 
-      // Load char DB for verse attribution then display
-      loadCharDB().then(() => {
-        displayScanResults(scanTerms, scanAllResults, scanClusters);
-      });
+      // Load results from IndexedDB if available, else from legacy localStorage data
+      if (s.source === 'indexeddb') {
+        const status = document.getElementById('scanStatus');
+        if (status) status.textContent = 'Loading results from database...';
+        try {
+          scanAllResults = await readAllFromScanDB(s.terms);
+        } catch (e) {
+          // IndexedDB data may have been cleared by browser
+          scanAllResults = {};
+          for (const t of s.terms) scanAllResults[t] = [];
+          alert('Saved hit data was cleared by the browser. Clusters still available — re-run scan for full results.');
+        }
+      } else {
+        // Legacy: results stored in localStorage
+        scanAllResults = s.allResults || {};
+      }
+
+      await loadCharDB();
+      displayScanResults(scanTerms, scanAllResults, scanClusters);
     };
 
     window.deleteScanSession = function(idx) {

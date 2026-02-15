@@ -4,7 +4,7 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.4
+**Version**: 4.5
 **Last Updated**: February 15, 2026
 **Status**: Production (11 active tools, 3 pending)
 
@@ -853,11 +853,14 @@ The dictionary merges entries from multiple sources into a single searchable col
 
 ### 5.4 IndexedDB Storage
 
-IndexedDB is the browser's built-in database for storing large amounts of structured data. This project uses it to store character data, word data, verse data, roots, and dictionary entries.
+IndexedDB is the browser's built-in database for storing large amounts of structured data. This project uses it for two purposes:
 
-**Database name**: `BibleAnalysis` (version 3)
+**Database: `BibleAnalysis`** (version 3) — Character data, word data, verse data, roots, and dictionary entries.
+- **Object stores**: `chars`, `words`, `verses`, `roots`, `definitions`, `metadata`
 
-**Object stores**: `chars`, `words`, `verses`, `roots`, `definitions`, `metadata`
+**Database: `ELSScanResults`** (version 1) — Streaming ELS scan results. During Full Scan, the Web Worker writes hits directly to IndexedDB in batches of 500, keeping memory low. After scan, results are read back for clustering and display. No size caps — all hits preserved.
+- **Object store**: `hits` (autoIncrement key, `by_term` index)
+- **Fields**: `{ term, pos, skip, form }`
 
 **Typical browser quotas**: Chrome/Edge ~60% of free disk space, Firefox ~50%, Safari 1 GB default.
 
@@ -865,7 +868,7 @@ IndexedDB is the browser's built-in database for storing large amounts of struct
 
 A Progressive Web App (PWA) is a website enhanced with a service worker and a manifest file so that it can be installed and run offline.
 
-**Service worker** (`sw.js`, current version v6.0): Caches all HTML pages, JavaScript modules, CSS files, Torah data, dictionary files, and ELS index files. Uses a cache-first strategy for static assets and network-first with cache fallback for data files.
+**Service worker** (`sw.js`, current version v6.3): Caches all HTML pages, JavaScript modules, CSS files, Torah data, dictionary files, and ELS index files. Uses a cache-first strategy for static assets and network-first with cache fallback for data files.
 
 **What works offline**: All tools — ELS search, text search, gematria, acronyms, tsirufim, dictionary lookups, matrix view, book reader. The only features requiring network are fetching URLs in the OCR tool and external links (e.g., Sefaria).
 
@@ -874,7 +877,8 @@ A Progressive Web App (PWA) is a website enhanced with a service worker and a ma
 - **Frontend**: Pure JavaScript (ES6 modules), HTML5, CSS3. No framework dependencies.
 - **Visualization**: D3.js (tsirufim), Three.js (3D matrix, lazy-loaded).
 - **OCR**: Tesseract.js, PDF.js (both loaded from CDN).
-- **Storage**: IndexedDB, Service Worker Cache API.
+- **Storage**: IndexedDB (character DB + scan results streaming), Service Worker Cache API.
+- **Web Workers**: `engines/scan.worker.js` (ELS scan), `engines/wrr.worker.js` (WRR experiments).
 - **Compression**: Browser-native Compression Streams API (gzip).
 - **Build tools** (offline, Python): `build-database.py`, `build-els-index.py`, `build-unified-dict.py`, and others in `tools/`.
 - **Deployment**: GitHub Pages (static hosting).
@@ -964,7 +968,8 @@ The `data/manuscripts/` directory contains Genesis text from multiple historical
 │   ├── letter-analysis.js      # Letter frequency analysis
 │   ├── els-index.js            # ELS index query engine
 │   ├── dictionary-service.js   # Dictionary service
-│   ├── els.worker.js           # ELS Web Worker
+│   ├── els.worker.js           # ELS Web Worker (IndexedDB-based)
+│   ├── scan.worker.js          # Full Scan Web Worker (streams to IndexedDB)
 │   └── tsirufim/               # Semantic permutation suite
 │       ├── permutations.js
 │       ├── embeddings.js
@@ -1294,6 +1299,15 @@ python3 p.py
 ---
 
 ## 11. Changelog
+
+### February 15, 2026 (v4.5): Web Worker Scan + IndexedDB Streaming
+
+- **Web Worker ELS Scan**: Full Scan mode now runs the entire ELS search in a dedicated Web Worker (`engines/scan.worker.js`). The UI stays fully responsive during big searches — smooth progress bar, instant cancel, no freezing. Falls back to main-thread with frequent yields if Worker is unavailable.
+- **IndexedDB Streaming Results**: During search, hits are streamed to IndexedDB (`ELSScanResults`) in batches of 500. No result caps — every single hit is preserved. Worker memory stays low (only 500-object buffer at any time). After scan, results are read back from IndexedDB for clustering and display.
+- **No More "Session Too Large" Errors**: Session save now stores only metadata (terms, clusters) in localStorage. Full hit data persists in IndexedDB with no size limit. JSON export still includes all results.
+- **Paginated Result Display**: Individual term results show first 200 hits with a "Show more" button that loads 200 more at a time. Prevents DOM bloat from rendering thousands of result elements.
+- **Memory Cleanup**: Scan start clears old results, clusters, P-values, and verse text cache. `verseTextCache` capped at 500 entries with LRU eviction.
+- **Clustering Performance Guard**: `findClusters()` uses top 5,000 hits per term (by smallest |skip|) for the sliding window algorithm — computational optimization, not result loss.
 
 ### February 15, 2026 (v4.4): WRR2 Nations Experiment (Sample B3)
 

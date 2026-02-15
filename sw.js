@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-codes-v6.2';
+const CACHE_NAME = 'bible-codes-v6.3';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -80,6 +80,8 @@ const urlsToCache = [
   './engines/letter-analysis.js',
   './engines/dictionary-service.js',
   './engines/els-index.js',
+  './engines/scan.worker.js',
+  './engines/wrr.worker.js',
 
   // Tsirufim modules
   './engines/tsirufim/permutations.js',

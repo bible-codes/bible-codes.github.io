@@ -11,6 +11,34 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ## Current Session: 2026-02-15
 
+### Web Worker Scan + IndexedDB Streaming ✅ COMPLETE
+
+Moved the Full Scan ELS search to a dedicated Web Worker with IndexedDB streaming to eliminate UI freezing and memory issues during big searches.
+
+#### What's New
+
+1. **Web Worker ELS Scan** (`engines/scan.worker.js`) — Entire findELS loop runs off the main thread. UI stays fully responsive: smooth progress bar, instant cancel button, no freezing even with ±500 skip range.
+
+2. **IndexedDB Streaming** — Worker streams hits to `ELSScanResults` IndexedDB in batches of 500 during search. Worker memory: ~500-object buffer at any time. No result caps — every hit preserved. After scan, main thread reads all results from IndexedDB.
+
+3. **Session Save Fix** — Metadata (terms, clusters) saved to localStorage (small). Full hit data persists in IndexedDB — no more "Session too large to save" errors. Session load reads hits back from IndexedDB.
+
+4. **Paginated Display** — Individual term results show first 200 with "Show more" button loading 200 more at a time. Prevents DOM bloat.
+
+5. **Memory Cleanup** — Scan start clears scanAllResults, scanClusters, clusterPValues, permSpanDistribution, and verseTextCache. verseTextCache capped at 500 entries with LRU eviction.
+
+6. **Main-Thread Fallback** — If Worker fails, falls back to main-thread with yields every 50 skip values + IndexedDB writes. Also writes to IndexedDB for persistence.
+
+#### Files Modified/Created
+
+| File | Changes |
+|------|---------|
+| `engines/scan.worker.js` | NEW: 190 lines — findELS, IndexedDB open/clear/flush, runScan with streaming |
+| `bible-codes.html` | +120 lines: openScanResultsDB(), readAllFromScanDB(), readTermHitsFromDB(), worker message handling, paginated display, session save/load via IndexedDB, memory cleanup |
+| `sw.js` | Bumped to v6.3, added scan.worker.js + wrr.worker.js to cache list |
+
+---
+
 ### WRR2 Nations Experiment (Sample B3) ✅ COMPLETE
 
 Implemented the WRR2 "Table of Nations" experiment from the second Witztum-Rips-Rosenberg paper. Extends the existing WRR1 infrastructure with a new dataset: 68 nation names from Genesis 10, each paired with 5 category expressions.
