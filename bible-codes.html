@@ -1904,6 +1904,11 @@
 
       displayScanResults(scanTerms, scanAllResults, scanClusters);
 
+      // Auto-select first cluster so matrix (2D & 3D) updates immediately
+      if (scanClusters.length > 0) {
+        showClusterMatrix(0);
+      }
+
       if (hasBatch) {
         renderBatchTable();
         document.getElementById('batchExportBtn').style.display = '';
@@ -2577,6 +2582,8 @@
       const msg = `Added ${added} term${added !== 1 ? 's' : ''}` + (skipped > 0 ? ` (${skipped} already present)` : '');
       const span = document.getElementById('discSelectedCount');
       if (span) { span.textContent = msg; span.style.color = '#2e7d32'; setTimeout(() => { span.style.color = '#555'; updateDiscSelectedCount(); }, 2000); }
+      // Auto re-scan so matrix updates with new terms
+      if (added > 0) setTimeout(() => startScan(), 300);
     };
 
     // Add a discovered term to the search textarea and re-scan
@@ -2593,11 +2600,8 @@
         return;
       }
       textarea.value = current + (current ? '\n' : '') + word;
-      // Flash feedback
-      const btn = event.target;
-      btn.textContent = '✓';
-      btn.style.background = '#2e7d32';
-      setTimeout(() => { btn.textContent = '+'; btn.style.background = ''; }, 1000);
+      // Auto re-scan so matrix updates with new term
+      setTimeout(() => startScan(), 300);
     };
 
     // --- Render N-term matrix ---
