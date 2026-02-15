@@ -2684,7 +2684,61 @@
       tbody.innerHTML = html;
     }
 
-    // ---- Main experiment ----
+    // ---- UI helpers for WRR results ----
+    let wrrActiveWorker = null;
+    let wrrT0 = 0;
+
+    function wrrUpdateRabbiRow(rabbiId, maxDw, result) {
+      const resultCell = document.getElementById(`wrrResult${rabbiId}`);
+      const dwCell = document.getElementById(`wrrDw${rabbiId}`);
+      if (dwCell) dwCell.textContent = maxDw;
+      if (!result) {
+        resultCell.innerHTML = '<span style="color:#ccc;" title="No ELS found in skip range">\u2014</span>';
+        return;
+      }
+      const d = result.dist;
+      const color = d < 5 ? '#1b5e20' : d < 20 ? '#2e7d32' : d < 50 ? '#558b2f' :
+                    d < 100 ? '#f57f17' : d < 500 ? '#e65100' : '#c62828';
+      const tip = `Name: ${result.name} (skip ${result.nameSkip})\nDate: ${result.date} (skip ${result.dateSkip})\n\u0394 = ${d.toFixed(2)} (2D Euclidean)`;
+      resultCell.innerHTML = `<span style="color:${color};font-weight:bold;cursor:pointer;" title="${tip}" onclick="viewWRRPair(${rabbiId})">${d.toFixed(1)}</span>`;
+    }
+
+    function wrrShowSummary(skipCap) {
+      const rabbisWithDates = WRR_RABBIS.filter(r => r.dates.length > 0);
+      const summary = document.getElementById('wrrSummary');
+      const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
+      document.getElementById('wrrRunBtn').disabled = false;
+      document.getElementById('wrrCancelBtn').style.display = 'none';
+      document.getElementById('wrrProgressBar').style.display = 'none';
+      if (wrrResults.length === 0) return;
+      wrrResults.sort((a, b) => a.dist - b.dist);
+      const median = wrrResults[Math.floor(wrrResults.length / 2)].dist;
+      const avg = wrrResults.reduce((s, r) => s + r.dist, 0) / wrrResults.length;
+      const close20 = wrrResults.filter(r => r.dist < 20).length;
+      const close100 = wrrResults.filter(r => r.dist < 100).length;
+      const mode = wrrActiveWorker ? 'Web Worker' : 'main thread';
+      summary.style.display = '';
+      summary.innerHTML = `
+        <div style="font-weight:bold;color:#2e7d32;font-size:16px;margin-bottom:8px;">Experiment Complete (${elapsed}s, ${mode})</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;font-size:13px;">
+          <div><strong>${wrrResults.length}</strong> / ${rabbisWithDates.length} rabbis with ELS pairs</div>
+          <div>Median \u0394: <strong>${median.toFixed(1)}</strong></div>
+          <div>Mean \u0394: <strong>${avg.toFixed(1)}</strong></div>
+          <div>\u0394 < 20: <strong>${close20}</strong> pairs</div>
+          <div>\u0394 < 100: <strong>${close100}</strong> pairs</div>
+          <div>Skip cap: <strong>${skipCap}</strong></div>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-secondary" onclick="wrrExportCSV()" style="font-size:12px;padding:6px 12px;">Export CSV</button>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:#555;">
+          \u0394 = min 2D Euclidean distance between name-ELS and date-ELS letters on cylindrical array.
+          Click any \u0394 value to view the pair in the ELS matrix.
+        </div>`;
+      wrrActiveWorker = null;
+    }
+
+    // ---- Main experiment: Web Worker with main-thread fallback ----
     window.runWRRExperiment = async function() {
       wrrAbort = false;
       wrrResults = [];
@@ -2706,18 +2760,83 @@
       await wrrLoadGenesis();
 
       const skipCap = parseInt(document.getElementById('wrrSkipCap')?.value) || 1000;
-      const rabbisWithDates = WRR_RABBIS.filter(r => r.dates.length > 0);
-      let completed = 0;
-      const t0 = performance.now();
-
-      // Reset table
+      wrrT0 = performance.now();
       populateWRRTable();
+
+      // Try Web Worker first (Option A: pass text via postMessage)
+      try {
+        const worker = new Worker('engines/wrr.worker.js');
+        wrrActiveWorker = worker;
+        progressText.textContent = 'Running via Web Worker (UI stays responsive)...';
+
+        worker.onmessage = function(e) {
+          const msg = e.data;
+          if (msg.type === 'rabbi-done') {
+            // Update progress
+            const pct = Math.round((msg.completed / msg.total) * 100);
+            progressFill.style.width = pct + '%';
+            const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
+            progressText.textContent = `${msg.completed}/${msg.total} rabbis (${elapsed}s)`;
+            // Update table row
+            wrrUpdateRabbiRow(msg.rabbiId, msg.maxDw, msg.result);
+            // Store result
+            if (msg.result) {
+              wrrResults.push({
+                rabbiId: msg.rabbiId, en: msg.en, dist: msg.result.dist,
+                name: msg.result.name, date: msg.result.date,
+                nameSkip: msg.result.nameSkip, dateSkip: msg.result.dateSkip,
+                namePos: msg.result.namePos, datePos: msg.result.datePos, maxDw: msg.maxDw
+              });
+            }
+          } else if (msg.type === 'complete') {
+            wrrShowSummary(skipCap);
+          } else if (msg.type === 'error') {
+            console.warn('WRR Worker error, falling back to main thread:', msg.message);
+            worker.terminate();
+            wrrActiveWorker = null;
+            wrrResults = [];
+            populateWRRTable();
+            wrrRunMainThread(skipCap);
+          }
+        };
+
+        worker.onerror = function(err) {
+          console.warn('WRR Worker failed, falling back to main thread:', err.message);
+          worker.terminate();
+          wrrActiveWorker = null;
+          wrrResults = [];
+          populateWRRTable();
+          wrrRunMainThread(skipCap);
+        };
+
+        // Send data to Worker
+        worker.postMessage({
+          action: 'run',
+          genesisNorm: wrrGenesisNorm,
+          rabbis: WRR_RABBIS,
+          skipCap: skipCap,
+          letterFreqs: wrrLetterFreqs
+        });
+
+      } catch (e) {
+        // Worker not supported or failed to create
+        console.warn('Web Worker unavailable, running on main thread:', e.message);
+        wrrActiveWorker = null;
+        wrrRunMainThread(skipCap);
+      }
+    };
+
+    // ---- Fallback: run on main thread (same algorithms, with UI yields) ----
+    async function wrrRunMainThread(skipCap) {
+      const progressFill = document.getElementById('wrrProgressFill');
+      const progressText = document.getElementById('wrrProgressText');
+      const rabbisWithDates = WRR_RABBIS.filter(r => r.dates.length > 0);
+
+      progressText.textContent = 'Running on main thread...';
 
       for (const rabbi of rabbisWithDates) {
         if (wrrAbort) break;
-
         const resultCell = document.getElementById(`wrrResult${rabbi.id}`);
-        const dwCell = document.getElementById(`wrrDw${rabbi.id}`);
         resultCell.innerHTML = '<span style="color:var(--orange);">&#9203;</span>';
 
         let bestResult = null;
@@ -2728,95 +2847,55 @@
           if (wrrAbort) break;
           const nameNorm = normalizeSofiot(nameRaw.replace(/\s+/g, ''));
           if (nameNorm.length < 2) continue;
-
           const dName = wrrMaxSkip(nameNorm, skipCap);
           if (dName > maxDw) maxDw = dName;
           const nameHits = wrrFindELS(wrrGenesisNorm, nameNorm, dName);
           if (nameHits.length === 0) continue;
-          await new Promise(r => setTimeout(r, 0)); // yield
-
+          await new Promise(r => setTimeout(r, 0));
           for (const dateRaw of rabbi.dates) {
             if (wrrAbort) break;
             const dateNorm = normalizeSofiot(dateRaw.replace(/\s+/g, ''));
             if (dateNorm.length < 2) continue;
-
             const dDate = wrrMaxSkip(dateNorm, skipCap);
             if (dDate > maxDw) maxDw = dDate;
             const dateHits = wrrFindELS(wrrGenesisNorm, dateNorm, dDate);
             if (dateHits.length === 0) continue;
-
             const pair = wrrBestProximity(nameHits, dateHits);
             if (pair && pair.dist < bestDist) {
               bestDist = pair.dist;
-              bestResult = { ...pair, nameStr: nameRaw, dateStr: dateRaw };
+              bestResult = { nameHit: pair.nameHit, dateHit: pair.dateHit, nameStr: nameRaw, dateStr: dateRaw };
             }
           }
         }
 
-        // Update UI
-        completed++;
-        const pct = Math.round((completed / rabbisWithDates.length) * 100);
-        progressFill.style.width = pct + '%';
-        const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-        progressText.textContent = `${completed}/${rabbisWithDates.length} rabbis (${elapsed}s)`;
-        if (dwCell) dwCell.textContent = maxDw;
-
-        if (bestResult) {
-          const d = bestDist;
-          const color = d < 5 ? '#1b5e20' : d < 20 ? '#2e7d32' : d < 50 ? '#558b2f' :
-                        d < 100 ? '#f57f17' : d < 500 ? '#e65100' : '#c62828';
-          const tip = `Name: ${bestResult.nameStr} (skip ${bestResult.nameHit.skip})\nDate: ${bestResult.dateStr} (skip ${bestResult.dateHit.skip})\n\u0394 = ${d.toFixed(2)} (2D Euclidean)\nArray width: min(${bestResult.nameHit.skip}, ${bestResult.dateHit.skip})`;
-          resultCell.innerHTML = `<span style="color:${color};font-weight:bold;cursor:pointer;" title="${tip}" onclick="viewWRRPair(${rabbi.id})">${d.toFixed(1)}</span>`;
-          wrrResults.push({
-            rabbiId: rabbi.id, en: rabbi.en, dist: d,
-            name: bestResult.nameStr, date: bestResult.dateStr,
-            nameSkip: bestResult.nameHit.skip, dateSkip: bestResult.dateHit.skip,
-            namePos: bestResult.nameHit.pos, datePos: bestResult.dateHit.pos, maxDw
-          });
-        } else {
-          resultCell.innerHTML = '<span style="color:#ccc;" title="No ELS found in skip range">—</span>';
+        const result = bestResult ? {
+          dist: bestDist, name: bestResult.nameStr, date: bestResult.dateStr,
+          nameSkip: bestResult.nameHit.skip, dateSkip: bestResult.dateHit.skip,
+          namePos: bestResult.nameHit.pos, datePos: bestResult.dateHit.pos
+        } : null;
+        wrrUpdateRabbiRow(rabbi.id, maxDw, result);
+        if (result) {
+          wrrResults.push({ rabbiId: rabbi.id, en: rabbi.en, ...result, maxDw });
         }
-
+        const done = wrrResults.length + WRR_RABBIS.filter(r => r.dates.length === 0).length;
+        progressFill.style.width = Math.round((done / rabbisWithDates.length) * 100) + '%';
+        const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
+        progressText.textContent = `${done}/${rabbisWithDates.length} rabbis (${elapsed}s, main thread)`;
         await new Promise(r => setTimeout(r, 0));
       }
 
-      // Summary
-      runBtn.disabled = false;
-      cancelBtn.style.display = 'none';
-      progressBar.style.display = 'none';
-
-      if (!wrrAbort && wrrResults.length > 0) {
-        const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-        wrrResults.sort((a, b) => a.dist - b.dist);
-        const median = wrrResults[Math.floor(wrrResults.length / 2)].dist;
-        const avg = wrrResults.reduce((s, r) => s + r.dist, 0) / wrrResults.length;
-        const close20 = wrrResults.filter(r => r.dist < 20).length;
-        const close100 = wrrResults.filter(r => r.dist < 100).length;
-        summary.style.display = '';
-        summary.innerHTML = `
-          <div style="font-weight:bold;color:#2e7d32;font-size:16px;margin-bottom:8px;">Experiment Complete (${elapsed}s)</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;font-size:13px;">
-            <div><strong>${wrrResults.length}</strong> / ${rabbisWithDates.length} rabbis with ELS pairs</div>
-            <div>Median \u0394: <strong>${median.toFixed(1)}</strong></div>
-            <div>Mean \u0394: <strong>${avg.toFixed(1)}</strong></div>
-            <div>\u0394 < 20: <strong>${close20}</strong> pairs</div>
-            <div>\u0394 < 100: <strong>${close100}</strong> pairs</div>
-            <div>Skip cap: <strong>${skipCap}</strong></div>
-          </div>
-          <div style="margin-top:10px;">
-            <button class="btn btn-secondary" onclick="wrrExportCSV()" style="font-size:12px;padding:6px 12px;">Export CSV</button>
-          </div>
-          <div style="margin-top:8px;font-size:12px;color:#555;">
-            \u0394 = min 2D Euclidean distance between name-ELS and date-ELS letters on cylindrical array.
-            Click any \u0394 value to view the pair in the ELS matrix.
-          </div>`;
-      }
-    };
+      wrrShowSummary(skipCap);
+    }
 
     window.cancelWRR = function() {
       wrrAbort = true;
+      if (wrrActiveWorker) {
+        wrrActiveWorker.terminate();
+        wrrActiveWorker = null;
+      }
       document.getElementById('wrrCancelBtn').style.display = 'none';
       document.getElementById('wrrRunBtn').disabled = false;
+      document.getElementById('wrrProgressBar').style.display = 'none';
       document.getElementById('wrrProgress').textContent = 'Cancelled';
     };
 

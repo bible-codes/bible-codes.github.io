@@ -1811,13 +1811,48 @@ For any claimed finding:
 
 #### Web Worker Migration
 
-Currently, ELS search runs on the main thread with periodic `yield` (`await setTimeout(0)`). Migrating to a dedicated Web Worker would:
-- Eliminate UI blocking entirely
-- Enable parallel searches (multiple workers)
-- Improve cancellation responsiveness
-- Allow progress reporting via `postMessage`
+**WRR Experiment — Option A (IMPLEMENTED)**
 
-Architecture: `engines/els.worker.js` already exists but is used for a different search mode. The main scan in `bible-codes.html` should be migrated.
+The WRR 1994 experiment runs in a dedicated Web Worker (`engines/wrr.worker.js`) with automatic main-thread fallback:
+- Worker receives Genesis text + rabbi data + config via `postMessage` (~100KB)
+- Posts per-rabbi results back incrementally (`rabbi-done`, `complete`, `error`)
+- Instant cancellation via `worker.terminate()`
+- Fallback to `wrrRunMainThread()` on Worker creation/runtime error
+- ~30-50% speedup vs main-thread `setTimeout(0)` yields
+
+**WRR Experiment — Option B (NEXT STEPS)**
+
+Upgrade to a module Worker for advanced WRR features requiring large data access:
+
+1. **Convert to module Worker**: `new Worker('wrr.worker.js', { type:'module' })`
+   - Enables `import` of shared engines (els-index.js, dictionary-service.js)
+   - Requires Chrome 80+, Firefox 114+, Safari 15+ (no IE11)
+
+2. **Access IndexedDB directly from Worker**:
+   - Load `charDatabase` for verse attribution inside Worker
+   - Load dictionary for candidate validation
+   - No `postMessage` overhead for large datasets
+
+3. **c(w,w') perturbation statistic** (125 variants per pair):
+   - Worker generates letter-substitution perturbations autonomously
+   - Re-searches each perturbation (125 x full ELS search per pair)
+   - Computes c(w,w') = rank(actual delta) / 125
+   - Requires ~30 min computation; Worker keeps UI fully responsive
+
+4. **Aggregate permutation test** (1,000-100,000 shuffles):
+   - Worker randomly permutes rabbi-date assignments
+   - Re-runs full experiment per permutation
+   - Computes P-value = rank(actual aggregate) / N_permutations
+   - Could use multiple Workers in parallel (one per CPU core)
+
+5. **SharedArrayBuffer** (optional perf boost):
+   - Requires Cross-Origin-Isolation headers (COOP + COEP)
+   - GitHub Pages doesn't support these natively (needs service worker injection)
+   - Eliminates `postMessage` copy overhead for large transfers
+
+**ELS Scan — Main Thread (current)**
+
+The main ELS scan still runs on the main thread with `setTimeout(0)` yields. `engines/els.worker.js` (421 lines) exists for the index-lookup mode but is not wired to the Full Scan tab. Migration planned but lower priority than WRR Option B.
 
 #### IndexedDB for Predictive ELS
 
@@ -1875,7 +1910,7 @@ For compute-intensive tasks (ELS full scan across ±500 skips, large permutation
 | Phase | Description | Status | Key Deliverables |
 |-------|-------------|--------|-----------------|
 | **Near-term** | Complete core suite (5 items) | 60% done | letter-analysis.html, taamim.html, cross-ref.html, dashboard |
-| **WRR 1994** | Full experiment replication | Tab added, needs polish | 2D proximity, P-value, CSV export |
+| **WRR 1994** | Full experiment replication | Academic-grade, Web Worker | 2D proximity, D(w), CSV export, Worker fallback |
 | **Predictive ELS** | News → ELS → ML pipeline | Planned (detailed) | predictive-els.html, 4 new engine files |
 | **Tsirufim-ELS loop** | Permutation feedback into ELS search | Planned | Integration code in predictive-els.js |
 | **ML/Neural** | Character prediction, graph embeddings | Research stage | MoE architecture, GAT experiments |
