@@ -1452,6 +1452,61 @@ These items have engines already built or detailed plans ready. They represent t
 - **CSV export** for both Quick Run and Full WRR modes
 - **War and Peace control text** comparison option
 
+### 13.2.1 WRR2 — Nations and Names Experiments
+
+**Status**: PLANNED. Extends the existing WRR infrastructure with new datasets and ELS+SL methodology.
+
+**Source**: Witztum, Rips & Rosenberg, "Equidistant Letter Sequences in the Book of Genesis" (second paper), hosted at [math.toronto.edu/drorbn/Codes/Nations/WRR2](https://www.math.toronto.edu/drorbn/Codes/Nations/WRR2/).
+
+**What It Adds** (beyond WRR1):
+
+**Sample B3 — The Seventy Nations** (Genesis 10):
+- 68 nation names (Table of Nations) × 4 categories per nation:
+  - Nation name: "x עם" (nation of x), "x-ים" (people of x), plus Targum Yonathan new names
+  - Country: "x ארץ" (country of x), plus Targum Yonathan new names
+  - Language: "x שפת" (language of x)
+  - Script: "x כתב" (script of x)
+- Pairs ELS occurrences of nation names with ordinary text ("strings of letters" / SL) appearances
+- Result: **P = 4.0 × 10⁻⁹** (with 999,999,999 permutations) — stronger than WRR1 rabbis
+- Control text V (verse-permuted Genesis): P ≈ 0.559 (non-significant)
+
+**Sample B1 — Men's Biblical Names** (457 pairs):
+- Names from Even-Shoshan's "Treasury of Men's Names" (5-8 letters, appearing in Hebrew Bible)
+- Paired with expressions meaning "a name beginning with [letter]" in 3 forms (singular + 2 plural)
+- Result: **P = 0.000884** (999,999 permutations)
+- Control text V: P ≈ 0.169 (non-significant)
+
+**Sample B2 — Women's Biblical Names** (38 pairs):
+- Same method as B1 using "Treasury of Women's Names"
+- Result: non-significant
+
+**Key Methodological Extensions**:
+1. **ELS + SL proximity**: Measures distance between ELS appearances and ordinary sequential text (SL), not just ELS-to-ELS. Requires finding where word w' appears as plain text in Genesis (d'=±1).
+2. **Domain of Minimality weighting**: w(e) = length(domain of minimality) / L. Weights each ELS occurrence by the range of skip values over which it is the closest occurrence to the SL text.
+3. **Billion-scale permutations**: B3 tested with 999,999,999 permutations for P₂. Our current UI caps at 100K — need to support web worker running up to 10⁹ trials with chunked progress.
+4. **Control text V**: Verse-permuted Genesis (specific RNG seed: decimal 10) as null hypothesis comparison.
+5. **Algorithm P permutations**: Knuth's Algorithm P with specific Turbo-Pascal RNG seed (01001 10000 10011 11100 00101 00111 11) for exact reproducibility.
+
+**Implementation Plan**:
+- Add "Nations" and "Names" dataset tabs alongside existing WRR rabbis tab
+- Hardcode Table of Nations data (68 names × category expressions) from Targum Yonathan
+- Implement SL (ordinary text) search in worker — find all ordinary occurrences of w' in Genesis
+- Add domain of minimality weighting to ε(w,w') aggregation
+- Extend permutation limit to 10⁹ with chunked processing and estimated time display
+- Add control text V generation (verse-permuted Genesis with fixed seed)
+
+**References**:
+- Cordovero, M. (1592) *Pardes Rimmonim*
+- Even-Shoshan, A. (1981) *A New Concordance of the Bible*
+- Even-Shoshan, A. (1989) *A New Dictionary of the Hebrew Language*
+- Feller, W. (1966) *An Introduction to Probability Theory and Its Applications*
+- Hagra (1905) *A Commentary to the Book of Job*
+- Kasher, M. M. (1929, 1953) *Torah Shelemah*
+- Knuth, D. E. (1969) *The Art of Computer Programming*
+- Rabbenu Bahya (1492) *A Commentary on the Pentateuch*
+- Weissmandel, H. M. D. (1958) *Torath Hemed*
+- Witztum, D., Rips, E. and Rosenberg, Y. (1994) *Equidistant Letter Sequences in the Book of Genesis*, Statistical Science, 9(3):429-438
+
 ### 13.3 Predictive ELS Pipeline
 
 **Status**: Detailed 5-phase plan written (`README--plans.md`). Not started.
