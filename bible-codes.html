@@ -934,6 +934,7 @@
               <button class="btn-3d-ctrl" id="btn3DReset" onclick="reset3DCamera()" style="display:none;">Reset Camera</button>
               <button class="btn-3d-ctrl" id="btn3DVideo" onclick="vidShowPanel()" style="display:none;background:#c62828;">Video</button>
               <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Download PNG</button>
+              <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover Terms</button>
             </div>
           </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
@@ -970,11 +971,24 @@
                   <option value="30" selected>30</option>
                   <option value="60">60</option>
                 </select>
-                <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download Video</button>
+                <span class="vid-label" style="margin-left:12px;">Format:</span>
+                <select id="vidFormatSelect">
+                  <option value="webm">WebM</option>
+                  <option value="mp4">MP4</option>
+                  <option value="gif">GIF (universal)</option>
+                </select>
+                <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download</button>
               </div>
             </div>
           </div>
           <div class="matrix-legend" id="scanMatrixLegend"></div>
+          <div id="discoverTermsPanel" style="display:none;margin-top:12px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#f9f9f9;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <h4 style="margin:0;font-size:14px;">Discovered ELS Terms in Matrix Region</h4>
+              <span id="discoverTermsStatus" style="font-size:12px;color:#666;"></span>
+            </div>
+            <div id="discoverTermsResults" style="max-height:300px;overflow-y:auto;"></div>
+          </div>
         </div>
       </section>
     </div>
@@ -1148,8 +1162,10 @@
 
   <script type="module">
     import { getElsIndexService, initElsIndex } from './engines/els-index.js';
+    import { getDictionaryService, initDictionaries } from './engines/dictionary-service.js';
 
     let elsService = null;
+    let dictService = null;
     let torahText = null;
     let currentResults = null;
 
@@ -1874,7 +1890,8 @@
       const merged = [];
       terms.forEach((term, idx) => {
         for (const hit of allResults[term]) {
-          merged.push({ pos: hit.pos, skip: hit.skip, termIdx: idx, term });
+          // Use actual matched form if available (alternate spellings), else primary
+          merged.push({ pos: hit.pos, skip: hit.skip, termIdx: idx, term: hit.form || term });
         }
       });
       if (merged.length === 0) return [];
@@ -1975,14 +1992,19 @@
       terms.forEach((term, tIdx) => {
         const results = allResults[term];
         const color = TERM_COLORS[tIdx % 8];
-        html += `<h3 style="margin-top:20px;border-right:4px solid ${color};padding-right:10px;">${term}: ${results.length.toLocaleString()} occurrences</h3>`;
+        // Count unique forms
+        const forms = new Set(results.map(r => r.form || term));
+        const formLabel = forms.size > 1 ? ` (${[...forms].join(' / ')})` : '';
+        html += `<h3 style="margin-top:20px;border-right:4px solid ${color};padding-right:10px;">${term}${formLabel}: ${results.length.toLocaleString()} occurrences</h3>`;
         if (results.length > 0) {
           html += '<div class="results-scrollable" style="max-height:300px;">';
           results.forEach((r, i) => {
-            const verses = getVersesForHit(r.pos, r.skip, term.length);
+            const actualForm = r.form || term;
+            const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
             const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
+            const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${actualForm}]</span> ` : '';
             html += `<div class="result-item" onclick="showSingleTermMatrix(${tIdx}, ${i})">
-              <span class="term" style="color:${color};">${term}</span>
+              <span class="term" style="color:${color};">${formNote}${actualForm}</span>
               <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}</span>
             </div>`;
           });
@@ -2043,22 +2065,24 @@
 
     // --- Show single term matrix ---
     window.showSingleTermMatrix = function(termIdx, resultIdx) {
-      const term = scanTerms[termIdx];
-      const results = scanAllResults[term];
+      const primaryTerm = scanTerms[termIdx];
+      const results = scanAllResults[primaryTerm];
       if (!results || !results[resultIdx] || !torahText) return;
 
       const r = results[resultIdx];
-      const hit = { pos: r.pos, skip: r.skip, term, termIdx };
+      const actualForm = r.form || primaryTerm;
+      const hit = { pos: r.pos, skip: r.skip, term: actualForm, termIdx };
 
       const view = document.getElementById('scanMatrixView');
       view.style.display = 'block';
-      document.getElementById('scanMatrixTitle').textContent = `"${term}"`;
+      const titleSuffix = actualForm !== primaryTerm ? ` [alt: ${primaryTerm}]` : '';
+      document.getElementById('scanMatrixTitle').textContent = `"${actualForm}"${titleSuffix}`;
 
       const color = TERM_COLORS[termIdx % 8];
-      const verses = getVersesForHit(r.pos, r.skip, term.length);
+      const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
 
       document.getElementById('scanMatrixStats').innerHTML = `
-        <div class="matrix-stat"><div class="value" style="color:${color};">${term}</div><div class="label">Term</div></div>
+        <div class="matrix-stat"><div class="value" style="color:${color};">${actualForm}</div><div class="label">Term</div></div>
         <div class="matrix-stat"><div class="value">${r.pos.toLocaleString()}</div><div class="label">Position</div></div>
         <div class="matrix-stat"><div class="value">${r.skip}</div><div class="label">Skip</div></div>
       `;
@@ -2068,7 +2092,7 @@
       const verseSpans = makeVerseSpans(verses);
       const verseStr = verseSpans ? ` — ${verseSpans}` : '';
       document.getElementById('scanMatrixLegend').innerHTML = `
-        <div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${term}${verseStr}</span></div>
+        <div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${actualForm}${verseStr}</span></div>
       `;
 
       current3DHits = [hit];
@@ -2080,6 +2104,174 @@
       }
 
       view.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // --- Discover dictionary-validated ELS terms within current matrix region ---
+    window.discoverMatrixTerms = async function() {
+      if (!current3DHits || current3DHits.length === 0) {
+        alert('No matrix displayed. Click a cluster first.');
+        return;
+      }
+      if (!elsService) {
+        alert('ELS index not loaded yet.');
+        return;
+      }
+
+      const panel = document.getElementById('discoverTermsPanel');
+      const resultsDiv = document.getElementById('discoverTermsResults');
+      const statusSpan = document.getElementById('discoverTermsStatus');
+      panel.style.display = 'block';
+      resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">Searching...</div>';
+      statusSpan.textContent = '';
+
+      // Compute the bounding region of the current matrix hits
+      const allPositions = [];
+      const searchTermSet = new Set();
+      for (const h of current3DHits) {
+        searchTermSet.add(h.term);
+        for (let i = 0; i < h.term.length; i++) {
+          allPositions.push(h.pos + i * h.skip);
+        }
+      }
+      const minPos = Math.min(...allPositions);
+      const maxPos = Math.max(...allPositions);
+      const center = Math.round((minPos + maxPos) / 2);
+      const radius = Math.max(Math.round((maxPos - minPos) / 2) + 100, 500);
+
+      // Load dictionary if not yet loaded
+      if (!dictService) {
+        statusSpan.textContent = 'Loading dictionary...';
+        try {
+          await initDictionaries(['unified']);
+          dictService = getDictionaryService();
+        } catch (e) {
+          // Try BDB fallback
+          try {
+            await initDictionaries(['bdb']);
+            dictService = getDictionaryService();
+          } catch (e2) {
+            dictService = null;
+          }
+        }
+      }
+
+      statusSpan.textContent = `Searching ±${radius} around position ${center}...`;
+
+      // Use setTimeout to allow UI to update before heavy computation
+      await new Promise(r => setTimeout(r, 50));
+
+      // Find all ELS-indexed words near the cluster
+      const nearby = elsService.findNearby(center, radius, {
+        minWordLength: 2,
+        maxResults: 500
+      });
+
+      // Filter: exclude the search terms themselves, validate against dictionary
+      const discovered = [];
+      for (const item of nearby) {
+        // Skip the original search terms
+        if (searchTermSet.has(item.word)) continue;
+
+        // Check dictionary
+        let inDict = false;
+        let definition = '';
+        let root = '';
+        if (dictService) {
+          const defs = dictService.getDefinitions(item.word);
+          if (defs && defs.length > 0) {
+            inDict = true;
+            definition = defs[0].definitions?.[0] || '';
+          }
+          const rootInfo = dictService.getRoot(item.word);
+          if (rootInfo) root = rootInfo.root;
+        }
+
+        // Get significance
+        const sig = elsService.significanceScore(item.word);
+
+        discovered.push({
+          word: item.word,
+          minDistance: item.minDistance,
+          occurrences: item.occurrences.length,
+          totalOccurrences: item.totalOccurrences,
+          zScore: sig.zScore,
+          inDict,
+          definition,
+          root,
+          bestOcc: item.occurrences[0] // closest occurrence
+        });
+      }
+
+      // Sort: dictionary words first, then by z-score descending
+      discovered.sort((a, b) => {
+        if (a.inDict !== b.inDict) return a.inDict ? -1 : 1;
+        return b.zScore - a.zScore;
+      });
+
+      // Render results table
+      const dictCount = discovered.filter(d => d.inDict).length;
+      statusSpan.textContent = `${dictCount} dictionary terms / ${discovered.length} total found in ±${radius}`;
+
+      if (discovered.length === 0) {
+        resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">No additional terms found in this region.</div>';
+        return;
+      }
+
+      let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#e8e8e8;text-align:left;">
+          <th style="padding:4px 6px;">#</th>
+          <th style="padding:4px 6px;">Term</th>
+          <th style="padding:4px 6px;">Root</th>
+          <th style="padding:4px 6px;">Distance</th>
+          <th style="padding:4px 6px;">Skip</th>
+          <th style="padding:4px 6px;">z-Score</th>
+          <th style="padding:4px 6px;">Dict</th>
+          <th style="padding:4px 6px;">Definition</th>
+          <th style="padding:4px 6px;">Add</th>
+        </tr></thead><tbody>`;
+
+      for (let i = 0; i < discovered.length; i++) {
+        const d = discovered[i];
+        const bgColor = d.inDict ? '#e8f5e9' : '#fff';
+        const zColor = d.zScore > 3 ? '#c62828' : d.zScore > 2 ? '#e65100' : '#333';
+        const defText = d.definition ? d.definition.substring(0, 60) : '';
+        html += `<tr style="background:${bgColor};border-bottom:1px solid #eee;" title="Position: ${d.bestOcc.pos}, Total ELS occurrences: ${d.totalOccurrences}">
+          <td style="padding:3px 6px;">${i + 1}</td>
+          <td style="padding:3px 6px;font-weight:bold;font-size:15px;direction:rtl;">${d.word}</td>
+          <td style="padding:3px 6px;direction:rtl;color:#555;">${d.root}</td>
+          <td style="padding:3px 6px;">${d.minDistance}</td>
+          <td style="padding:3px 6px;">${d.bestOcc.skip}</td>
+          <td style="padding:3px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
+          <td style="padding:3px 6px;">${d.inDict ? '✓' : ''}</td>
+          <td style="padding:3px 6px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${defText}</td>
+          <td style="padding:3px 6px;"><button class="btn btn-small" style="padding:2px 8px;font-size:11px;" onclick="addDiscoveredTerm('${d.word}', ${d.bestOcc.pos}, ${d.bestOcc.skip})">+</button></td>
+        </tr>`;
+      }
+
+      html += '</tbody></table>';
+      resultsDiv.innerHTML = html;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    // Add a discovered term to the search textarea and re-scan
+    window.addDiscoveredTerm = function(word, pos, skip) {
+      const textarea = document.getElementById('batchTextarea');
+      if (!textarea) return;
+      // Add term on new line if not already present
+      const current = textarea.value.trim();
+      const lines = current ? current.split('\n') : [];
+      // Check if already present (as primary or alternate)
+      const alreadyPresent = lines.some(line => line.split(/\s+/).some(w => w === word));
+      if (alreadyPresent) {
+        alert(`"${word}" is already in the search terms.`);
+        return;
+      }
+      textarea.value = current + (current ? '\n' : '') + word;
+      // Flash feedback
+      const btn = event.target;
+      btn.textContent = '✓';
+      btn.style.background = '#2e7d32';
+      setTimeout(() => { btn.textContent = '+'; btn.style.background = ''; }, 1000);
     };
 
     // --- Render N-term matrix ---
@@ -3617,6 +3809,8 @@
     let vidFrameCount = 0;
     let vidIsRecording = false;
     let vidFrameBlobs = [];  // for frame-by-frame mode
+    let vidGifFrames = [];   // for GIF capture mode
+    let vidGifInterval = null;
 
     // Lazy-load Three.js from CDN
     async function load3DDeps() {
@@ -4046,6 +4240,7 @@
 
       const canvas = renderer3D.domElement;
       const fps = parseInt(document.getElementById('vidFPSSelect')?.value) || 30;
+      const format = document.getElementById('vidFormatSelect')?.value || 'webm';
 
       // Verify canvas is valid and has dimensions
       if (!canvas || canvas.width === 0 || canvas.height === 0) {
@@ -4053,7 +4248,13 @@
         return;
       }
 
-      // Check browser support
+      // GIF mode: frame-by-frame canvas capture (no MediaRecorder needed)
+      if (format === 'gif') {
+        vidStartGifRecord(canvas, fps);
+        return;
+      }
+
+      // Video mode (WebM or MP4): use MediaRecorder
       if (typeof canvas.captureStream !== 'function') {
         alert('captureStream() not supported. Use Chrome or Firefox.');
         return;
@@ -4079,17 +4280,36 @@
       vidBlob = null;
       vidFrameCount = 0;
 
-      // Choose best available codec
-      const mimeTypes = [
-        'video/webm;codecs=vp9',
-        'video/webm;codecs=vp8',
-        'video/webm',
-        'video/mp4'
-      ];
+      // Choose codec based on format preference
       let mimeType = '';
-      for (const mt of mimeTypes) {
-        if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+      if (format === 'mp4') {
+        const mp4Types = [
+          'video/mp4;codecs=avc1',
+          'video/mp4;codecs=h264',
+          'video/mp4'
+        ];
+        for (const mt of mp4Types) {
+          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+        }
+        if (!mimeType) {
+          // Fallback: record as WebM, will convert filename hint
+          alert('MP4 recording not natively supported in this browser. Recording as WebM — you can convert to MP4 using a free online converter or VLC.');
+          const webmTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+          for (const mt of webmTypes) {
+            if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+          }
+        }
+      } else {
+        const webmTypes = [
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm'
+        ];
+        for (const mt of webmTypes) {
+          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+        }
       }
+
       if (!mimeType) {
         alert('No supported video codec. Try Chrome or Firefox.');
         return;
@@ -4150,7 +4370,271 @@
       vidTimerInterval = setInterval(vidUpdateTime, 250);
     }
 
+    // ---- GIF Recording (universal playback) ----
+
+    function vidStartGifRecord(canvas, fps) {
+      vidGifFrames = [];
+      vidBlob = null;
+      vidIsRecording = true;
+      vidStartTime = performance.now();
+      vidFrameCount = 0;
+
+      const delay = Math.round(1000 / fps);
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Capture frames at specified FPS from WebGL canvas
+      vidGifInterval = setInterval(() => {
+        if (!vidIsRecording) return;
+        // Force render to ensure canvas has content
+        if (controls3D) controls3D.update();
+        if (renderer3D && scene3D && camera3D) renderer3D.render(scene3D, camera3D);
+
+        // Read pixels from WebGL
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!gl) return;
+        const pixels = new Uint8Array(w * h * 4);
+        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+        // WebGL pixels are bottom-up, flip vertically
+        const flipped = new Uint8Array(w * h * 4);
+        for (let row = 0; row < h; row++) {
+          const srcOff = row * w * 4;
+          const dstOff = (h - 1 - row) * w * 4;
+          flipped.set(pixels.subarray(srcOff, srcOff + w * 4), dstOff);
+        }
+
+        vidGifFrames.push({ data: flipped, delay });
+        vidFrameCount++;
+      }, delay);
+
+      const recBtn = document.getElementById('vidRecBtn');
+      recBtn.textContent = 'Stop';
+      recBtn.classList.add('recording');
+      document.getElementById('vidDownloadBtn').style.display = 'none';
+      document.getElementById('vidTimeline').disabled = true;
+      vidUpdateStatus('<span class="rec-dot">&#9679;</span> Recording GIF...');
+      vidTimerInterval = setInterval(vidUpdateTime, 250);
+    }
+
+    function vidStopGifRecord() {
+      clearInterval(vidGifInterval);
+      vidGifInterval = null;
+      vidIsRecording = false;
+      clearInterval(vidTimerInterval);
+
+      if (vidGifFrames.length === 0) {
+        vidUpdateStatus('No frames captured');
+        return;
+      }
+
+      const canvas = renderer3D.domElement;
+      const w = canvas.width;
+      const h = canvas.height;
+
+      vidUpdateStatus(`Encoding GIF (${vidGifFrames.length} frames)...`);
+
+      // Encode GIF asynchronously to avoid blocking UI
+      setTimeout(() => {
+        try {
+          const gifData = encodeGIF(vidGifFrames, w, h);
+          vidBlob = new Blob([gifData], { type: 'image/gif' });
+
+          const elapsed = (performance.now() - vidStartTime) / 1000;
+          const mm = Math.floor(elapsed / 60);
+          const ss = Math.floor(elapsed % 60).toString().padStart(2, '0');
+          vidUpdateStatus(`GIF: ${vidGifFrames.length} frames, ${mm}:${ss} (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
+
+          const recBtn = document.getElementById('vidRecBtn');
+          recBtn.textContent = 'Record';
+          recBtn.classList.remove('recording');
+          document.getElementById('vidDownloadBtn').style.display = '';
+        } catch (e) {
+          vidUpdateStatus('GIF encoding failed: ' + e.message);
+          const recBtn = document.getElementById('vidRecBtn');
+          recBtn.textContent = 'Record';
+          recBtn.classList.remove('recording');
+        }
+        vidGifFrames = [];
+      }, 50);
+    }
+
+    // Minimal GIF89a encoder (LZW compression, 256-color quantization)
+    function encodeGIF(frames, width, height) {
+      const buf = [];
+      function writeByte(b) { buf.push(b & 0xFF); }
+      function writeShort(s) { buf.push(s & 0xFF); buf.push((s >> 8) & 0xFF); }
+      function writeStr(s) { for (let i = 0; i < s.length; i++) buf.push(s.charCodeAt(i)); }
+      function writeBytes(arr) { for (let i = 0; i < arr.length; i++) buf.push(arr[i]); }
+
+      // Quantize RGBA pixels to 256-color palette using median-cut simplification
+      function quantize(rgba, w, h) {
+        // Build a 6-bit (64-color) uniform palette for speed
+        const palette = [];
+        for (let r = 0; r < 4; r++)
+          for (let g = 0; g < 4; g++)
+            for (let b = 0; b < 4; b++)
+              palette.push([(r * 85), (g * 85), (b * 85)]);
+        // Pad to 256
+        while (palette.length < 256) palette.push([0, 0, 0]);
+
+        const indexed = new Uint8Array(w * h);
+        for (let i = 0; i < w * h; i++) {
+          const ri = rgba[i * 4], gi = rgba[i * 4 + 1], bi = rgba[i * 4 + 2];
+          // Map to 6-bit uniform: r/85 * 16 + g/85 * 4 + b/85
+          const idx = Math.round(ri / 85) * 16 + Math.round(gi / 85) * 4 + Math.round(bi / 85);
+          indexed[i] = Math.min(idx, 63);
+        }
+        return { palette, indexed };
+      }
+
+      // LZW encoder for GIF
+      function lzwEncode(indexed, minCodeSize) {
+        const clearCode = 1 << minCodeSize;
+        const eoiCode = clearCode + 1;
+        let codeSize = minCodeSize + 1;
+        let nextCode = eoiCode + 1;
+        const maxCode = 4096;
+
+        const output = [];
+        let bitBuf = 0, bitPos = 0;
+
+        function emit(code) {
+          bitBuf |= (code << bitPos);
+          bitPos += codeSize;
+          while (bitPos >= 8) {
+            output.push(bitBuf & 0xFF);
+            bitBuf >>= 8;
+            bitPos -= 8;
+          }
+        }
+
+        // Initialize code table
+        let table = new Map();
+        function resetTable() {
+          table = new Map();
+          for (let i = 0; i < clearCode; i++) table.set(String(i), i);
+          nextCode = eoiCode + 1;
+          codeSize = minCodeSize + 1;
+        }
+
+        resetTable();
+        emit(clearCode);
+
+        let cur = String(indexed[0]);
+        for (let i = 1; i < indexed.length; i++) {
+          const next = String(indexed[i]);
+          const combined = cur + ',' + next;
+          if (table.has(combined)) {
+            cur = combined;
+          } else {
+            emit(table.get(cur));
+            if (nextCode < maxCode) {
+              table.set(combined, nextCode++);
+              if (nextCode > (1 << codeSize) && codeSize < 12) codeSize++;
+            } else {
+              emit(clearCode);
+              resetTable();
+            }
+            cur = next;
+          }
+        }
+        emit(table.get(cur));
+        emit(eoiCode);
+
+        // Flush remaining bits
+        if (bitPos > 0) output.push(bitBuf & 0xFF);
+
+        return output;
+      }
+
+      // --- Build GIF ---
+
+      // Header
+      writeStr('GIF89a');
+      writeShort(width);
+      writeShort(height);
+
+      // Use first frame for global color table
+      const q0 = quantize(frames[0].data, width, height);
+      const palette = q0.palette;
+
+      // GCT flag: yes, color resolution: 8, sorted: no, size: 256 (7 → 2^(7+1)=256)
+      writeByte(0xF7); // 1_111_0_111
+      writeByte(0);    // bg color index
+      writeByte(0);    // pixel aspect ratio
+
+      // Write Global Color Table (256 × 3 bytes)
+      for (let i = 0; i < 256; i++) {
+        writeByte(palette[i][0]);
+        writeByte(palette[i][1]);
+        writeByte(palette[i][2]);
+      }
+
+      // Netscape extension for looping
+      writeByte(0x21); // extension
+      writeByte(0xFF); // app extension
+      writeByte(11);   // block size
+      writeStr('NETSCAPE2.0');
+      writeByte(3);    // sub-block size
+      writeByte(1);    // loop sub-block id
+      writeShort(0);   // loop count (0 = infinite)
+      writeByte(0);    // terminator
+
+      // Write each frame
+      for (let f = 0; f < frames.length; f++) {
+        const frame = frames[f];
+        const q = f === 0 ? q0 : quantize(frame.data, width, height);
+        const delay = Math.round(frame.delay / 10); // GIF delay is in centiseconds
+
+        // Graphic Control Extension
+        writeByte(0x21); // extension
+        writeByte(0xF9); // GCE
+        writeByte(4);    // block size
+        writeByte(0);    // disposal: none, no transparency
+        writeShort(delay);
+        writeByte(0);    // transparent color index
+        writeByte(0);    // terminator
+
+        // Image Descriptor
+        writeByte(0x2C);
+        writeShort(0);      // left
+        writeShort(0);      // top
+        writeShort(width);
+        writeShort(height);
+        writeByte(0);       // no local color table
+
+        // LZW minimum code size
+        const minCodeSize = 8;
+        writeByte(minCodeSize);
+
+        // LZW compressed data
+        const lzwData = lzwEncode(q.indexed, minCodeSize);
+
+        // Write as sub-blocks (max 255 bytes each)
+        let pos = 0;
+        while (pos < lzwData.length) {
+          const chunkSize = Math.min(255, lzwData.length - pos);
+          writeByte(chunkSize);
+          writeBytes(lzwData.slice(pos, pos + chunkSize));
+          pos += chunkSize;
+        }
+        writeByte(0); // block terminator
+      }
+
+      // Trailer
+      writeByte(0x3B);
+
+      return new Uint8Array(buf);
+    }
+
     function vidStopRecord() {
+      // GIF mode
+      if (vidGifInterval !== null || (vidGifFrames && vidGifFrames.length > 0)) {
+        vidStopGifRecord();
+        return;
+      }
+      // Video mode (WebM/MP4)
       if (vidRecorder && vidRecorder.state === 'recording') {
         vidRecorder.stop();
       }
@@ -4241,7 +4725,9 @@
 
     window.vidDownload = function() {
       if (!vidBlob) { alert('No recording to download'); return; }
-      const ext = vidBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      let ext = 'webm';
+      if (vidBlob.type.includes('mp4')) ext = 'mp4';
+      else if (vidBlob.type.includes('gif')) ext = 'gif';
       const a = document.createElement('a');
       a.href = URL.createObjectURL(vidBlob);
       a.download = `els-matrix-3d-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.${ext}`;
@@ -4269,6 +4755,8 @@
       vidIsRecording = false;
       vidFrameBlobs = [];
       vidFrameCount = 0;
+      vidGifFrames = [];
+      if (vidGifInterval) { clearInterval(vidGifInterval); vidGifInterval = null; }
       if (vidTimerInterval) { clearInterval(vidTimerInterval); vidTimerInterval = null; }
     }
 
