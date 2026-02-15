@@ -4,9 +4,9 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.1
-**Last Updated**: February 14, 2026
-**Status**: Production (10 active tools, 3 pending)
+**Version**: 4.2
+**Last Updated**: February 15, 2026
+**Status**: Production (11 active tools, 3 pending)
 
 ---
 
@@ -28,14 +28,17 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
      - 3.1.4 [Batch Term Loader](#314-batch-term-loader)
      - 3.1.5 [Matrix Visualization](#315-matrix-visualization)
      - 3.1.6 [3D Matrix View](#316-3d-matrix-view)
-   - 3.2 [Text Search](#32-text-search)
-   - 3.3 [Gematria Calculator](#33-gematria-calculator)
-   - 3.4 [Acronym / Notarikon Tool](#34-acronym--notarikon-tool)
-   - 3.5 [Tsirufim — Semantic Permutations](#35-tsirufim--semantic-permutations)
-   - 3.6 [Matrix View](#36-matrix-view)
-   - 3.7 [Book View](#37-book-view)
-   - 3.8 [Hebrew OCR](#38-hebrew-ocr)
-   - 3.9 [Other Resources](#39-other-resources)
+     - 3.1.7 [Cluster Significance Test](#317-cluster-significance-test)
+     - 3.1.8 [Discover Terms](#318-discover-terms)
+   - 3.2 [WRR 1994 Experiment](#32-wrr-1994-experiment)
+   - 3.3 [Text Search](#33-text-search)
+   - 3.4 [Gematria Calculator](#34-gematria-calculator)
+   - 3.5 [Acronym / Notarikon Tool](#35-acronym--notarikon-tool)
+   - 3.6 [Tsirufim — Semantic Permutations](#36-tsirufim--semantic-permutations)
+   - 3.7 [Matrix View](#37-matrix-view)
+   - 3.8 [Book View](#38-book-view)
+   - 3.9 [Hebrew OCR](#39-hebrew-ocr)
+   - 3.10 [Other Resources](#310-other-resources)
 4. [How It Works — Algorithms Explained](#4-how-it-works--algorithms-explained)
    - 4.1 [ELS Search Algorithm](#41-els-search-algorithm)
      - 4.1.1 [What Is an ELS?](#411-what-is-an-els)
@@ -266,8 +269,42 @@ A WebGL-rendered 3D version of the matrix, built with Three.js (lazy-loaded on f
 - Auto-rotate with orbit controls (drag to rotate, scroll to zoom).
 - Raycasting tooltips: hover any letter for verse reference, position, and term info.
 - Only renders highlighted letters (typically 10–50 meshes) for performance.
+- Video capture: record rotating matrix as WebM video with frame-by-frame controls.
 
-### 3.2 Text Search
+#### 3.1.7 Cluster Significance Test
+
+Monte Carlo permutation test for evaluating whether an N-term cluster is statistically significant or coincidental.
+
+- **Method**: Pools all ELS hits from all terms, shuffles term-index labels (preserving count-per-term), then runs the sliding-window minimum-span finder on each shuffled arrangement.
+- **P-value**: Fraction of random shuffles producing a minimum span ≤ actual best span.
+- **Controls**: Configurable number of trials (default 1,000, up to 100,000).
+- **Output**: P-value (color-coded), significance label, rank, actual vs permuted median/mean, histogram of permuted span distribution.
+- **Performance**: O(M) per trial — no new ELS searches needed, runs entirely on existing hit positions.
+
+#### 3.1.8 Discover Terms
+
+Automatically discovers additional dictionary-validated ELS terms within a matrix region.
+
+- Searches ±radius around the cluster center for all indexed ELS words.
+- Validates against the unified Hebrew dictionary (56K+ entries).
+- Shows root, z-score significance, definition, and distance from cluster.
+- Click "+" to add any discovered term to the search and re-scan.
+
+### 3.2 WRR 1994 Experiment
+
+**Location**: 4th tab ("WRR 1994") in `bible-codes.html`
+
+Faithful replication of the Witztum-Rips-Rosenberg 1994 experiment (*Statistical Science*, Vol. 9, No. 3). Searches Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates.
+
+- **Quick Run**: Computes minimum linear distance (Δ) between each rabbi's name and date ELS occurrences. Color-coded results table.
+- **Full WRR**: Implements the c(w,w') perturbation statistic with 125 spatial perturbations, multi-row-length optimization, and combined P₁/P₂ scoring.
+- **Permutation Test**: Pre-computes N×N c-matrix, shuffles date assignments, reports P-value with histogram.
+- **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date conversion for all rabbi dates.
+- **Control text**: Optional War and Peace comparison.
+- **Web Worker**: All computation runs off-main-thread via `engines/wrr.worker.js`.
+- **CSV export** for both Quick Run and Full WRR results.
+
+### 3.3 Text Search
 
 **File**: `text-search.html`
 
@@ -279,7 +316,7 @@ Search for words and patterns in the Hebrew Bible.
 - **Text mode**: Search in consonantal text (letters only) or full text (with niqqud/vowel marks).
 - **Auto-suggestions**: As you type, matching words are suggested.
 
-### 3.3 Gematria Calculator
+### 3.4 Gematria Calculator
 
 **File**: `gematria.html`
 
@@ -301,7 +338,7 @@ Final letter forms (ך ם ן ף ץ) use the same values as their regular forms.
 - Search by range (e.g., find all words with gematria between 100 and 110).
 - Statistical analysis of gematria distributions.
 
-### 3.4 Acronym / Notarikon Tool
+### 3.5 Acronym / Notarikon Tool
 
 **File**: `acronym.html`
 
@@ -320,7 +357,7 @@ Notarikon is the extraction of letters from specific positions within words. Thi
 - Book-wide analysis: extract acronyms across an entire book.
 - Meaningful pattern detection.
 
-### 3.5 Tsirufim — Semantic Permutations
+### 3.6 Tsirufim — Semantic Permutations
 
 **File**: `tsirufim.html`
 
@@ -337,7 +374,7 @@ Tsirufim (צירופים, "combinations") is the analysis of how the letters of 
 6. Click "Generate Permutations".
 7. Browse results across four tabs: Results, Visualization (2D semantic space), Clusters, and Analysis.
 
-### 3.6 Matrix View
+### 3.7 Matrix View
 
 **File**: `matrix-view.html`
 
@@ -349,7 +386,7 @@ Display a section of Torah text as a rectangular character grid.
 - Hover cells for verse reference tooltips.
 - Export matrix to text file.
 
-### 3.7 Book View
+### 3.8 Book View
 
 **File**: `book-view.html`
 
@@ -361,7 +398,7 @@ Read the Hebrew Bible in a traditional layout.
 - Navigate between chapters with Previous/Next buttons.
 - Print-friendly mode.
 
-### 3.8 Hebrew OCR
+### 3.9 Hebrew OCR
 
 **File**: `heb-ocr.html`
 
@@ -372,7 +409,7 @@ Extract Hebrew text from PDF files or images using in-browser OCR.
 - Page-by-page processing with progress indicator.
 - Download the extracted text as a `.txt` file.
 
-### 3.9 Other Resources
+### 3.10 Other Resources
 
 **File**: `other-resources.html`
 
@@ -1137,11 +1174,12 @@ python3 p.py
 
 ## 10. Implementation Status
 
-### Active Tools (10)
+### Active Tools (11)
 
 | Tool | File | Status |
 |------|------|--------|
 | ELS Bible Codes | `bible-codes.html` | Complete |
+| WRR 1994 Experiment | `bible-codes.html` (4th tab) | Complete |
 | Text Search | `text-search.html` | Complete |
 | Gematria | `gematria.html` | Complete |
 | Acronym | `acronym.html` | Complete |
@@ -1152,11 +1190,10 @@ python3 p.py
 | Other Resources | `other-resources.html` | Complete |
 | Dictionary | (in bible-codes.html) | Complete |
 
-### Pending (4)
+### Pending (3)
 
 | Tool | Description | Priority |
 |------|-------------|----------|
-| WRR 1994 Experiment | One-click replication of the 32-rabbi name-date experiment | High |
 | Letter Analysis UI | Letter frequency visualization (engine complete) | High |
 | Cantillation Viewer | Display and search by taamim (cantillation marks) | Medium |
 | Cross-References | Link verses to Talmud, Midrash, Zohar via Sefaria | Medium |
@@ -1194,6 +1231,22 @@ python3 p.py
 ---
 
 ## 11. Changelog
+
+### February 15, 2026: WRR Exact Replication, Cluster Significance Test, UI Improvements
+
+- **WRR 1994 Exact Replication**: Full implementation of the Witztum-Rips-Rosenberg experiment with c(w,w') perturbation statistic. 125 spatial perturbations (x,y,z shifts), multi-row-length optimization, P₁ (binomial tail) and P₂ (Gamma CDF) combined statistic, permutation test with pre-computed N×N c-matrix. Three worker modes: Quick Run (Δ distance), Full WRR (c(w,w')), and Permutation Test.
+- **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date converter for WRR experiment rabbi dates. Handles month lengths, leap years, and Tishrei-based year boundaries.
+- **Cluster Significance Test**: Monte Carlo permutation test for Full Scan clusters. Shuffles term labels across pooled ELS hit positions, computes minimum-span via sliding window, reports P-value with histogram visualization. Answers: "How unlikely is this clustering by chance?"
+- **Discover Terms — High Contrast**: Results table now uses black text throughout for readability. Darker header row, bolder root column, larger definition text.
+- **Alt Spellings Display Fix**: Space-separated alternate spellings on the same line now correctly display all forms in results.
+- **Video Format Options**: 3D matrix video capture supports WebM format selection.
+- **Backward ELS Search**: WRR worker searches reversed terms (equivalent to negative skip) for complete coverage.
+- **ELS Cache**: Map keyed by `termNorm:maxSkip` avoids redundant ELS computations across WRR rabbi pairs.
+- **Dynamic D(w)**: Cumulative expected ELS count with formula E(w,d) = (L-(k-1)d)·∏pᵢ for skip cap calculation.
+
+### February 14, 2026: Placeholder and Input Fixes
+
+- **Placeholder text**: Search textarea uses generic Hebrew examples (Moses, Abraham, Jerusalem) instead of specific names.
 
 ### February 13, 2026: Repository Consolidation
 
@@ -1318,27 +1371,22 @@ These items have engines already built or detailed plans ready. They represent t
 
 ### 13.2 WRR 1994 Experiment Replication
 
-**Status**: A 4th tab "WRR 1994" has been added to `bible-codes.html` with the 32-rabbi dataset, search logic, and results table. Needs testing, polish, and the full WRR proximity measure.
+**Status**: COMPLETE. Full faithful replication implemented as 4th tab in `bible-codes.html`.
 
 **Background**: The 1994 Witztum-Rips-Rosenberg experiment (*Statistical Science*, Vol. 9, No. 3) searched Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates. The result — a P-value of approximately 1/62,500 — remains the most cited statistical claim in Torah codes research.
 
-**What's built**:
-- Pre-loaded dataset of 32 rabbis with Hebrew appellations and date forms
-- Genesis-only search (first 78,064 chars of `torahNoSpaces.txt`)
-- ELS search across skip values 2-100 for each name-date pair
-- Per-pair minimum distance calculation
-- Color-coded results table (green/yellow/red by proximity)
-- Click any row to view name + date in matrix
-
-**What's remaining**:
-- Full WRR-style 2D proximity measure (Euclidean distance on the matrix grid, not just linear position distance)
-- Per-term dynamic skip range based on expected occurrence formula: `D(w)` where expected ≈ 10
-- Aggregate P-value computation against randomized control texts
-- Extend to all appellations (currently using primary name forms; WRR used multiple forms per rabbi)
-- CSV export and per-rabbi summary view
-- Performance optimization (currently ~30 rabbis × multiple names × skip range can be slow)
-
-**Detailed plan**: `.claude/plans/temporal-sauteeing-harbor.md`
+**Implementation** (`engines/wrr.worker.js`, ~760 lines):
+- **Three modes**: Quick Run (Δ distance), Full WRR (c(w,w') perturbation statistic), Permutation Test
+- **c(w,w') statistic**: 125 spatial perturbations (x,y,z ∈ {-2..2}³) shifting last 3 ELS positions
+- **Multi-row-length**: ω = max(1/δ) across h_i = round(|d|/i) for i=1..10
+- **P₁** = binomial tail, **P₂** = Gamma CDF, **P = 2·min(P₁,P₂)**
+- **Permutation test**: Pre-compute N×N c-matrix, shuffle dates, recompute P₁/P₂
+- **Dynamic D(w)**: Cumulative expected ELS ≥ 10 via E(w,d) = (L-(k-1)d)·∏pᵢ
+- **Backward ELS**: Search reversed term (equivalent to negative skip)
+- **First-char optimization**: Pre-compute ch0 positions, skip invalid starts
+- **ELS cache**: Map keyed by `termNorm:maxSkip`
+- **CSV export** for both Quick Run and Full WRR modes
+- **War and Peace control text** comparison option
 
 ### 13.3 Predictive ELS Pipeline
 

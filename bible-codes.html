@@ -1744,6 +1744,7 @@
     let scanAllResults = {};  // { term: [{pos, skip}, ...] }
     let scanTerms = [];
     let scanClusters = [];
+    let clusterPermRunning = false;
 
     window.cancelScan = function() { scanAbort = true; batchAbort = true; };
 
@@ -1983,7 +1984,12 @@
       // Clusters section (2+ terms)
       if (terms.length >= 2 && clusters.length > 0) {
         html += `<div style="background:#fff3e0;padding:16px;border-radius:8px;border-right:4px solid #ff9800;margin-bottom:20px;">`;
-        html += `<h3 style="color:#e65100;margin-bottom:12px;">Clusters (${clusters.length}) — sorted by smallest region</h3>`;
+        html += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">`;
+        html += `<h3 style="color:#e65100;margin:0;">Clusters (${clusters.length}) — sorted by smallest region</h3>`;
+        html += `<button onclick="runClusterPermTest()" id="clusterPermBtn" style="background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Significance Test</button>`;
+        html += `<label style="font-size:12px;color:#666;">N=<input id="clusterPermN" type="number" value="1000" min="100" max="100000" step="100" style="width:70px;margin-left:4px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;font-size:12px;"></label>`;
+        html += `</div>`;
+        html += `<div id="clusterPermResults" style="display:none;margin-bottom:12px;"></div>`;
         html += `<p style="font-size:13px;color:#666;margin-bottom:12px;">Click to view matrix with all terms</p>`;
         html += '<div class="results-scrollable" style="max-height:500px;">';
         clusters.forEach((c, idx) => {
@@ -2033,6 +2039,183 @@
 
       html += '</div>';
       document.getElementById('scanResults').innerHTML = html;
+    }
+
+    // --- Cluster significance permutation test ---
+    window.runClusterPermTest = async function() {
+      if (clusterPermRunning) { clusterPermRunning = false; return; }
+      if (scanTerms.length < 2 || scanClusters.length === 0) return;
+
+      const numTrials = parseInt(document.getElementById('clusterPermN')?.value) || 1000;
+      const btn = document.getElementById('clusterPermBtn');
+      const resDiv = document.getElementById('clusterPermResults');
+      clusterPermRunning = true;
+      btn.textContent = 'Cancel';
+      btn.style.background = 'linear-gradient(135deg,#c62828,#e53935)';
+      resDiv.style.display = 'block';
+      resDiv.innerHTML = `<div style="background:#f3e5f5;padding:10px;border-radius:6px;">
+        <div style="font-size:13px;color:#6a1b9a;margin-bottom:6px;">Running permutation test...</div>
+        <div style="background:#e1bee7;border-radius:4px;height:8px;overflow:hidden;">
+          <div id="clusterPermBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7b1fa2,#ab47bc);transition:width 0.2s;"></div>
+        </div>
+        <div id="clusterPermProgress" style="font-size:11px;color:#888;margin-top:4px;"></div>
+      </div>`;
+
+      // Pool all hits from all terms
+      const termCount = scanTerms.length;
+      const pooled = [];
+      for (const term of scanTerms) {
+        const results = scanAllResults[term];
+        if (!results) continue;
+        const tIdx = scanTerms.indexOf(term);
+        for (const hit of results) {
+          pooled.push({ pos: hit.pos, termIdx: tIdx });
+        }
+      }
+      pooled.sort((a, b) => a.pos - b.pos);
+      const M = pooled.length;
+      if (M < termCount) {
+        resDiv.innerHTML = '<div style="color:#c62828;padding:8px;">Not enough hits for permutation test.</div>';
+        btn.textContent = 'Significance Test';
+        btn.style.background = 'linear-gradient(135deg,#7b1fa2,#9c27b0)';
+        clusterPermRunning = false;
+        return;
+      }
+
+      // Actual best (smallest) cluster span
+      const actualBestSpan = scanClusters[0].span;
+
+      // Sliding-window minimum-span finder for given labels
+      function findMinSpan(labels) {
+        const counts = new Array(termCount).fill(0);
+        let present = 0, left = 0, minSpan = Infinity;
+        for (let right = 0; right < M; right++) {
+          const rLabel = labels[right];
+          if (counts[rLabel] === 0) present++;
+          counts[rLabel]++;
+          while (present === termCount) {
+            const span = pooled[right].pos - pooled[left].pos;
+            if (span < minSpan) minSpan = span;
+            const lLabel = labels[left];
+            counts[lLabel]--;
+            if (counts[lLabel] === 0) present--;
+            left++;
+          }
+        }
+        return minSpan;
+      }
+
+      // Build label array preserving count-per-term
+      const labels = pooled.map(h => h.termIdx);
+
+      // Fisher-Yates shuffle (in-place)
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+        }
+      }
+
+      const permSpans = [];
+      let betterCount = 0;
+      const bar = document.getElementById('clusterPermBar');
+      const progText = document.getElementById('clusterPermProgress');
+
+      for (let t = 0; t < numTrials; t++) {
+        if (!clusterPermRunning) break;
+
+        shuffle(labels);
+        const span = findMinSpan(labels);
+        permSpans.push(span);
+        if (span <= actualBestSpan) betterCount++;
+
+        if (t % 50 === 0) {
+          const pct = ((t + 1) / numTrials * 100).toFixed(1);
+          bar.style.width = pct + '%';
+          const runningP = (betterCount / (t + 1)).toFixed(4);
+          progText.textContent = `Trial ${t + 1}/${numTrials} — running P ≈ ${runningP}`;
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+
+      btn.textContent = 'Significance Test';
+      btn.style.background = 'linear-gradient(135deg,#7b1fa2,#9c27b0)';
+      const wasAborted = !clusterPermRunning;
+      clusterPermRunning = false;
+
+      if (wasAborted) {
+        progText.textContent = 'Cancelled.';
+        return;
+      }
+
+      const completed = permSpans.length;
+      const pValue = betterCount / completed;
+      permSpans.sort((a, b) => a - b);
+      const median = permSpans[Math.floor(completed / 2)];
+      const mean = permSpans.reduce((s, v) => s + v, 0) / completed;
+      showClusterPermResults({
+        pValue, betterCount, numTrials: completed,
+        actualSpan: actualBestSpan, median, mean,
+        distribution: permSpans
+      });
+    };
+
+    function showClusterPermResults(msg) {
+      const resDiv = document.getElementById('clusterPermResults');
+      const pVal = msg.pValue;
+      const pColor = pVal < 0.01 ? '#1b5e20' : pVal < 0.05 ? '#2e7d32' : pVal < 0.1 ? '#f57f17' : '#c62828';
+      const sigLabel = pVal < 0.001 ? 'Highly significant' :
+                       pVal < 0.01  ? 'Very significant' :
+                       pVal < 0.05  ? 'Significant' :
+                       pVal < 0.1   ? 'Marginally significant' : 'Not significant';
+      const ratio = pVal > 0 ? Math.round(1 / pVal) : msg.numTrials;
+
+      // Mini histogram
+      let histHTML = '';
+      if (msg.distribution && msg.distribution.length > 10) {
+        const dist = msg.distribution;
+        const minV = dist[0], maxV = dist[dist.length - 1];
+        const bins = 30;
+        const binW = (maxV - minV) / bins || 1;
+        const counts = new Array(bins).fill(0);
+        for (const v of dist) {
+          const bi = Math.min(bins - 1, Math.floor((v - minV) / binW));
+          counts[bi]++;
+        }
+        const maxCount = Math.max(...counts);
+        const actualBin = Math.min(bins - 1, Math.floor((msg.actualSpan - minV) / binW));
+
+        histHTML = '<div style="margin-top:8px;"><div style="font-size:11px;color:#555;margin-bottom:4px;">Distribution of permuted minimum spans:</div>';
+        histHTML += '<div style="display:flex;align-items:flex-end;height:60px;gap:1px;">';
+        for (let b = 0; b < bins; b++) {
+          const h = maxCount > 0 ? Math.round((counts[b] / maxCount) * 56) : 0;
+          const isActual = b === actualBin;
+          const bg = isActual ? '#c62828' : '#ce93d8';
+          const title = `${(minV + b * binW).toLocaleString()}\u2013${(minV + (b + 1) * binW).toLocaleString()}: ${counts[b]}`;
+          histHTML += `<div style="width:${Math.max(4, Math.floor(200 / bins))}px;height:${Math.max(1, h)}px;background:${bg};border-radius:1px 1px 0 0;" title="${title}"></div>`;
+        }
+        histHTML += '</div>';
+        histHTML += `<div style="font-size:10px;color:#999;display:flex;justify-content:space-between;"><span>${minV.toLocaleString()}</span><span>Red = actual (${msg.actualSpan.toLocaleString()})</span><span>${maxV.toLocaleString()}</span></div>`;
+        histHTML += '</div>';
+      }
+
+      resDiv.innerHTML = `
+        <div style="background:#f3e5f5;padding:12px;border-radius:6px;border:1px solid #ce93d8;">
+          <div style="font-weight:bold;color:#6a1b9a;font-size:14px;margin-bottom:8px;">Cluster Significance Test Results</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;font-size:13px;">
+            <div>P-value: <strong style="color:${pColor};font-size:15px;">${pVal === 0 ? '< ' + (1/msg.numTrials).toFixed(6) : pVal.toFixed(6)}</strong></div>
+            <div>Significance: <strong style="color:${pColor};">${sigLabel}</strong></div>
+            <div>Rank: <strong>${msg.betterCount}</strong> / ${msg.numTrials.toLocaleString()} (1/${ratio.toLocaleString()})</div>
+            <div>Actual best span: <strong>${msg.actualSpan.toLocaleString()} chars</strong></div>
+            <div>Permuted median: <strong>${msg.median.toLocaleString()} chars</strong></div>
+            <div>Permuted mean: <strong>${Math.round(msg.mean).toLocaleString()} chars</strong></div>
+          </div>
+          ${histHTML}
+          <div style="margin-top:6px;font-size:11px;color:#777;">
+            ${msg.numTrials.toLocaleString()} random shuffles of term labels across ${scanTerms.length} terms.
+            P = fraction of shuffled arrangements producing a minimum span \u2264 actual best span (${msg.actualSpan.toLocaleString()}).
+          </div>
+        </div>`;
     }
 
     // --- Show cluster matrix ---
@@ -2140,7 +2323,7 @@
       const resultsDiv = document.getElementById('discoverTermsResults');
       const statusSpan = document.getElementById('discoverTermsStatus');
       panel.style.display = 'block';
-      resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">Searching...</div>';
+      resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching...</div>';
       statusSpan.textContent = '';
 
       // Compute the bounding region of the current matrix hits
@@ -2232,38 +2415,38 @@
       statusSpan.textContent = `${dictCount} dictionary terms / ${discovered.length} total found in ±${radius}`;
 
       if (discovered.length === 0) {
-        resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">No additional terms found in this region.</div>';
+        resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;">No additional terms found in this region.</div>';
         return;
       }
 
-      let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr style="background:#e8e8e8;text-align:left;">
-          <th style="padding:4px 6px;">#</th>
-          <th style="padding:4px 6px;">Term</th>
-          <th style="padding:4px 6px;">Root</th>
-          <th style="padding:4px 6px;">Distance</th>
-          <th style="padding:4px 6px;">Skip</th>
-          <th style="padding:4px 6px;">z-Score</th>
-          <th style="padding:4px 6px;">Dict</th>
-          <th style="padding:4px 6px;">Definition</th>
-          <th style="padding:4px 6px;">Add</th>
+      let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;color:#000;">
+        <thead><tr style="background:#d0d0d0;text-align:left;color:#000;font-weight:bold;">
+          <th style="padding:5px 6px;">#</th>
+          <th style="padding:5px 6px;">Term</th>
+          <th style="padding:5px 6px;">Root</th>
+          <th style="padding:5px 6px;">Distance</th>
+          <th style="padding:5px 6px;">Skip</th>
+          <th style="padding:5px 6px;">z-Score</th>
+          <th style="padding:5px 6px;">Dict</th>
+          <th style="padding:5px 6px;">Definition</th>
+          <th style="padding:5px 6px;">Add</th>
         </tr></thead><tbody>`;
 
       for (let i = 0; i < discovered.length; i++) {
         const d = discovered[i];
-        const bgColor = d.inDict ? '#e8f5e9' : '#fff';
-        const zColor = d.zScore > 3 ? '#c62828' : d.zScore > 2 ? '#e65100' : '#333';
+        const bgColor = d.inDict ? '#dcedc8' : '#fff';
+        const zColor = d.zScore > 3 ? '#b71c1c' : d.zScore > 2 ? '#bf360c' : '#000';
         const defText = d.definition ? d.definition.substring(0, 60) : '';
-        html += `<tr style="background:${bgColor};border-bottom:1px solid #eee;" title="Position: ${d.bestOcc.pos}, Total ELS occurrences: ${d.totalOccurrences}">
-          <td style="padding:3px 6px;">${i + 1}</td>
-          <td style="padding:3px 6px;font-weight:bold;font-size:15px;direction:rtl;">${d.word}</td>
-          <td style="padding:3px 6px;direction:rtl;color:#555;">${d.root}</td>
-          <td style="padding:3px 6px;">${d.minDistance}</td>
-          <td style="padding:3px 6px;">${d.bestOcc.skip}</td>
-          <td style="padding:3px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
-          <td style="padding:3px 6px;">${d.inDict ? '✓' : ''}</td>
-          <td style="padding:3px 6px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${defText}</td>
-          <td style="padding:3px 6px;"><button class="btn btn-small" style="padding:2px 8px;font-size:11px;" onclick="addDiscoveredTerm('${d.word}', ${d.bestOcc.pos}, ${d.bestOcc.skip})">+</button></td>
+        html += `<tr style="background:${bgColor};border-bottom:1px solid #ccc;color:#000;" title="Position: ${d.bestOcc.pos}, Total ELS occurrences: ${d.totalOccurrences}">
+          <td style="padding:4px 6px;">${i + 1}</td>
+          <td style="padding:4px 6px;font-weight:bold;font-size:15px;direction:rtl;color:#000;">${d.word}</td>
+          <td style="padding:4px 6px;direction:rtl;color:#000;font-weight:600;">${d.root}</td>
+          <td style="padding:4px 6px;color:#000;">${d.minDistance}</td>
+          <td style="padding:4px 6px;color:#000;">${d.bestOcc.skip}</td>
+          <td style="padding:4px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
+          <td style="padding:4px 6px;color:#000;font-weight:bold;">${d.inDict ? '✓' : ''}</td>
+          <td style="padding:4px 6px;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">${defText}</td>
+          <td style="padding:4px 6px;"><button class="btn btn-small" style="padding:2px 8px;font-size:11px;" onclick="addDiscoveredTerm('${d.word}', ${d.bestOcc.pos}, ${d.bestOcc.skip})">+</button></td>
         </tr>`;
       }
 
