@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hebrew Date Converter | ממיר תאריכים</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#181c24;color:#e8eaf0;font-family:'Segoe UI',Tahoma,sans-serif;min-height:100vh;padding:20px}
+h1{text-align:center;font-size:1.8em;margin-bottom:4px;color:#7ecfff}
+h2{text-align:center;font-size:1.1em;color:#888;margin-bottom:24px;font-weight:normal}
+.container{max-width:900px;margin:0 auto}
+.panels{display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap}
+.panel{flex:1;min-width:300px;background:#1e2330;border-radius:12px;padding:20px;border:1px solid #2a3040}
+.panel h3{color:#7ecfff;margin-bottom:14px;font-size:1.1em;text-align:center}
+label{display:block;color:#aab;font-size:.85em;margin-bottom:4px;margin-top:10px}
+label:first-of-type{margin-top:0}
+input[type=number],input[type=text],input[type=date],select{
+  width:100%;padding:8px 10px;background:#252a38;border:1px solid #3a4055;border-radius:6px;
+  color:#e8eaf0;font-size:1em;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:#7ecfff}
+.btn{display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;
+  cursor:pointer;font-size:1em;font-family:inherit;margin-top:14px;width:100%}
+.btn:hover{background:#3b82f6}
+.btn-sm{padding:6px 14px;font-size:.9em;width:auto;margin-top:8px}
+.btn-today{background:#1a5c3a;margin-top:8px;width:auto;padding:6px 16px;font-size:.85em}
+.btn-today:hover{background:#22804e}
+.result-box{background:#151922;border:1px solid #2a3a50;border-radius:10px;padding:18px;margin-top:16px;
+  text-align:center;min-height:60px}
+.result-box .heb-date{font-size:1.6em;color:#ffd700;margin-bottom:6px;direction:rtl}
+.result-box .greg-date{font-size:1.3em;color:#7ecfff;margin-bottom:6px}
+.result-box .dow{color:#aab;font-size:.95em}
+.result-box .holiday{color:#ff9f43;font-size:.9em;margin-top:4px}
+.result-box .note{color:#666;font-size:.8em;margin-top:6px}
+.free-input{margin-top:10px}
+.free-input input{direction:rtl;text-align:right;font-size:1.1em}
+.verify-section{background:#1e2330;border-radius:12px;padding:20px;border:1px solid #2a3040;margin-top:20px}
+.verify-section h3{color:#7ecfff;margin-bottom:10px}
+.verify-table{width:100%;border-collapse:collapse;font-size:.85em;direction:ltr;text-align:left}
+.verify-table th{background:#252a38;padding:6px 8px;border-bottom:2px solid #3a4055;color:#7ecfff}
+.verify-table td{padding:5px 8px;border-bottom:1px solid #252a38}
+.verify-table .pass{color:#22c55e}
+.verify-table .fail{color:#ef4444;font-weight:bold}
+.intl-check{color:#888;font-size:.8em;margin-top:8px}
+.parasha{color:#b8e986;font-size:.95em;margin-top:6px;font-weight:500}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+footer{text-align:center;margin-top:30px;color:#555;font-size:.8em}
+footer a{color:#7ecfff;text-decoration:none}
+@media(max-width:700px){.panels{flex-direction:column}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Hebrew Date Converter</h1>
+<h2>ממיר תאריכים עברי ⇄ לועזי</h2>
+
+<div class="panels">
+<!-- Gregorian Panel -->
+<div class="panel">
+  <h3>Gregorian Date / תאריך לועזי</h3>
+  <div class="row">
+    <div><label>Month</label>
+      <select id="gMonth"></select></div>
+    <div><label>Day</label>
+      <input type="number" id="gDay" min="1" max="31" value="24"></div>
+    <div><label>Year</label>
+      <input type="number" id="gYear" min="-3760" max="9999" value="1975"></div>
+  </div>
+  <button class="btn-today btn-sm" onclick="setToday()">Today</button>
+  <button class="btn" onclick="gregToHeb()">Convert to Hebrew →</button>
+  <div class="result-box" id="hebResult" style="display:none"></div>
+</div>
+
+<!-- Hebrew Panel -->
+<div class="panel">
+  <h3>Hebrew Date / תאריך עברי</h3>
+  <div class="row">
+    <div><label>חודש / Month</label>
+      <select id="hMonth"></select></div>
+    <div><label>יום / Day</label>
+      <input type="number" id="hDay" min="1" max="30" value="12"></div>
+    <div><label>שנה / Year</label>
+      <input type="number" id="hYear" min="1" max="6000" value="5735"></div>
+  </div>
+  <div class="free-input">
+    <label>Or type Hebrew date: י"ב שבט תשל"ה</label>
+    <input type="text" id="hFreeText" placeholder='י"ב שבט תשל"ה' dir="rtl">
+    <button class="btn-sm" onclick="parseHebrewInput()" style="margin-top:4px">Parse</button>
+  </div>
+  <button class="btn" onclick="hebToGreg()">← Convert to Gregorian</button>
+  <div class="result-box" id="gregResult" style="display:none"></div>
+</div>
+</div>
+
+<!-- Verification -->
+<div class="verify-section">
+  <h3>Verification Suite</h3>
+  <p style="color:#888;font-size:.85em;margin-bottom:10px">
+    Cross-checks algorithm against known dates and browser's Intl API.
+  </p>
+  <button class="btn-sm" onclick="runVerification()">Run All Tests</button>
+  <div id="verifyResults" style="margin-top:12px"></div>
+</div>
+
+<footer>
+  <p>Based on Dershowitz &amp; Reingold "Calendrical Calculations" algorithms.</p>
+  <p>Hebrew day begins at sunset; this converter uses midnight boundaries.</p>
+  <p style="margin-top:4px"><a href="index.html">← Back to Home</a></p>
+</footer>
+</div>
+
+<script>
+// ===================================================================
+//  HEBREW CALENDAR ALGORITHMS
+//  Based on Dershowitz & Reingold, "Calendrical Calculations"
+//  Internal day system: Rata Die (R.D.) where day 1 = Jan 1, 1 CE
+// ===================================================================
+
+const HEBREW_EPOCH = -1373427; // R.D. of 1 Tishrei, year 1 AM
+
+// --- Gregorian Calendar ---
+
+function isGregorianLeap(y) {
+  return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+}
+
+function gregorianToRD(y, m, d) {
+  return 365 * (y - 1)
+    + Math.floor((y - 1) / 4)
+    - Math.floor((y - 1) / 100)
+    + Math.floor((y - 1) / 400)
+    + Math.floor((367 * m - 362) / 12)
+    + (m <= 2 ? 0 : (isGregorianLeap(y) ? -1 : -2))
+    + d;
+}
+
+function rdToGregorian(rd) {
+  const d0 = rd - 1;
+  const n400 = Math.floor(d0 / 146097);
+  const d1 = d0 - 146097 * n400;
+  const n100 = Math.floor(d1 / 36524);
+  const d2 = d1 - 36524 * n100;
+  const n4 = Math.floor(d2 / 1461);
+  const d3 = d2 - 1461 * n4;
+  const n1 = Math.floor(d3 / 365);
+  const year = 400 * n400 + 100 * n100 + 4 * n4 + n1
+    + ((n100 === 4 || n1 === 4) ? 0 : 1);
+  const priorDays = rd - gregorianToRD(year, 1, 1);
+  const correction = rd < gregorianToRD(year, 3, 1)
+    ? 0 : (isGregorianLeap(year) ? 1 : 2);
+  const month = Math.floor((12 * (priorDays + correction) + 373) / 367);
+  const day = rd - gregorianToRD(year, month, 1) + 1;
+  return { year, month, day };
+}
+
+// --- Hebrew Calendar ---
+
+function isHebrewLeap(y) {
+  return ((7 * y + 1) % 19) < 7;
+}
+
+function hebrewMonthCount(y) {
+  return isHebrewLeap(y) ? 13 : 12;
+}
+
+// Day number of 1 Tishrei of year y, counted from epoch (1-based)
+function hebrewElapsedDays(y) {
+  const M = Math.floor((235 * y - 234) / 19); // months before year y
+  const p = 204 + 793 * M;
+  const h = 5 + 12 * M + Math.floor(p / 1080);
+  const parts = p % 1080;
+  const hours = h % 24;
+  const day = 1 + 29 * M + Math.floor(h / 24);
+  const dow = day % 7;
+
+  // Dehiyot (postponement rules)
+  // Lo ADU: if Rosh Hashana falls on Sun(0), Wed(3), or Fri(5)
+  if (dow === 0 || dow === 3 || dow === 5) {
+    return day + 1;
+  }
+  // Molad Zaken: if molad is at or after 18 hours
+  if (hours >= 18) {
+    const d2 = day + 1;
+    const dow2 = d2 % 7;
+    return (dow2 === 0 || dow2 === 3 || dow2 === 5) ? d2 + 1 : d2;
+  }
+  // GaTRaD: non-leap year, Tue, molad >= 9h 204p
+  if (dow === 2 && !isHebrewLeap(y) &&
+      (hours > 9 || (hours === 9 && parts >= 204))) {
+    return day + 2;
+  }
+  // BeTUTKPaT: year after leap, Mon, molad >= 15h 589p
+  if (dow === 1 && isHebrewLeap(y - 1) &&
+      (hours > 15 || (hours === 15 && parts >= 589))) {
+    return day + 1;
+  }
+  return day;
+}
+
+function hebrewNewYearRD(y) {
+  return HEBREW_EPOCH + hebrewElapsedDays(y) - 1;
+}
+
+function hebrewYearDays(y) {
+  return hebrewElapsedDays(y + 1) - hebrewElapsedDays(y);
+}
+
+// 0=deficient(353/383), 1=regular(354/384), 2=full(355/385)
+function hebrewYearType(y) {
+  const len = hebrewYearDays(y);
+  if (len === 353 || len === 383) return 0;
+  if (len === 354 || len === 384) return 1;
+  return 2;
+}
+
+// Month numbering (civil year):
+// Non-leap: 1=Tishrei..6=Adar, 7=Nisan..12=Elul
+// Leap:     1=Tishrei..5=Shevat, 6=Adar I, 7=Adar II, 8=Nisan..13=Elul
+function hebrewMonthDays(y, m) {
+  const type = hebrewYearType(y);
+  const leap = isHebrewLeap(y);
+  if (m === 1) return 30; // Tishrei
+  if (m === 2) return type === 2 ? 30 : 29; // Cheshvan
+  if (m === 3) return type === 0 ? 29 : 30; // Kislev
+  if (m === 4) return 29; // Tevet
+  if (m === 5) return 30; // Shevat
+  if (leap) {
+    if (m === 6) return 30; // Adar I
+    if (m === 7) return 29; // Adar II
+    if (m === 8) return 30;  // Nisan
+    if (m === 9) return 29;  // Iyar
+    if (m === 10) return 30; // Sivan
+    if (m === 11) return 29; // Tammuz
+    if (m === 12) return 30; // Av
+    if (m === 13) return 29; // Elul
+  } else {
+    if (m === 6) return 29;  // Adar
+    if (m === 7) return 30;  // Nisan
+    if (m === 8) return 29;  // Iyar
+    if (m === 9) return 30;  // Sivan
+    if (m === 10) return 29; // Tammuz
+    if (m === 11) return 30; // Av
+    if (m === 12) return 29; // Elul
+  }
+  return 0;
+}
+
+function hebrewToRD(y, m, d) {
+  let rd = hebrewNewYearRD(y);
+  for (let i = 1; i < m; i++) rd += hebrewMonthDays(y, i);
+  return rd + d - 1;
+}
+
+function rdToHebrew(rd) {
+  // Estimate year
+  let y = Math.floor((rd - HEBREW_EPOCH) / 365.2468) + 1;
+  while (hebrewNewYearRD(y + 1) <= rd) y++;
+  while (hebrewNewYearRD(y) > rd) y--;
+  // Find month
+  let rem = rd - hebrewNewYearRD(y);
+  let m = 1;
+  const mc = hebrewMonthCount(y);
+  while (m < mc) {
+    const md = hebrewMonthDays(y, m);
+    if (rem < md) break;
+    rem -= md;
+    m++;
+  }
+  return { year: y, month: m, day: rem + 1 };
+}
+
+// Day of week: 0=Sun, 1=Mon, ..., 6=Sat
+function dayOfWeek(rd) {
+  return ((rd % 7) + 7) % 7;
+}
+
+// ===================================================================
+//  HEBREW NUMERAL FORMATTING
+// ===================================================================
+
+const HEB_ONES  = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+const HEB_TENS  = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+const HEB_HUNDS = ['', 'ק', 'ר', 'ש', 'ת'];
+
+function numberToHebrew(n, addQuotes) {
+  if (n <= 0) return String(n);
+  if (addQuotes === undefined) addQuotes = true;
+  let s = '';
+  // Hundreds: ת=400, repeat for 500+
+  let h = n;
+  while (h >= 400) { s += 'ת'; h -= 400; }
+  if (h >= 100) { s += HEB_HUNDS[Math.floor(h / 100)]; h %= 100; }
+  // Special: 15=טו, 16=טז
+  if (h === 15) { s += 'טו'; h = 0; }
+  else if (h === 16) { s += 'טז'; h = 0; }
+  else {
+    if (h >= 10) { s += HEB_TENS[Math.floor(h / 10)]; h %= 10; }
+    if (h >= 1) { s += HEB_ONES[h]; }
+  }
+  if (addQuotes && s.length > 0) {
+    if (s.length === 1) s += '׳';
+    else s = s.slice(0, -1) + '״' + s.slice(-1);
+  }
+  return s;
+}
+
+function hebrewYearStr(y) {
+  // Convention: drop the thousands for years 5000-5999
+  const display = (y >= 5000 && y < 6000) ? y - 5000 : y;
+  return numberToHebrew(display, true);
+}
+
+function parseHebrewNumeral(s) {
+  const vals = {
+    'א':1,'ב':2,'ג':3,'ד':4,'ה':5,'ו':6,'ז':7,'ח':8,'ט':9,
+    'י':10,'כ':20,'ל':30,'מ':40,'נ':50,'ס':60,'ע':70,'פ':80,'צ':90,
+    'ק':100,'ר':200,'ש':300,'ת':400
+  };
+  let total = 0;
+  for (const ch of s) {
+    if (vals[ch]) total += vals[ch];
+  }
+  return total;
+}
+
+// ===================================================================
+//  MONTH NAMES
+// ===================================================================
+
+function hebMonthNames(y) {
+  if (isHebrewLeap(y)) {
+    return ['תשרי','חשוון','כסלו','טבת','שבט','אדר א׳','אדר ב׳',
+            'ניסן','אייר','סיוון','תמוז','אב','אלול'];
+  }
+  return ['תשרי','חשוון','כסלו','טבת','שבט','אדר',
+          'ניסן','אייר','סיוון','תמוז','אב','אלול'];
+}
+
+function hebMonthNamesEn(y) {
+  if (isHebrewLeap(y)) {
+    return ['Tishrei','Cheshvan','Kislev','Tevet','Shevat','Adar I','Adar II',
+            'Nisan','Iyar','Sivan','Tammuz','Av','Elul'];
+  }
+  return ['Tishrei','Cheshvan','Kislev','Tevet','Shevat','Adar',
+          'Nisan','Iyar','Sivan','Tammuz','Av','Elul'];
+}
+
+const GREG_MONTHS = ['January','February','March','April','May','June',
+  'July','August','September','October','November','December'];
+const DOW_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Shabbat'];
+const DOW_HE = ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת'];
+
+// ===================================================================
+//  HOLIDAYS
+// ===================================================================
+
+function getHoliday(hYear, hMonth, hDay) {
+  const leap = isHebrewLeap(hYear);
+  const mc = hebrewMonthCount(hYear);
+  // Nisan month number
+  const NISAN = leap ? 8 : 7;
+  const IYAR  = NISAN + 1;
+  const SIVAN = NISAN + 2;
+  const TAMMUZ = NISAN + 3;
+  const AV    = NISAN + 4;
+  const ELUL  = NISAN + 5;
+  const ADAR  = leap ? 7 : 6; // Adar (or Adar II in leap)
+
+  if (hMonth === 1 && (hDay === 1 || hDay === 2)) return 'Rosh Hashana / ראש השנה';
+  if (hMonth === 1 && hDay === 3) return 'Tzom Gedaliah / צום גדליה';
+  if (hMonth === 1 && hDay === 10) return 'Yom Kippur / יום כיפור';
+  if (hMonth === 1 && hDay >= 15 && hDay <= 21) return 'Sukkot / סוכות';
+  if (hMonth === 1 && hDay === 22) return 'Shemini Atzeret / שמיני עצרת';
+  if (hMonth === 1 && hDay === 23) return 'Simchat Torah / שמחת תורה';
+  if (hMonth === 3 && hDay === 25) return 'Chanukah begins / חנוכה';
+  if (hMonth === 3 && hDay >= 25) return 'Chanukah / חנוכה';
+  if (hMonth === 4 && hDay <= 2) return 'Chanukah / חנוכה';
+  if (hMonth === 5 && hDay === 15) return 'Tu BiShvat / ט״ו בשבט';
+  if (hMonth === ADAR && hDay === 13) return 'Ta\'anit Esther / תענית אסתר';
+  if (hMonth === ADAR && hDay === 14) return 'Purim / פורים';
+  if (hMonth === ADAR && hDay === 15) return 'Shushan Purim / שושן פורים';
+  if (hMonth === NISAN && hDay === 14) return 'Erev Pesach / ערב פסח';
+  if (hMonth === NISAN && hDay >= 15 && hDay <= 22) return 'Pesach / פסח';
+  if (hMonth === IYAR && hDay === 4) return 'Yom HaZikaron / יום הזיכרון';
+  if (hMonth === IYAR && hDay === 5) return 'Yom HaAtzmaut / יום העצמאות';
+  if (hMonth === IYAR && hDay === 18) return 'Lag BaOmer / ל״ג בעומר';
+  if (hMonth === IYAR && hDay === 28) return 'Yom Yerushalayim / יום ירושלים';
+  if (hMonth === SIVAN && hDay === 6) return 'Shavuot / שבועות';
+  if (hMonth === SIVAN && hDay === 7) return 'Shavuot II / שבועות ב׳';
+  if (hMonth === TAMMUZ && hDay === 17) return 'Shiva Asar BeTammuz / י״ז בתמוז';
+  if (hMonth === AV && hDay === 9) return 'Tisha B\'Av / תשעה באב';
+  if (hMonth === AV && hDay === 15) return 'Tu B\'Av / ט״ו באב';
+  return '';
+}
+
+// ===================================================================
+//  PARASHA (TORAH PORTION) CALCULATOR - Diaspora
+// ===================================================================
+
+// All 54 parashot: index 1..54 (0 unused)
+const PARASHOT = [
+  null, // index 0 unused
+  // Bereishit (Genesis)
+  { he: 'בראשית',         en: 'Bereishit' },       // 1
+  { he: 'נח',             en: 'Noach' },            // 2
+  { he: 'לך לך',          en: 'Lech Lecha' },       // 3
+  { he: 'וירא',           en: 'Vayera' },           // 4
+  { he: 'חיי שרה',        en: 'Chayei Sarah' },     // 5
+  { he: 'תולדות',         en: 'Toldot' },           // 6
+  { he: 'ויצא',           en: 'Vayetze' },          // 7
+  { he: 'וישלח',          en: 'Vayishlach' },       // 8
+  { he: 'וישב',           en: 'Vayeshev' },         // 9
+  { he: 'מקץ',            en: 'Miketz' },           // 10
+  { he: 'ויגש',           en: 'Vayigash' },         // 11
+  { he: 'ויחי',           en: 'Vayechi' },          // 12
+  // Shemot (Exodus)
+  { he: 'שמות',           en: 'Shemot' },           // 13
+  { he: 'וארא',           en: "Va'era" },           // 14
+  { he: 'בא',             en: 'Bo' },               // 15
+  { he: 'בשלח',           en: 'Beshalach' },        // 16
+  { he: 'יתרו',           en: 'Yitro' },            // 17
+  { he: 'משפטים',         en: 'Mishpatim' },        // 18
+  { he: 'תרומה',          en: 'Terumah' },          // 19
+  { he: 'תצוה',           en: 'Tetzaveh' },         // 20
+  { he: 'כי תשא',         en: 'Ki Tisa' },          // 21
+  { he: 'ויקהל',          en: 'Vayakhel' },         // 22
+  { he: 'פקודי',          en: 'Pekudei' },          // 23
+  // Vayikra (Leviticus)
+  { he: 'ויקרא',          en: 'Vayikra' },          // 24
+  { he: 'צו',             en: 'Tzav' },             // 25
+  { he: 'שמיני',          en: 'Shemini' },          // 26
+  { he: 'תזריע',          en: 'Tazria' },           // 27
+  { he: 'מצורע',          en: 'Metzora' },          // 28
+  { he: 'אחרי מות',       en: 'Acharei Mot' },      // 29
+  { he: 'קדושים',         en: 'Kedoshim' },         // 30
+  { he: 'אמור',           en: 'Emor' },             // 31
+  { he: 'בהר',            en: 'Behar' },            // 32
+  { he: 'בחוקותי',        en: 'Bechukotai' },       // 33
+  // Bamidbar (Numbers)
+  { he: 'במדבר',          en: 'Bamidbar' },         // 34
+  { he: 'נשא',            en: 'Naso' },             // 35
+  { he: 'בהעלותך',        en: "Beha'alotcha" },     // 36
+  { he: 'שלח',            en: 'Shelach' },          // 37
+  { he: 'קרח',            en: 'Korach' },           // 38
+  { he: 'חקת',            en: 'Chukat' },           // 39
+  { he: 'בלק',            en: 'Balak' },            // 40
+  { he: 'פינחס',          en: 'Pinchas' },          // 41
+  { he: 'מטות',           en: 'Matot' },            // 42
+  { he: 'מסעי',           en: 'Masei' },            // 43
+  // Devarim (Deuteronomy)
+  { he: 'דברים',          en: 'Devarim' },          // 44
+  { he: 'ואתחנן',         en: "Va'etchanan" },      // 45
+  { he: 'עקב',            en: 'Ekev' },             // 46
+  { he: 'ראה',            en: "Re'eh" },            // 47
+  { he: 'שופטים',         en: 'Shoftim' },          // 48
+  { he: 'כי תצא',         en: 'Ki Teitzei' },       // 49
+  { he: 'כי תבוא',        en: 'Ki Tavo' },          // 50
+  { he: 'נצבים',          en: 'Nitzavim' },         // 51
+  { he: 'וילך',           en: 'Vayelech' },         // 52
+  { he: 'האזינו',         en: "Ha'azinu" },         // 53
+  { he: 'וזאת הברכה',     en: "V'Zot HaBrachah" },  // 54
+];
+
+// The 7 doubleable parasha pairs (first index of each pair)
+const DOUBLEABLE = [22, 27, 29, 32, 39, 42, 51];
+
+/**
+ * Check if a Hebrew date falls on a holiday whose Shabbat reading
+ * displaces the regular weekly parasha (Diaspora).
+ * hYear = Hebrew year, hMonth = month (1-based), hDay = day.
+ */
+function isHolidayShabbat(hYear, hMonth, hDay) {
+  const leap = isHebrewLeap(hYear);
+  const NISAN = leap ? 8 : 7;
+  const SIVAN = NISAN + 2;
+
+  // Rosh Hashana: 1-2 Tishrei
+  if (hMonth === 1 && (hDay === 1 || hDay === 2)) return true;
+  // Yom Kippur: 10 Tishrei
+  if (hMonth === 1 && hDay === 10) return true;
+  // Sukkot + Shemini Atzeret + Simchat Torah: 15-23 Tishrei (Diaspora)
+  if (hMonth === 1 && hDay >= 15 && hDay <= 23) return true;
+  // Pesach: 15-22 Nisan (Diaspora)
+  if (hMonth === NISAN && hDay >= 15 && hDay <= 22) return true;
+  // Shavuot: 6-7 Sivan (Diaspora)
+  if (hMonth === SIVAN && (hDay === 6 || hDay === 7)) return true;
+
+  return false;
+}
+
+/**
+ * Build the parasha schedule for a given cycle year (Diaspora).
+ * The cycle runs from Simchat Torah (23 Tishrei) of cycleYear
+ * to just before Simchat Torah of cycleYear+1.
+ *
+ * Returns a Map: RD (Shabbat) -> { indices: [parashaIdx, ...], holiday: bool }
+ */
+function buildParashaSchedule(cycleYear) {
+  // Simchat Torah = 23 Tishrei of cycleYear (Diaspora)
+  const stRD = hebrewToRD(cycleYear, 1, 23);
+  const stDow = dayOfWeek(stRD);
+  // First Shabbat AFTER Simchat Torah = Bereishit Shabbat
+  const daysToShabbat = (6 - stDow + 7) % 7;
+  const bereishitRD = stRD + (daysToShabbat === 0 ? 7 : daysToShabbat);
+
+  // Next Simchat Torah
+  const nextSTRD = hebrewToRD(cycleYear + 1, 1, 23);
+
+  // List all Shabbatot from Bereishit to before next Simchat Torah
+  const shabbatot = [];
+  for (let rd = bereishitRD; rd < nextSTRD; rd += 7) {
+    shabbatot.push(rd);
+  }
+
+  // Mark each Shabbat as holiday or regular
+  const shabbatInfo = shabbatot.map(rd => {
+    const heb = rdToHebrew(rd);
+    return { rd, holiday: isHolidayShabbat(heb.year, heb.month, heb.day) };
+  });
+
+  // Count regular (non-holiday) Shabbatot from position i onward
+  const regularFromIdx = new Array(shabbatInfo.length + 1).fill(0);
+  for (let i = shabbatInfo.length - 1; i >= 0; i--) {
+    regularFromIdx[i] = regularFromIdx[i + 1] + (shabbatInfo[i].holiday ? 0 : 1);
+  }
+
+  // Build schedule: assign parashot to Shabbatot
+  // We need to assign parashot 1 through 53 (V'Zot HaBrachah=54 is read on Simchat Torah, not Shabbat)
+  const schedule = new Map();
+  let nextParasha = 1;
+  const doubleableSet = new Set(DOUBLEABLE);
+
+  for (let i = 0; i < shabbatInfo.length; i++) {
+    const { rd, holiday } = shabbatInfo[i];
+    if (holiday) {
+      schedule.set(rd, { indices: [], holiday: true });
+      continue;
+    }
+
+    if (nextParasha > 53) {
+      // All parashot assigned; remaining Shabbatot get no regular reading
+      schedule.set(rd, { indices: [], holiday: false });
+      continue;
+    }
+
+    // Parashot remaining (1..53): from nextParasha to 53
+    const parashotRemaining = 53 - nextParasha + 1;
+    // Regular Shabbatot remaining from this one onward (inclusive)
+    const regularRemaining = regularFromIdx[i];
+
+    // Should we double at this parasha?
+    if (doubleableSet.has(nextParasha) && parashotRemaining > regularRemaining) {
+      schedule.set(rd, { indices: [nextParasha, nextParasha + 1], holiday: false });
+      nextParasha += 2;
+    } else {
+      schedule.set(rd, { indices: [nextParasha], holiday: false });
+      nextParasha += 1;
+    }
+  }
+
+  return schedule;
+}
+
+// Cache for parasha schedules to avoid recomputation
+const parashaCache = new Map();
+
+function getCachedSchedule(cycleYear) {
+  if (!parashaCache.has(cycleYear)) {
+    parashaCache.set(cycleYear, buildParashaSchedule(cycleYear));
+  }
+  return parashaCache.get(cycleYear);
+}
+
+/**
+ * Determine the parasha cycle year for a given RD.
+ * The cycle starts at Simchat Torah (23 Tishrei).
+ * If rd is before Simchat Torah of the Hebrew year, use previous year's cycle.
+ */
+function getCycleYear(rd) {
+  const heb = rdToHebrew(rd);
+  const stThisYear = hebrewToRD(heb.year, 1, 23);
+  if (rd <= stThisYear) {
+    return heb.year - 1;
+  }
+  return heb.year;
+}
+
+/**
+ * Get the parasha for a given RD date.
+ * Finds the Shabbat of the week (on or after the given date, dow=6=Saturday),
+ * then looks up the parasha schedule.
+ *
+ * Returns { indices: [n, ...], holiday: bool } or null
+ * indices contains 1 or 2 parasha numbers, or [] for holiday/none.
+ */
+function getParashaForDate(rd) {
+  const dow = dayOfWeek(rd);
+  // Find next Shabbat (Saturday=6): on or after the given date
+  const shabbatRD = rd + ((6 - dow + 7) % 7);
+
+  const cycleYear = getCycleYear(shabbatRD);
+  const schedule = getCachedSchedule(cycleYear);
+
+  if (schedule.has(shabbatRD)) {
+    return schedule.get(shabbatRD);
+  }
+
+  // Edge case: Shabbat falls exactly on Simchat Torah or beyond schedule range
+  // Try next cycle year
+  const nextSchedule = getCachedSchedule(cycleYear + 1);
+  if (nextSchedule.has(shabbatRD)) {
+    return nextSchedule.get(shabbatRD);
+  }
+
+  return null;
+}
+
+/**
+ * Format parasha info for display.
+ * Returns HTML string like: 📖 Parashat וישב / Vayeshev
+ */
+function formatParasha(parashaInfo) {
+  if (!parashaInfo) return '';
+
+  if (parashaInfo.holiday && parashaInfo.indices.length === 0) {
+    return '<div class="parasha">\u{1F4D6} Special Holiday Reading</div>';
+  }
+
+  if (parashaInfo.indices.length === 0) return '';
+
+  if (parashaInfo.indices.length === 1) {
+    const p = PARASHOT[parashaInfo.indices[0]];
+    if (!p) return '';
+    return `<div class="parasha">\u{1F4D6} Parashat ${p.he} / ${p.en}</div>`;
+  }
+
+  if (parashaInfo.indices.length === 2) {
+    const p1 = PARASHOT[parashaInfo.indices[0]];
+    const p2 = PARASHOT[parashaInfo.indices[1]];
+    if (!p1 || !p2) return '';
+    return `<div class="parasha">\u{1F4D6} Parashat ${p1.he}-${p2.he} / ${p1.en}-${p2.en}</div>`;
+  }
+
+  return '';
+}
+
+// ===================================================================
+//  UI LOGIC
+// ===================================================================
+
+// Populate Gregorian month select
+const gMonthSel = document.getElementById('gMonth');
+GREG_MONTHS.forEach((name, i) => {
+  const opt = document.createElement('option');
+  opt.value = i + 1;
+  opt.textContent = name;
+  gMonthSel.appendChild(opt);
+});
+
+// Set initial Hebrew month list
+function populateHebMonths() {
+  const sel = document.getElementById('hMonth');
+  const y = parseInt(document.getElementById('hYear').value) || 5785;
+  const names = hebMonthNames(y);
+  const namesEn = hebMonthNamesEn(y);
+  const cur = parseInt(sel.value) || 1;
+  sel.innerHTML = '';
+  names.forEach((name, i) => {
+    const opt = document.createElement('option');
+    opt.value = i + 1;
+    opt.textContent = `${name} / ${namesEn[i]}`;
+    sel.appendChild(opt);
+  });
+  sel.value = Math.min(cur, names.length);
+}
+document.getElementById('hYear').addEventListener('change', populateHebMonths);
+populateHebMonths();
+
+function setToday() {
+  const now = new Date();
+  document.getElementById('gYear').value = now.getFullYear();
+  document.getElementById('gMonth').value = now.getMonth() + 1;
+  document.getElementById('gDay').value = now.getDate();
+}
+
+function gregToHeb() {
+  const y = parseInt(document.getElementById('gYear').value);
+  const m = parseInt(document.getElementById('gMonth').value);
+  const d = parseInt(document.getElementById('gDay').value);
+  if (!y || !m || !d) { alert('Enter a valid Gregorian date'); return; }
+
+  const rd = gregorianToRD(y, m, d);
+  const heb = rdToHebrew(rd);
+  const dow = dayOfWeek(rd);
+  const mNames = hebMonthNames(heb.year);
+  const mNamesEn = hebMonthNamesEn(heb.year);
+  const holiday = getHoliday(heb.year, heb.month, heb.day);
+
+  const hebDateStr = `${numberToHebrew(heb.day)} ${mNames[heb.month - 1]} ${hebrewYearStr(heb.year)}`;
+  const enDateStr = `${heb.day} ${mNamesEn[heb.month - 1]} ${heb.year}`;
+
+  // Parasha for upcoming Shabbat
+  const parashaInfo = getParashaForDate(rd);
+  const parashaHtml = formatParasha(parashaInfo);
+
+  // Cross-check with Intl API
+  let intlCheck = '';
+  try {
+    const dt = new Date(y, m - 1, d);
+    const intlHeb = new Intl.DateTimeFormat('en-u-ca-hebrew', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    }).format(dt);
+    intlCheck = `<div class="intl-check">Browser Intl check: ${intlHeb}</div>`;
+  } catch(e) {}
+
+  const box = document.getElementById('hebResult');
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="heb-date">${hebDateStr}</div>
+    <div class="greg-date">${enDateStr}</div>
+    <div class="dow">${DOW_HE[dow]} / ${DOW_EN[dow]}</div>
+    ${holiday ? `<div class="holiday">${holiday}</div>` : ''}
+    ${parashaHtml}
+    ${intlCheck}
+  `;
+}
+
+function hebToGreg() {
+  const y = parseInt(document.getElementById('hYear').value);
+  const m = parseInt(document.getElementById('hMonth').value);
+  const d = parseInt(document.getElementById('hDay').value);
+  if (!y || !m || !d) { alert('Enter a valid Hebrew date'); return; }
+  if (d > hebrewMonthDays(y, m)) {
+    alert(`Month ${hebMonthNames(y)[m-1]} in year ${y} has only ${hebrewMonthDays(y, m)} days`);
+    return;
+  }
+
+  const rd = hebrewToRD(y, m, d);
+  const greg = rdToGregorian(rd);
+  const dow = dayOfWeek(rd);
+  const mNames = hebMonthNames(y);
+  const mNamesEn = hebMonthNamesEn(y);
+  const holiday = getHoliday(y, m, d);
+
+  const hebDateStr = `${numberToHebrew(d)} ${mNames[m - 1]} ${hebrewYearStr(y)}`;
+  const gregStr = `${GREG_MONTHS[greg.month - 1]} ${greg.day}, ${greg.year}`;
+
+  // Parasha for upcoming Shabbat
+  const parashaInfo = getParashaForDate(rd);
+  const parashaHtml = formatParasha(parashaInfo);
+
+  const box = document.getElementById('gregResult');
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="greg-date">${gregStr}</div>
+    <div class="heb-date">${hebDateStr}</div>
+    <div class="dow">${DOW_HE[dow]} / ${DOW_EN[dow]}</div>
+    ${holiday ? `<div class="holiday">${holiday}</div>` : ''}
+    ${parashaHtml}
+  `;
+}
+
+// ===================================================================
+//  FREE-TEXT HEBREW DATE PARSING
+// ===================================================================
+
+const MONTH_PATTERNS = [
+  { re: /תשרי/, m: 1, leap: null },
+  { re: /[חמ]ר?חשו[וו]?[נן]/, m: 2, leap: null },
+  { re: /חשו?ן/, m: 2, leap: null },
+  { re: /כסל[וו]/, m: 3, leap: null },
+  { re: /טב[תט]/, m: 4, leap: null },
+  { re: /שבט/, m: 5, leap: null },
+  { re: /אדר\s*[אa]׳?/, m: 6, leap: true },
+  { re: /אדר\s*[בb]׳?/, m: 7, leap: true },
+  { re: /אדר/, m: -1, leap: null }, // resolved later
+  { re: /ניסן|ניסנ/, m: -2, leap: null },
+  { re: /אייר|איר/, m: -3, leap: null },
+  { re: /סיו[וו]?[נן]/, m: -4, leap: null },
+  { re: /תמוז/, m: -5, leap: null },
+  { re: /\bאב\b/, m: -6, leap: null },
+  { re: /אלול/, m: -7, leap: null },
+];
+
+function resolveMonthNum(code, year) {
+  const leap = isHebrewLeap(year);
+  if (code > 0) return code;
+  // Negative codes: relative to Nisan
+  if (code === -1) return leap ? 7 : 6; // Adar (or Adar II)
+  const nisMo = leap ? 8 : 7;
+  return nisMo + (-code - 2); // -2→Nisan, -3→Iyar, etc.
+}
+
+function parseHebrewInput() {
+  const txt = document.getElementById('hFreeText').value.trim();
+  if (!txt) return;
+
+  // Remove punctuation: geresh, gershayim, quotes
+  const clean = txt.replace(/[׳״"']/g, '');
+  const parts = clean.split(/\s+/);
+
+  if (parts.length < 2) { alert('Enter at least day and month'); return; }
+
+  // Try to find month
+  let monthCode = 0;
+  let monthIdx = -1;
+  for (let i = 0; i < parts.length; i++) {
+    // Check combined with next word too (for "אדר א")
+    const combined = parts.slice(i, i + 2).join(' ');
+    for (const mp of MONTH_PATTERNS) {
+      if (mp.re.test(combined) || mp.re.test(parts[i])) {
+        monthCode = mp.m;
+        monthIdx = i;
+        break;
+      }
+    }
+    if (monthCode !== 0) break;
+  }
+
+  if (monthCode === 0) { alert('Could not identify month'); return; }
+
+  // Day: Hebrew numeral before the month
+  let day = 0;
+  for (let i = 0; i < monthIdx; i++) {
+    day += parseHebrewNumeral(parts[i]);
+  }
+  if (day === 0) day = 1;
+
+  // Year: Hebrew numeral after the month
+  let year = 0;
+  for (let i = monthIdx + 1; i < parts.length; i++) {
+    if (MONTH_PATTERNS.some(mp => mp.re.test(parts[i]))) continue; // skip month-related words
+    year += parseHebrewNumeral(parts[i]);
+  }
+  if (year > 0 && year < 1000) year += 5000; // convention: add 5000
+
+  if (year === 0) {
+    // Default to current Hebrew year
+    const nowRD = gregorianToRD(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+    year = rdToHebrew(nowRD).year;
+  }
+
+  const month = resolveMonthNum(monthCode, year);
+
+  document.getElementById('hYear').value = year;
+  populateHebMonths();
+  document.getElementById('hMonth').value = month;
+  document.getElementById('hDay').value = day;
+}
+
+// ===================================================================
+//  VERIFICATION SUITE
+// ===================================================================
+
+function runVerification() {
+  const tests = [
+    // [gYear, gMonth, gDay, hYear, hMonth, hDay, description]
+    [1975,  1, 24, 5735,  5, 12, 'User example: Jan 24 1975 = 12 Shevat 5735'],
+    [2024, 10,  3, 5785,  1,  1, 'Rosh Hashana 5785'],
+    [2023,  9, 16, 5784,  1,  1, 'Rosh Hashana 5784'],
+    [2023,  9, 25, 5784,  1, 10, 'Yom Kippur 5784'],
+    [2024,  4, 23, 5784,  8, 15, 'Pesach I 5784 (leap year)'],
+    [2024,  3, 24, 5784,  7, 14, 'Purim 5784 (Adar II, leap)'],
+    [1948,  5, 14, 5708,  9,  5, 'Israel Independence Day 5 Iyar 5708'],
+    [2000,  1,  1, 5760,  4, 23, 'Y2K: Jan 1 2000'],
+    [1990,  3, 27, 5750,  7,  1, 'Nisan 1 5750'],
+    [2025,  1,  1, 5785,  4,  1, 'Jan 1 2025 = 1 Tevet 5785'],
+    [1967,  6,  7, 5727,  8, 28, 'Jerusalem Day (28 Iyar 5727)'],
+    [2014,  9, 25, 5775,  1,  1, 'Rosh Hashana 5775'],
+    [2022,  4, 15, 5782,  8, 14, 'Erev Pesach 5782'],
+    [1999, 12, 31, 5760,  4, 22, 'Dec 31 1999'],
+    [2024, 12, 26, 5785,  3, 25, 'Chanukah I 5785'],
+    [1900,  1,  1, 5660,  4, 21, 'Jan 1 1900'],
+    [2100,  1,  1, 5860,  4, 16, 'Jan 1 2100 (far future)'],
+    [1776,  7,  4, 5536,  8, 18, 'US Independence Day'],
+  ];
+
+  let pass = 0, fail = 0;
+  let rows = '';
+
+  for (const [gY, gM, gD, hY, hM, hD, desc] of tests) {
+    // Test Gregorian → Hebrew
+    const rd = gregorianToRD(gY, gM, gD);
+    const heb = rdToHebrew(rd);
+    const g2hOK = heb.year === hY && heb.month === hM && heb.day === hD;
+
+    // Test Hebrew → Gregorian
+    const rd2 = hebrewToRD(hY, hM, hD);
+    const greg = rdToGregorian(rd2);
+    const h2gOK = greg.year === gY && greg.month === gM && greg.day === gD;
+
+    const ok = g2hOK && h2gOK;
+    if (ok) pass++; else fail++;
+
+    // Intl cross-check
+    let intlMatch = '—';
+    try {
+      const dt = new Date(gY, gM - 1, gD);
+      if (dt.getFullYear() === gY) {
+        const parts = new Intl.DateTimeFormat('en-u-ca-hebrew', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        }).formatToParts(dt);
+        const intlDay = parts.find(p => p.type === 'day')?.value;
+        const intlMonth = parts.find(p => p.type === 'month')?.value;
+        const intlYear = parts.find(p => p.type === 'year')?.value;
+        intlMatch = `${intlDay} ${intlMonth} ${intlYear}`;
+      }
+    } catch(e) { intlMatch = 'N/A'; }
+
+    const mNames = hebMonthNamesEn(hY);
+    const status = ok ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>';
+    const got = g2hOK ? '' : ` (got: ${heb.day} ${hebMonthNamesEn(heb.year)[heb.month-1]} ${heb.year})`;
+
+    rows += `<tr>
+      <td>${status}</td>
+      <td>${GREG_MONTHS[gM-1]} ${gD}, ${gY}</td>
+      <td>${hD} ${mNames[hM-1]} ${hY}</td>
+      <td>${intlMatch}</td>
+      <td>${desc}${got}</td>
+    </tr>`;
+  }
+
+  // Parasha verification tests
+  // [gYear, gMonth, gDay, expectedParashaIdx1, expectedParashaIdx2OrNull, description]
+  // idx2=null means single, idx2=number means doubled
+  const parashaTests = [
+    [1975,  1, 18, 15, null, 'Jan 18 1975 (Shabbat) → Bo'],
+    [1975,  1, 17, 15, null, 'Jan 17 1975 (Fri) → Shabbat Jan 18 → Bo'],
+    [2024, 10, 26, 1, null, 'Oct 26 2024 (Shabbat) → Bereishit (first Shabbat after ST 5785)'],
+    [2024, 12, 21, 9, null, 'Dec 21 2024 (Shabbat) → Vayeshev'],
+    [2025,  3, 22, 22, 23, 'Mar 22 2025 (Shabbat) → Vayakhel-Pekudei (doubled, non-leap 5785)'],
+  ];
+
+  let pPass = 0, pFail = 0;
+  let pRows = '';
+  for (const [gY, gM, gD, expIdx1, expIdx2, desc] of parashaTests) {
+    const rd = gregorianToRD(gY, gM, gD);
+    const parashaInfo = getParashaForDate(rd);
+    let ok = false;
+    let got = '';
+    if (parashaInfo && parashaInfo.indices.length > 0) {
+      if (expIdx2 === null) {
+        ok = parashaInfo.indices.length === 1 && parashaInfo.indices[0] === expIdx1;
+      } else {
+        ok = parashaInfo.indices.length === 2 && parashaInfo.indices[0] === expIdx1 && parashaInfo.indices[1] === expIdx2;
+      }
+      got = parashaInfo.indices.map(i => PARASHOT[i]?.en).join('-');
+    } else if (parashaInfo && parashaInfo.holiday) {
+      got = 'Holiday';
+    } else {
+      got = 'none';
+    }
+    const expected = expIdx2 === null ? PARASHOT[expIdx1].en : `${PARASHOT[expIdx1].en}-${PARASHOT[expIdx2].en}`;
+    if (ok) pPass++; else pFail++;
+    const status = ok ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>';
+    pRows += `<tr>
+      <td>${status}</td>
+      <td>${GREG_MONTHS[gM-1]} ${gD}, ${gY}</td>
+      <td>${expected}</td>
+      <td>${got}</td>
+      <td>${desc}${ok ? '' : ' (MISMATCH)'}</td>
+    </tr>`;
+  }
+
+  // Round-trip test: convert 1000 random dates
+  let rtPass = 0, rtFail = 0;
+  for (let i = 0; i < 1000; i++) {
+    const rd = Math.floor(Math.random() * 800000) + 1; // ~1 CE to ~2190 CE
+    const greg = rdToGregorian(rd);
+    const heb = rdToHebrew(rd);
+    // Round-trip: Gregorian → RD → Hebrew → RD
+    const rd2 = hebrewToRD(heb.year, heb.month, heb.day);
+    const rd3 = gregorianToRD(greg.year, greg.month, greg.day);
+    if (rd === rd2 && rd === rd3) rtPass++; else rtFail++;
+  }
+
+  document.getElementById('verifyResults').innerHTML = `
+    <p style="margin-bottom:8px">
+      Known dates: <span class="${pass === tests.length ? 'pass' : 'fail'}">${pass}/${tests.length} passed</span>
+      &nbsp;|&nbsp;
+      Round-trip (1000 random): <span class="${rtFail === 0 ? 'pass' : 'fail'}">${rtPass}/1000 passed</span>
+      &nbsp;|&nbsp;
+      Parasha: <span class="${pFail === 0 ? 'pass' : 'fail'}">${pPass}/${parashaTests.length} passed</span>
+    </p>
+    <table class="verify-table">
+      <tr><th>Status</th><th>Gregorian</th><th>Hebrew</th><th>Intl API</th><th>Description</th></tr>
+      ${rows}
+    </table>
+    <h4 style="color:#b8e986;margin:16px 0 8px">Parasha Verification</h4>
+    <table class="verify-table">
+      <tr><th>Status</th><th>Gregorian</th><th>Expected</th><th>Got</th><th>Description</th></tr>
+      ${pRows}
+    </table>
+  `;
+}
+
+// Set January as default
+document.getElementById('gMonth').value = 1;
+</script>
+</body>
+</html>

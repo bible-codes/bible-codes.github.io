@@ -304,40 +304,62 @@ function computeC(nameHits, dateHits, textLen) {
   return m > 0 ? v / m : 1.0;
 }
 
-// ---- P₁: binomial tail P(Bin(N, 0.2) ≥ k) ----
-function computeP1(cValues) {
-  const N = cValues.length;
-  if (N === 0) return 1.0;
-  const k = cValues.filter(c => c < 0.2).length;
+// ---- Binomial tail helper: P(Bin(N, p) ≥ k) ----
+function binomialTail(N, p, k) {
   if (k === 0) return 1.0;
-
+  if (k > N) return 0.0;
   let pTail = 0;
+  const logP = Math.log(p), log1P = Math.log(1 - p);
   for (let j = k; j <= N; j++) {
     let logProb = 0;
     for (let i = 0; i < j; i++) logProb += Math.log(N - i) - Math.log(i + 1);
-    logProb += j * Math.log(0.2) + (N - j) * Math.log(0.8);
+    logProb += j * logP + (N - j) * log1P;
     pTail += Math.exp(logProb);
   }
   return Math.min(pTail, 1.0);
 }
 
-// ---- P₂: Gamma upper-tail CDF ----
-// t = -Σ ln(c_i), P₂ = e^{-t} · Σ_{j=0}^{N-1} t^j/j!
-function computeP2(cValues) {
-  const N = cValues.length;
+// ---- Gamma upper-tail helper: e^{-t} · Σ_{j=0}^{N-1} t^j/j! ----
+function gammaTail(cVals) {
+  const N = cVals.length;
   if (N === 0) return 1.0;
-
-  const safeC = cValues.map(c => Math.max(c, 1e-10));
+  const safeC = cVals.map(c => Math.max(c, 1e-10));
   let t = 0;
   for (const c of safeC) t -= Math.log(c);
   if (t <= 0) return 1.0;
-
   let sum = 0, term = 1;
   for (let j = 0; j < N; j++) {
     sum += term;
     term *= t / (j + 1);
   }
   return Math.min(Math.max(Math.exp(-t) * sum, 0), 1.0);
+}
+
+// ---- P₁: binomial tail P(Bin(N, 0.2) ≥ k₁) where k₁ = #{c < 0.2} ----
+function computeP1(cValues) {
+  const N = cValues.length;
+  if (N === 0) return 1.0;
+  const k = cValues.filter(c => c < 0.2).length;
+  return binomialTail(N, 0.2, k);
+}
+
+// ---- P₂: Gamma tail on all c values ----
+function computeP2(cValues) {
+  return gammaTail(cValues);
+}
+
+// ---- P₃: binomial tail P(Bin(N, 0.1) ≥ k₃) where k₃ = #{c < 0.1} ----
+function computeP3(cValues) {
+  const N = cValues.length;
+  if (N === 0) return 1.0;
+  const k = cValues.filter(c => c < 0.1).length;
+  return binomialTail(N, 0.1, k);
+}
+
+// ---- P₄: Gamma tail on truncated c values (c' = min(c, 0.5)) ----
+function computeP4(cValues) {
+  const truncated = cValues.map(c => Math.min(c, 0.5));
+  return gammaTail(truncated);
 }
 
 // ---- Main message handler ----
@@ -651,15 +673,17 @@ function runWRRFull(data) {
       });
     }
 
-    // ---- Phase 3: Compute P₁ and P₂ ----
+    // ---- Phase 3: Compute P₁, P₂, P₃, P₄ ----
     const cValues = rabbiResults.filter(r => r.c < 1.0).map(r => r.c);
     const p1 = computeP1(cValues);
     const p2 = computeP2(cValues);
-    const overallP = 2 * Math.min(p1, p2);
+    const p3 = computeP3(cValues);
+    const p4 = computeP4(cValues);
+    const overallP = 4 * Math.min(p1, p2, p3, p4);
 
     self.postMessage({
       type: 'wrr-complete',
-      rabbiResults, cValues, p1, p2, overallP,
+      rabbiResults, cValues, p1, p2, p3, p4, overallP,
       matchedCount: cValues.length,
       totalRabbis: processed.length
     });
@@ -735,7 +759,9 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen)
 
     const permP1 = computeP1(permC);
     const permP2 = computeP2(permC);
-    const permP = 2 * Math.min(permP1, permP2);
+    const permP3 = computeP3(permC);
+    const permP4 = computeP4(permC);
+    const permP = 4 * Math.min(permP1, permP2, permP3, permP4);
 
     if (permP <= actualOverallP) betterCount++;
 

@@ -972,12 +972,12 @@
                   <option value="60">60</option>
                 </select>
                 <span class="vid-label" style="margin-left:12px;">Format:</span>
-                <select id="vidFormatSelect">
-                  <option value="webm">WebM</option>
-                  <option value="mp4">MP4</option>
+                <select id="vidFormatSelect" title="Select format BEFORE recording">
+                  <option value="webm">WebM (default)</option>
                   <option value="gif">GIF (universal)</option>
                 </select>
-                <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download</button>
+                <span class="vid-label" style="font-size:.7em;color:#888" id="vidFormatNote">Select before recording</span>
+                <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download Video</button>
               </div>
             </div>
           </div>
@@ -1051,17 +1051,36 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
           <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
-            <div style="font-size:28px;font-weight:bold;color:var(--blue);">32</div>
-            <div style="font-size:12px;color:var(--gray);">Rabbis (List 2)</div>
+            <div style="font-size:28px;font-weight:bold;color:var(--blue);" id="wrrStatRabbis">32</div>
+            <div style="font-size:12px;color:var(--gray);" id="wrrStatRabbisLabel">Rabbis (List 2)</div>
           </div>
           <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
             <div style="font-size:28px;font-weight:bold;color:var(--blue);">78,064</div>
-            <div style="font-size:12px;color:var(--gray);">Letters in Genesis</div>
+            <div style="font-size:12px;color:var(--gray);" id="wrrStatTextLabel">Letters in Genesis</div>
           </div>
           <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
             <div style="font-size:28px;font-weight:bold;color:var(--blue);">p &lt; 1/62,500</div>
-            <div style="font-size:12px;color:var(--gray);">Published P-value</div>
+            <div style="font-size:12px;color:var(--gray);">Published P-value (List 2)</div>
           </div>
+        </div>
+
+        <!-- List & Text selectors -->
+        <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+          <label style="font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;">
+            Rabbi list:
+            <select id="wrrListSelect" onchange="wrrSwitchList(this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
+              <option value="list2" selected>List 2 (32 rabbis)</option>
+              <option value="list1">List 1 (34 rabbis)</option>
+            </select>
+          </label>
+          <label style="font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;">
+            Text:
+            <select id="wrrTextSelect" onchange="wrrSwitchText(this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
+              <option value="genesis" selected>Genesis (Koren)</option>
+              <option value="tolstoy">War and Peace (Tolstoy)</option>
+            </select>
+          </label>
+          <span id="wrrTextNote" style="font-size:11px;color:#999;"></span>
         </div>
 
         <!-- Controls -->
@@ -1069,7 +1088,7 @@
           <button class="btn" id="wrrRunBtn" onclick="runWRRExperiment()" style="background:linear-gradient(135deg,#667eea,#764ba2);font-size:15px;padding:10px 24px;">
             Quick Run
           </button>
-          <button class="btn" id="wrrFullBtn" onclick="wrrRunFullExperiment()" style="background:linear-gradient(135deg,#1b5e20,#388e3c);font-size:15px;padding:10px 24px;color:#fff;border:none;border-radius:6px;cursor:pointer;" title="Full WRR replication with c(w,w') perturbation statistic, P&#8321; and P&#8322;">
+          <button class="btn" id="wrrFullBtn" onclick="wrrRunFullExperiment()" style="background:linear-gradient(135deg,#1b5e20,#388e3c);font-size:15px;padding:10px 24px;color:#fff;border:none;border-radius:6px;cursor:pointer;" title="Full WRR replication with c(w,w') perturbation statistic, P&#8321;-P&#8324;">
             Run Full WRR (c statistic)
           </button>
           <button class="btn btn-secondary" id="wrrCancelBtn" onclick="cancelWRR()" style="display:none;">Cancel</button>
@@ -1094,7 +1113,7 @@
         </div>
 
         <!-- Rabbi table -->
-        <div style="margin-bottom:8px;font-weight:600;color:var(--blue);">Rabbi List (WRR List 2)</div>
+        <div style="margin-bottom:8px;font-weight:600;color:var(--blue);" id="wrrTableLabel">Rabbi List (WRR List 2)</div>
         <div style="overflow-x:auto;max-height:500px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
           <table id="wrrTable" style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead style="position:sticky;top:0;background:var(--blue);color:white;z-index:1;">
@@ -2883,66 +2902,127 @@
     const WRR_GENESIS_LEN = 78064;
 
     // WRR List 2: 32 rabbis from Encyclopedia of Great Men in Israel.
-    // Appellations and date forms are consonantal Hebrew (spaces stripped at search time).
+    // Appellations converted from WRR's original MC transliteration (WRR2.txt, McKay ANU archive).
+    // Each appellation is a single consonantal Hebrew word (no spaces) — searched as ELS.
     // Rabbis 4 and 8 have no recorded death dates — excluded from analysis.
     const WRR_RABBIS = [
-      { id:1, en:"Abraham ben David (RABaD)", names:["רבי אברהם","הראבד","בעל האשכול","ראבד"], dates:["כ חשון","כ בחשון","בכ חשון"] },
-      { id:2, en:"Abraham Yitzhaki", names:["רבי אברהם","יצחקי","זרע אברהם","בעל זרע אברהם","אברהם יצחקי"], dates:["יג סיון","יג בסיון","ביג סיון"] },
-      { id:3, en:"Abraham HaMalakh", names:["רבי אברהם","המלאך","חסד לאברהם","בעל חסד לאברהם"], dates:["יב תשרי","יב בתשרי","ביב תשרי"] },
-      { id:4, en:"Abraham Saba", names:["רבי אברהם","אברהם סבע","צרור המר","בעל צרור המר"], dates:[] },
-      { id:5, en:"Aaron HaGadol of Karlin", names:["רבי אהרן","אהרן הגדול מקרלין"], dates:["יט ניסן","יט בניסן","ביט ניסן"] },
-      { id:6, en:"Eliezer Ashkenazi", names:["מעשי השם","מעשי יהוה","בעל מעשי השם","בעל מעשי יהוה","אליעזר אשכנזי","רבי אליעזר"], dates:["כב כסלו","כב בכסלו","בכב כסלו"] },
-      { id:7, en:"David Oppenheim", names:["רבי דוד","אופנהיים","הרדא","מהרדא אופנהיים","דוד אופנהיים"], dates:["ז תשרי","ז בתשרי","בז תשרי"] },
-      { id:8, en:"David HaNagid", names:["רבי דוד","דוד הנגיד"], dates:[] },
-      { id:9, en:"David Nieto", names:["רבי דוד","דוד ניטו","הכוזרי השני","בעל הכוזרי השני","ניטו"], dates:["כח טבת","כח בטבת","בכח טבת"] },
-      { id:10, en:"Hayyim Abulafia", names:["רבי חיים","חיים אבולעפיה","אבולעפיה"], dates:["ו ניסן","ו בניסן","בו ניסן"] },
-      { id:11, en:"Hayyim Benveniste", names:["רבי חיים","בנבנשת","כנסת הגדולה","בעל כנסת הגדולה","חיים בנבנשת"], dates:["יט אלול","יט באלול","ביט אלול"] },
-      { id:12, en:"Hayyim Capusi", names:["רבי חיים","כפוסי","בעל נס","בעל הנס","חיים כפוסי"], dates:["יב שבט","יב בשבט","ביב שבט"] },
-      { id:13, en:"Hayyim Shabetai", names:["רבי חיים","חיים שבתי","מהרחש","המהרחש"], dates:["יג ניסן","יג בניסן","ביג ניסן"] },
-      { id:14, en:"Yair Hayyim Bacharach", names:["חוות יאיר","בעל חוות יאיר","יאיר חיים בכרך","בכרך","רבי יאיר חיים"], dates:["א טבת","א בטבת","בא טבת"] },
-      { id:15, en:"Yehuda HeHasid", names:["רבי יהודה","יהודה חסיד","יהודה החסיד"], dates:["ה חשון","ה בחשון","בה חשון"] },
-      { id:16, en:"Yehuda Ayash", names:["רבי יהודה","מהריע איש","יהודה עיאש","עיאש"], dates:["א תשרי","א בתשרי","בא תשרי"] },
-      { id:17, en:"Yehosef HaNagid", names:["רבי יהוסף"], dates:["ט טבת","ט בטבת","בט טבת"] },
-      { id:18, en:"Yehoshua (Maginei Shlomo)", names:["רבי יהושע","מגיני שלמה"], dates:["כז אב","כז באב","בכז אב"] },
-      { id:19, en:"Yosef di Trani (MaHaRiT)", names:["רבי יוסף","מטראני","יוסף טראני","טראני","מהרימט","המהרימט","מהריט","המהריט","יוסף מטראני"], dates:["יד תמוז","יד בתמוז","ביד תמוז"] },
-      { id:20, en:"Yosef Te'omim", names:["רבי יוסף","תאומים","פרי מגדים","בעל פרי מגדים","יוסף תאומים"], dates:["ד אייר","ד באייר","בד אייר"] },
-      { id:21, en:"Ya'akov BeRav", names:["רבי יעקב","יעקב בירב","מהרי בירב","הריבר","בירב"], dates:["ל ניסן","ל בניסן","בל ניסן"] },
-      { id:22, en:"Yisrael Ya'akov Hagiz", names:["חגיז","בעל הלקט","הלקט","ישראל יעקב","רבי ישראל יעקב"], dates:["כו שבט","כו בשבט","בכו שבט"] },
-      { id:23, en:"Ya'akov Moelin (MaHaRIL)", names:["רבי יעקב","מולין","יעקב סגל","יעקב הלוי","מהרי סגל","מהרי הלוי","מהריל","המהריל","יעקב מולין"], dates:["כב אלול","כב באלול","בכב אלול"] },
-      { id:24, en:"Ya'akov Emden (Ya'avetz)", names:["היעבץ","הריעבץ","עמדין","הריע עמדן","הריע עמדין","יעקב ישראל עמדן","יעקב ישראל עמדין","עמדן","רבי יעקב ישראל"], dates:["ל ניסן","ל בניסן","בל ניסן"] },
-      { id:25, en:"Yitzhak HaLevi Horowitz", names:["רבי יצחק","הורוויץ","יצחק הלוי","רבי אייצקל המבורגר","יצחק הלוי איש הורוויץ"], dates:["ו אייר","ו באייר","בו אייר"] },
-      { id:26, en:"Menachem Mendel Krochmal", names:["רבי מנחם","קרוכמל","רבי מענדל","צמח צדק","בעל צמח צדק","מנחם מענדל"], dates:["ב שבט","ב בשבט","בב שבט"] },
-      { id:27, en:"Moshe Zacuto", names:["רבי משה","זכותא","זכותו","משה זכות","משה זכותא","משה זכותו","מהרם זכות","מהרמז","המהרמז","קול הרמז","בעל קול הרמז","זכות"], dates:["כז תשרי","כז בתשרי","בכז תשרי","יו תשרי","יו בתשרי","ביו תשרי"] },
-      { id:28, en:"Moshe Margalit", names:["רבי משה","מרגלית","פני משה","בעל פני משה","משה מרגלית"], dates:["יב טבת","יב בטבת","ביב טבת"] },
-      { id:29, en:"Azariah Figo", names:["רבי עזריה","עזריה פיגו"], dates:["א אדרא","א באדרא","בא אדרא"] },
-      { id:30, en:"Immanuel Hai Ricchi", names:["משנת חסידים","בעל משנת חסידים","עמנואל חירפל ריקי","ריקי","רבי עמנואל חירפל"], dates:["א אדר","א באדר","בא אדר"] },
-      { id:31, en:"Shalom Sharabi (RaShaSh)", names:["רבי שלום","מזרחי","שר עבי","שר שלום","מהרשש","המהרשש","שמש","השמש","שלום מזרחי"], dates:["י שבט","י בשבט","בי שבט"] },
-      { id:32, en:"Shlomo HaMa'almi", names:["רבי שלמה","מרכבת המשנה","בעל מרכבת המשנה","שלמה מחלמא","שלמה מחעלמא"], dates:["כא תמוז","כא בתמוז","בכא תמוז"] }
+      { id:1, en:"Abraham ben David (RABaD)", names:["רביאברהמ","הראבי","הרבאבד","הראבד","האשכול","בעלהאשכול","ראבי","הרבאבביתדינ","ראבד"], dates:["כ חשונ","כ בחשונ","בכ חשונ"] },
+      { id:2, en:"Abraham Yitzhaki", names:["רביאברהמ","יצחקי","זרעאברהמ","בעלזרעאברהמ","אברהמיצחקי"], dates:["יג סיונ","יג בסיונ","ביג סיונ"] },
+      { id:3, en:"Abraham HaMalakh", names:["רביאברהמ","המלאכ","חסדלאברהמ","בעלחסדלאברהמ"], dates:["יב תשרי","יב בתשרי","ביב תשרי"] },
+      { id:4, en:"Abraham Saba", names:["רביאברהמ","אברהמסבע","צרורהמר","בעלצרורהמר"], dates:[] },
+      { id:5, en:"Aaron HaGadol of Karlin", names:["רביאהרנ","אהרנהגדולמקרלינ"], dates:["יט ניסנ","יט בניסנ","ביט ניסנ"] },
+      { id:6, en:"Eliezer Ashkenazi", names:["מעשיהשמ","מעשייהוה","בעלמעשיהשמ","בעלמעשייהוה","אליעזראשכנזי","רביאליעזר"], dates:["כב כסלו","כב בכסלו","בכב כסלו"] },
+      { id:7, en:"David Oppenheim", names:["רבידוד","אופנהימ","הרדא","מהרדאופנהימ","דודאופנהימ"], dates:["ז תשרי","ז בתשרי","בז תשרי"] },
+      { id:8, en:"David HaNagid", names:["רבידוד","דודהנגיד"], dates:[] },
+      { id:9, en:"David Nieto", names:["רבידוד","דודניטו","הכוזריהשני","בעלהכוזריהשני","ניטו"], dates:["כח טבת","כח בטבת","בכח טבת"] },
+      { id:10, en:"Hayyim Abulafia", names:["רביחיימ","חיימאבואלעפיה","אבואלעפיה"], dates:["ו ניסנ","ו בניסנ","בו ניסנ"] },
+      { id:11, en:"Hayyim Benveniste", names:["רביחיימ","בנבנשת","כנסתהגדולה","בעלכנסתהגדולה","חיימבנבנשת"], dates:["יט אלול","יט באלול","ביט אלול"] },
+      { id:12, en:"Hayyim Capusi", names:["רביחיימ","כפוסי","בעלנס","בעלהנס","חיימכפוסי"], dates:["יב שבט","יב בשבט","ביב שבט"] },
+      { id:13, en:"Hayyim Shabetai", names:["רביחיימ","חיימשבתי","מהרחש","המהרחש"], dates:["יג ניסנ","יג בניסנ","ביג ניסנ"] },
+      { id:14, en:"Yair Hayyim Bacharach", names:["חותיאיר","בעלחותיאיר","יאירחיימבכרכ","בכרכ","רבייאירחיימ"], dates:["א טבת","א בטבת","בא טבת"] },
+      { id:15, en:"Yehuda HeHasid", names:["רבייהודה","יהודהחסיד","יהודההחסיד"], dates:["ה חשונ","ה בחשונ","בה חשונ"] },
+      { id:16, en:"Yehuda Ayash", names:["רבייהודה","מהריעיאש","יהודהעיאש","עיאש"], dates:["א תשרי","א בתשרי","בא תשרי"] },
+      { id:17, en:"Yehosef HaNagid", names:["רבייהוספ"], dates:["ט טבת","ט בטבת","בט טבת"] },
+      { id:18, en:"Yehoshua (Maginei Shlomo)", names:["רבייהושע","מגנישלמה"], dates:["כז אב","כז באב","בכז אב"] },
+      { id:19, en:"Yosef di Trani (MaHaRiT)", names:["רבייוספ","מטרני","יוספטרני","טראני","מטראני","מהרימט","המהרימט","מהריט","המהריט","יוספמטרני","יוספטראני","יוספמטראני","טרני"], dates:["יד תמוז","יד בתמוז","ביד תמוז"] },
+      { id:20, en:"Yosef Te'omim", names:["רבייוספ","תאומימ","פרימגדימ","בעלפרימגדימ","יוספתאומימ"], dates:["ד איר","ד באיר","בד איר"] },
+      { id:21, en:"Ya'akov BeRav", names:["רבייעקב","יעקבבירב","מהריבירב","הריבר","בירב"], dates:["ל ניסנ","ל בניסנ","בל ניסנ"] },
+      { id:22, en:"Yisrael Ya'akov Hagiz", names:["חאגיז","בעלהלקט","הלקט","ישראליעקב","רביישראליעקב"], dates:["כו שבט","כו בשבט","בכו שבט"] },
+      { id:23, en:"Ya'akov Moelin (MaHaRIL)", names:["רבייעקב","מולינ","יעקבסגל","יעקבהלוי","מהריסגל","מהריהלוי","מהריל","המהריל","יעקבמולינ"], dates:["כב אלול","כב באלול","בכב אלול"] },
+      { id:24, en:"Ya'akov Emden (Ya'avetz)", names:["היעבצ","הריעבצ","עמדינ","הריעמדנ","הריעמדינ","יעקבישראלעמדנ","יעקבישראלעמדינ","עמדנ","רבייעקבישראל"], dates:["ל ניסנ","ל בניסנ","בל ניסנ"] },
+      { id:25, en:"Yitzhak HaLevi Horowitz", names:["רבייצחק","הורוויצ","יצחקהלוי","רביאיצקלהמבורגר","יצחקהלויאישהורוויצ"], dates:["ו איר","ו באיר","בו איר"] },
+      { id:26, en:"Menachem Mendel Krochmal", names:["רבימנחמ","קרוכמל","רבימענדל","צמחצדק","בעלצמחצדק","מנחממענדל"], dates:["ב שבט","ב בשבט","בב שבט"] },
+      { id:27, en:"Moshe Zacuto", names:["רבימשה","זכותא","זכותו","משהזכות","משהזכותא","משהזכותו","מהרמזכות","מהרמז","המהרמז","המזלנ","קולהרמז","מזלנ","בעלקולהרמז","זכות"], dates:["טז תשרי","טז בתשרי","בטז תשרי","יו תשרי","יו בתשרי","ביו תשרי"] },
+      { id:28, en:"Moshe Margalit", names:["רבימשה","מרגלית","פנימשה","בעלפנימשה","משהמרגלית"], dates:["יב טבת","יב בטבת","ביב טבת"] },
+      { id:29, en:"Azariah Figo", names:["רביעזריה","עזריהפיגו"], dates:["א אדרא","א באדרא","בא אדרא"] },
+      { id:30, en:"Immanuel Hai Ricchi", names:["אחהער","ישרלבב","משנתחסידימ","בעלמשנתחסידימ","בעלישרלבב","עמנואלחירפאלריקי","ריקי","רביעמנואלחירפאל"], dates:["א אדר","א באדר","בא אדר"] },
+      { id:31, en:"Shalom Sharabi (RaShaSh)", names:["רבישלומ","מזרחי","שרעבי","שרשלומ","מהרשש","המהרשש","שמש","השמש","שלוממזרחי"], dates:["י שבט","י בשבט","בי שבט"] },
+      { id:32, en:"Shlomo HaMa'almi", names:["רבישלמה","מרכבתהמשנה","בעלמרכבתהמשנה","שלמהמחלמא","שלמהמחעלמא"], dates:["כא תמוז","כא בתמוז","בכא תמוז"] }
     ];
 
+    // WRR List 1: 34 rabbis (major figures). Converted from WRR1.txt (McKay ANU archive).
+    // Rabbi 23 (Rif) has no recorded death date — excluded from analysis.
+    const WRR_RABBIS_LIST1 = [
+      { id:1, en:"Abraham ben David (RABaD)", names:["רביאברהמ","הראבד","בעלההשגות","ראבד"], dates:["כו כסלו","כו בכסלו","בכו כסלו"] },
+      { id:2, en:"Abraham the Pious (ben HaRambam)", names:["רביאברהמ","אברהמהחסיד","אברהמבנהרמבמ"], dates:["יח כסלו","יח בכסלו","ביח כסלו"] },
+      { id:3, en:"Abraham ibn Ezra", names:["רביאברהמ","אבנעזרא","בנעזרא","הראבע","ראבע","אברהמבנעזרא","אברהמאבנעזרא"], dates:["א אדרא","א באדרא","בא אדרא"] },
+      { id:4, en:"Eliyahu Bahur", names:["רביאליהו","הבחור","בעלהבחור","אליהוהלוי"], dates:["ו שבט","ו בשבט","בו שבט"] },
+      { id:5, en:"Eliyahu (the GR\"A)", names:["רביאליהו","הגאונ","הגרא","הגאונמוילנא"], dates:["טו ניסנ","טו בניסנ","בטו ניסנ","יה ניסנ","יה בניסנ","ביה ניסנ","יט תשרי","יט בתשרי","ביט תשרי"] },
+      { id:6, en:"Gershon Ashkenazi", names:["רביגרשונ","הגרשני","בעלעבודתהגרשני","גרשונאשכנזי"], dates:["י אדרב","י באדרב","בי אדרב"] },
+      { id:7, en:"David Ganz", names:["רבידוד","דודגנז","דודגאנז","צמחדוד","בעלצמחדוד"], dates:["ה אלול","ה באלול","בה אלול"] },
+      { id:8, en:"David HaLevi (the TaZ)", names:["רבידוד","דודהלוי","בעלהטז","הטז"], dates:["כו שבט","כו בשבט","בכו שבט"] },
+      { id:9, en:"Hayyim ibn Attar", names:["רביחיימ","בנעטר","אבנעטר","אורהחיימ","בעלאורהחיימ","חיימבנעטר","חיימאבנעטר"], dates:["טו תמוז","טו בתמוז","בטו תמוז","יה תמוז","יה בתמוז","ביה תמוז"] },
+      { id:10, en:"Yehuda ben HaRosh", names:["רבייהודה","יהודהבנהראש"], dates:["יז תמוז","יז בתמוז","ביז תמוז"] },
+      { id:11, en:"Yehuda HeHasid (of Regensburg)", names:["רבייהודה","בעלספרחסידימ","יהודההחסיד"], dates:["יג אדר","יג באדר","ביג אדר"] },
+      { id:12, en:"Yehuda Loew (MaHaRaL of Prague)", names:["רבייהודה","רביליוא","המהרל","מהרלמפרג","מהרלמפראג","מהרל"], dates:["יח אלול","יח באלול","ביח אלול"] },
+      { id:13, en:"Yonatan Eybeschutz", names:["רבייונתנ","איבשיצ","בעלהתמימ","יונתנפרגר","יונתנאיבשיצ","יונתנפראגר","יהונתנאיבשיצ","רבייהונתנ"], dates:["כא אלול","כא באלול","בכא אלול"] },
+      { id:14, en:"Yehoshua (Penei Yehoshua)", names:["רבייהושע","רביהעשיל"], dates:["כ תשרי","כ בתשרי","בכ תשרי"] },
+      { id:15, en:"Yehoshua Falk (the SM\"A)", names:["רבייהושע","בעלהסמע","הסמע","יהושעפלקכצ","יהושעולקכצ"], dates:["יט ניסנ","יט בניסנ","ביט ניסנ"] },
+      { id:16, en:"Yoel Sirkis (the Ba\"CH)", names:["רבייואל","סירקש","בעלהבח","הבח","יואלסירקש"], dates:["כ אדר","כ באדר","בכ אדר"] },
+      { id:17, en:"Yom Tov Lipmann Heller", names:["העלר","רבייומטוב","בעלתוספותיומטוב","תוספותיומטוב","יומטובליפמנהעלר"], dates:["ו אלול","ו באלול","בו אלול"] },
+      { id:18, en:"Yonah Gerondi", names:["רבייונה","רבנויונה","יונהגרונדי"], dates:["ח חשונ","ח בחשונ","בח חשונ"] },
+      { id:19, en:"Yosef Karo", names:["רבייוספ","יוספקרו","יוספקארו","מהריקרו","מהריקארו","ביתיוספ","המחבר","קרו","קארו","בעלביתיוספ"], dates:["יג ניסנ","יג בניסנ","ביג ניסנ"] },
+      { id:20, en:"Yehezkel Landau (Noda BiYehuda)", names:["בעלהצלח","נודעביהודה","יחזקאללנדא","לנדא","רבייחזקאל","בעלנורעביהודה","הצלח"], dates:["יח חשונ","יח בחשונ","ביח חשונ","יז איר","יז באיר","ביז איר"] },
+      { id:21, en:"Ya'akov Yehoshua Falk (Penei Yehoshua)", names:["פנייהושע","בעלפנייהושע","יעקביהושעפלק","פלק","רבייעקביהושע","פאלק","יעקביהושעפאלק"], dates:["כח כסלו","כח בכסלו","בכח כסלו","יד שבט","יד בשבט","ביד שבט"] },
+      { id:22, en:"Ya'akov Tam (Rabbeinu Tam)", names:["רבייעקב","רבנותמ"], dates:["ד תמוז","ד בתמוז","בד תמוז"] },
+      { id:23, en:"Yitzhak Alfasi (the Rif)", names:["רבייצחק","אלפסי","רבאלפס","בעלההלכות","ריפ","הריפ","יצחקאלפסי"], dates:[] },
+      { id:24, en:"Yisrael Ba'al Shem Tov", names:["רביישראל","בעלשמטוב","הבעשט","בעשט"], dates:["יח אלול","יח באלול","ביח אלול"] },
+      { id:25, en:"Meir of Rothenburg (MaHaRaM)", names:["רבימאיר","המהרמ","מהרמ","מהרממרוטמבורג","מהרמברברוכ"], dates:["יט איר","יט באיר","ביט איר"] },
+      { id:26, en:"Mordechai Yaffe (the Levush)", names:["רבימרדכי","מרדכייפה","הלבוש","בעלהלבוש","בעלהלבושימ","יפה"], dates:["ג אדרב","ג באדרב","בג אדרב"] },
+      { id:27, en:"Moshe Isserles (the Rema)", names:["רבימשה","איסרלש","הרמא","משהאיסרלש"], dates:["יח איר","יח באיר","ביח איר"] },
+      { id:28, en:"Moshe Hayyim Luzzatto (RaMCHaL)", names:["לוצטו","לוצאטו","הרמחל","רמחל","משהחיימלוצטו","רבימשהחיימ","משהחיימלוצאטו"], dates:["כו איר","כו באיר","בכו איר"] },
+      { id:29, en:"Moshe ben Maimon (Rambam)", names:["רבימשה","הרמבמ","רמבמ","משהבנמימונ","משהבנמימונהספרדי"], dates:["כ טבת","כ בטבת","בכ טבת","יד ניסנ","יד בניסנ","ביד ניסנ"] },
+      { id:30, en:"Tzvi Ashkenazi (Hakham Tzvi)", names:["רביצבי","חכמצבי","צביאשכנזי"], dates:["א איר","א באיר","בא איר"] },
+      { id:31, en:"Shabtai HaKohen (the ShaKH)", names:["רבישבתי","שבתיכהנ","שבתיהכהנ","בעלהשכ","השכ"], dates:["א אדרא","א באדרא","בא אדרא"] },
+      { id:32, en:"Shlomo Yitzhaki (Rashi)", names:["רבישלמה","רשי","שלמהיצחקי"], dates:["כט תמוז","כט בתמוז","בכט תמוז"] },
+      { id:33, en:"Shlomo Luria (MaHaRShaL)", names:["רבישלמה","לוריא","מהרשל","המהרשל","שלמהלוריאאשכנזי"], dates:["יב כסלו","יב בכסלו","ביב כסלו"] },
+      { id:34, en:"Shmuel Eliezer Eidels (MaHaRSHA)", names:["אידלש","מהרשא","המהרשא","שמואלאליעזראידלש","רבישמואלאליעזר"], dates:["ה כסלו","ה בכסלו","בה כסלו"] }
+    ];
+
+    // Active rabbi list (switchable via UI)
+    let wrrActiveRabbis = WRR_RABBIS;
+    let wrrActiveListName = 'list2';
+    let wrrActiveTextName = 'genesis';
+
     let wrrAbort = false;
-    let wrrGenesisNorm = null;   // Genesis text with sofiot normalized
-    let wrrLetterFreqs = null;   // letter frequency map for Genesis
+    let wrrTextNorm = null;      // Active text with sofiot normalized (Genesis or W&P)
+    let wrrLetterFreqs = null;   // letter frequency map for active text
     let wrrResults = [];         // stored results for export/view
     let wrrELSCache = new Map(); // termNorm:maxSkip → hits (avoid re-searching shared terms)
+    // Cache both texts so switching is instant
+    let wrrGenesisNorm = null;
+    let wrrWarAndPeaceNorm = null;
 
-    // ---- Load Genesis text and compute letter frequencies ----
-    async function wrrLoadGenesis() {
-      if (wrrGenesisNorm) return;
-      let raw;
-      if (torahText && torahText.length >= WRR_GENESIS_LEN) {
-        raw = torahText.slice(0, WRR_GENESIS_LEN);
+    // ---- Load active text and compute letter frequencies ----
+    async function wrrLoadText() {
+      if (wrrActiveTextName === 'genesis') {
+        if (!wrrGenesisNorm) {
+          let raw;
+          if (torahText && torahText.length >= WRR_GENESIS_LEN) {
+            raw = torahText.slice(0, WRR_GENESIS_LEN);
+          } else {
+            const resp = await fetch('data/torahNoSpaces.txt');
+            raw = (await resp.text()).trim().slice(0, WRR_GENESIS_LEN);
+          }
+          wrrGenesisNorm = normalizeSofiot(raw);
+        }
+        wrrTextNorm = wrrGenesisNorm;
       } else {
-        const resp = await fetch('data/torahNoSpaces.txt');
-        raw = (await resp.text()).trim().slice(0, WRR_GENESIS_LEN);
+        if (!wrrWarAndPeaceNorm) {
+          const resp = await fetch('data/warAndPeace78064.txt');
+          const raw = (await resp.text()).trim();
+          wrrWarAndPeaceNorm = normalizeSofiot(raw);
+        }
+        wrrTextNorm = wrrWarAndPeaceNorm;
       }
-      wrrGenesisNorm = normalizeSofiot(raw);
       // Compute letter frequencies for D(w) calculation
       wrrLetterFreqs = {};
-      for (const ch of wrrGenesisNorm) {
+      for (const ch of wrrTextNorm) {
         wrrLetterFreqs[ch] = (wrrLetterFreqs[ch] || 0) + 1;
       }
     }
+    // Alias for backward compatibility
+    const wrrLoadGenesis = wrrLoadText;
 
     // ---- Dynamic skip range D(w) ----
     // D(w) = smallest D such that sum_{d=2}^{D} E(w,d) >= 10
@@ -3061,12 +3141,12 @@
       const tbody = document.getElementById('wrrTableBody');
       if (!tbody) return;
       let html = '';
-      WRR_RABBIS.forEach(r => {
+      wrrActiveRabbis.forEach(r => {
         const hasDates = r.dates.length > 0;
         const pairCount = hasDates ? r.names.length * r.dates.length : 0;
         const dateStr = hasDates ? r.dates[0] : '—';
         const rowStyle = hasDates ? '' : 'opacity:0.5;';
-        html += `<tr style="border-bottom:1px solid #eee;${rowStyle}">
+        html += `<tr id="wrrRow${r.id}" style="border-bottom:1px solid #eee;${rowStyle}">
           <td style="padding:6px 4px;text-align:center;color:var(--gray);">${r.id}</td>
           <td style="padding:6px 4px;font-size:12px;">${r.en}</td>
           <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${r.names[0]}${r.names.length > 1 ? ` <span style="color:#999;font-size:11px;">(+${r.names.length - 1})</span>` : ''}</td>
@@ -3078,6 +3158,46 @@
       });
       tbody.innerHTML = html;
     }
+
+    // ---- Switch rabbi list ----
+    window.wrrSwitchList = function(listName) {
+      wrrActiveListName = listName;
+      if (listName === 'list1') {
+        wrrActiveRabbis = WRR_RABBIS_LIST1;
+        document.getElementById('wrrStatRabbis').textContent = '34';
+        document.getElementById('wrrStatRabbisLabel').textContent = 'Rabbis (List 1)';
+        document.getElementById('wrrTableLabel').textContent = 'Rabbi List (WRR List 1)';
+      } else {
+        wrrActiveRabbis = WRR_RABBIS;
+        document.getElementById('wrrStatRabbis').textContent = '32';
+        document.getElementById('wrrStatRabbisLabel').textContent = 'Rabbis (List 2)';
+        document.getElementById('wrrTableLabel').textContent = 'Rabbi List (WRR List 2)';
+      }
+      wrrResults = [];
+      wrrELSCache.clear();
+      populateWRRTable();
+      document.getElementById('wrrSummary').style.display = 'none';
+    };
+
+    // ---- Switch text (Genesis / War and Peace) ----
+    window.wrrSwitchText = function(textName) {
+      wrrActiveTextName = textName;
+      wrrTextNorm = null;  // Force reload
+      wrrLetterFreqs = null;
+      wrrELSCache.clear();
+      wrrResults = [];
+      const label = document.getElementById('wrrStatTextLabel');
+      const note = document.getElementById('wrrTextNote');
+      if (textName === 'tolstoy') {
+        label.textContent = 'Letters in War & Peace';
+        note.textContent = 'Control text: WRR published non-significant results for Tolstoy.';
+      } else {
+        label.textContent = 'Letters in Genesis';
+        note.textContent = '';
+      }
+      populateWRRTable();
+      document.getElementById('wrrSummary').style.display = 'none';
+    };
 
     // ---- UI helpers for WRR results ----
     let wrrActiveWorker = null;
@@ -3099,7 +3219,7 @@
     }
 
     function wrrShowSummary(skipCap) {
-      const rabbisWithDates = WRR_RABBIS.filter(r => r.dates.length > 0);
+      const rabbisWithDates = wrrActiveRabbis.filter(r => r.dates.length > 0);
       const summary = document.getElementById('wrrSummary');
       const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
       document.getElementById('wrrRunBtn').disabled = false;
@@ -3167,7 +3287,7 @@
       progressBar.style.display = '';
       summary.style.display = 'none';
 
-      progressText.textContent = 'Loading Genesis (78,064 letters)...';
+      progressText.textContent = `Loading ${wrrActiveTextName === 'genesis' ? 'Genesis' : 'War and Peace'} (78,064 letters)...`;
       await wrrLoadGenesis();
 
       const skipCap = parseInt(document.getElementById('wrrSkipCap')?.value) || 1000;
@@ -3223,8 +3343,8 @@
         // Send data to Worker
         worker.postMessage({
           action: 'run',
-          genesisNorm: wrrGenesisNorm,
-          rabbis: WRR_RABBIS,
+          genesisNorm: wrrTextNorm,
+          rabbis: wrrActiveRabbis,
           skipCap: skipCap,
           letterFreqs: wrrLetterFreqs
         });
@@ -3241,7 +3361,7 @@
     async function wrrRunMainThread(skipCap) {
       const progressFill = document.getElementById('wrrProgressFill');
       const progressText = document.getElementById('wrrProgressText');
-      const rabbisWithDates = WRR_RABBIS.filter(r => r.dates.length > 0);
+      const rabbisWithDates = wrrActiveRabbis.filter(r => r.dates.length > 0);
 
       progressText.textContent = 'Running on main thread...';
 
@@ -3260,7 +3380,7 @@
           if (nameNorm.length < 2) continue;
           const dName = wrrMaxSkip(nameNorm, skipCap);
           if (dName > maxDw) maxDw = dName;
-          const nameHits = wrrFindELS(wrrGenesisNorm, nameNorm, dName);
+          const nameHits = wrrFindELS(wrrTextNorm, nameNorm, dName);
           if (nameHits.length === 0) continue;
           await new Promise(r => setTimeout(r, 0));
           for (const dateRaw of rabbi.dates) {
@@ -3269,7 +3389,7 @@
             if (dateNorm.length < 2) continue;
             const dDate = wrrMaxSkip(dateNorm, skipCap);
             if (dDate > maxDw) maxDw = dDate;
-            const dateHits = wrrFindELS(wrrGenesisNorm, dateNorm, dDate);
+            const dateHits = wrrFindELS(wrrTextNorm, dateNorm, dDate);
             if (dateHits.length === 0) continue;
             const pair = wrrBestProximity(nameHits, dateHits);
             if (pair && pair.dist < bestDist) {
@@ -3288,7 +3408,7 @@
         if (result) {
           wrrResults.push({ rabbiId: rabbi.id, en: rabbi.en, ...result, maxDw });
         }
-        const done = wrrResults.length + WRR_RABBIS.filter(r => r.dates.length === 0).length;
+        const done = wrrResults.length + wrrActiveRabbis.filter(r => r.dates.length === 0).length;
         progressFill.style.width = Math.round((done / rabbisWithDates.length) * 100) + '%';
         const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
         progressText.textContent = `${done}/${rabbisWithDates.length} rabbis (${elapsed}s, main thread)`;
@@ -3323,7 +3443,7 @@
     // View a specific rabbi's best name-date pair in the scan matrix
     window.viewWRRPair = function(rabbiId) {
       const res = wrrResults.find(r => r.rabbiId === rabbiId);
-      const rabbi = WRR_RABBIS.find(r => r.id === rabbiId);
+      const rabbi = wrrActiveRabbis.find(r => r.id === rabbiId);
       if (!rabbi) return;
       const nameToSearch = res ? res.name.replace(/\s+/g, '') : rabbi.names[0].replace(/\s+/g, '');
       const dateToSearch = res ? res.date.replace(/\s+/g, '') : (rabbi.dates[0] || '').replace(/\s+/g, '');
@@ -3421,8 +3541,8 @@
         wrrLoadGenesis().then(() => {
           worker.postMessage({
             action: 'permutation-test',
-            genesisNorm: wrrGenesisNorm,
-            rabbis: WRR_RABBIS,
+            genesisNorm: wrrTextNorm,
+            rabbis: wrrActiveRabbis,
             skipCap,
             letterFreqs: wrrLetterFreqs,
             numPermutations: numPerm,
@@ -3511,7 +3631,7 @@
       progressBar.style.display = '';
       summary.style.display = 'none';
 
-      progressText.textContent = 'Loading Genesis (78,064 letters)...';
+      progressText.textContent = `Loading ${wrrActiveTextName === 'genesis' ? 'Genesis' : 'War and Peace'} (78,064 letters)...`;
       await wrrLoadGenesis();
 
       const skipCap = parseInt(document.getElementById('wrrSkipCap')?.value) || 1000;
@@ -3571,8 +3691,8 @@
 
         worker.postMessage({
           action: 'run-wrr-full',
-          genesisNorm: wrrGenesisNorm,
-          rabbis: WRR_RABBIS,
+          genesisNorm: wrrTextNorm,
+          rabbis: wrrActiveRabbis,
           skipCap,
           letterFreqs: wrrLetterFreqs,
           runPermTest: numPerm > 0,
@@ -3623,24 +3743,38 @@
                        p < 0.1   ? 'Marginally significant' : 'Not significant';
 
       const kLow = msg.cValues.filter(c => c < 0.2).length;
-      const cProduct = msg.cValues.reduce((a, b) => a * b, 1);
+      const k10 = msg.cValues.filter(c => c < 0.1).length;
+      const textLabel = wrrActiveTextName === 'genesis' ? 'Genesis' : 'War & Peace';
+      const listLabel = wrrActiveListName === 'list1' ? 'List 1' : 'List 2';
+
+      // Published Table 3 values (List 2, Genesis, 1M permutations)
+      const isGenL2 = wrrActiveTextName === 'genesis' && wrrActiveListName === 'list2';
+      const pubRef = isGenL2
+        ? '<div style="margin-top:10px;padding:8px 12px;background:#fff3e0;border-radius:6px;border:1px solid #ffe0b2;font-size:12px;">' +
+          '<strong style="color:#e65100;">WRR Published (Table 3, List 2, Genesis):</strong> ' +
+          'P\u2081 rank = 453, P\u2082 rank = 5, P\u2083 rank = 570, P\u2084 rank = 4 out of 1,000,000. ' +
+          '\u03C1 = 4\u00b74/(10\u2076\u22121) \u2248 16/10\u2076' +
+          '</div>'
+        : '';
 
       summary.style.display = '';
       summary.style.background = 'linear-gradient(135deg,#e8f5e9,#c8e6c9)';
       summary.style.border = '1px solid #a5d6a7';
 
       summary.innerHTML = `
-        <div style="font-weight:bold;color:#1b5e20;font-size:16px;margin-bottom:8px;">Full WRR Experiment — c(w,w') Statistic (${elapsed}s)</div>
+        <div style="font-weight:bold;color:#1b5e20;font-size:16px;margin-bottom:8px;">Full WRR — c(w,w') Statistic (${textLabel}, ${listLabel}, ${elapsed}s)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:13px;">
           <div><strong>${msg.matchedCount}</strong> / ${msg.totalRabbis} rabbis matched (c &lt; 1.0)</div>
-          <div>c &lt; 0.2 count: <strong>${kLow}</strong> / ${msg.cValues.length}</div>
-          <div>P\u2081 (binomial): <strong>${msg.p1.toExponential(4)}</strong></div>
+          <div>c &lt; 0.2: <strong>${kLow}</strong> / ${msg.cValues.length} &nbsp; c &lt; 0.1: <strong>${k10}</strong></div>
+          <div>P\u2081 (Bin 0.2): <strong>${msg.p1.toExponential(4)}</strong></div>
           <div>P\u2082 (Gamma): <strong>${msg.p2.toExponential(4)}</strong></div>
-          <div style="font-size:15px;">Overall P = 2\u00b7min(P\u2081,P\u2082): <strong style="color:${pColor};font-size:17px;">${p.toExponential(4)}</strong></div>
+          <div>P\u2083 (Bin 0.1): <strong>${(msg.p3 || 1).toExponential(4)}</strong></div>
+          <div>P\u2084 (\u0393 trunc): <strong>${(msg.p4 || 1).toExponential(4)}</strong></div>
+          <div style="font-size:15px;">P = 4\u00b7min(P\u2081..P\u2084): <strong style="color:${pColor};font-size:17px;">${p.toExponential(4)}</strong></div>
           <div>Significance: <strong style="color:${pColor};">${sigLabel}</strong></div>
           <div>Skip cap: <strong>${skipCap}</strong></div>
-          <div>\u220Fc values: <strong>${cProduct.toExponential(4)}</strong></div>
         </div>
+        ${pubRef}
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-secondary" onclick="wrrExportCSVFull()" style="font-size:12px;padding:6px 12px;">Export CSV</button>
           <label style="font-size:11px;color:#555;">
@@ -3723,8 +3857,8 @@
 
           worker.postMessage({
             action: 'run-wrr-full',
-            genesisNorm: wrrGenesisNorm,
-            rabbis: WRR_RABBIS,
+            genesisNorm: wrrTextNorm,
+            rabbis: wrrActiveRabbis,
             skipCap,
             letterFreqs: wrrLetterFreqs,
             runPermTest: true,
@@ -3760,7 +3894,7 @@
         </div>
         <div style="margin-top:6px;font-size:11px;color:#777;">
           ${msg.numPermutations} random permutations of rabbi\u2194date assignments.
-          Each permutation: compute c(w,w') for all pairings, then P\u2081/P\u2082.
+          Each permutation: compute c(w,w') for all pairings, then P\u2081\u2013P\u2084.
           P-value = fraction with overall P \u2264 actual.
         </div>`;
     }
@@ -3774,9 +3908,13 @@
         rows.push([r.en || r.rabbiId, r.name || '', r.date || '', r.c.toFixed(6), r.nameHitCount, r.dateHitCount]);
       }
       rows.push([]);
-      rows.push(['P1 (binomial)', results.p1.toExponential(6)]);
+      rows.push(['P1 (binomial 0.2)', results.p1.toExponential(6)]);
       rows.push(['P2 (Gamma)', results.p2.toExponential(6)]);
-      rows.push(['Overall P', results.overallP.toExponential(6)]);
+      rows.push(['P3 (binomial 0.1)', (results.p3 || 1).toExponential(6)]);
+      rows.push(['P4 (Gamma truncated)', (results.p4 || 1).toExponential(6)]);
+      rows.push(['Overall P = 4*min(P1..P4)', results.overallP.toExponential(6)]);
+      rows.push(['Text', wrrActiveTextName]);
+      rows.push(['List', wrrActiveListName]);
       const csv = rows.map(r => r.join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const a = document.createElement('a');
@@ -4227,6 +4365,14 @@
       document.getElementById('vidTimeDisplay').textContent = `${mm}:${ss}`;
     }
 
+    // Warn user if they change format during recording
+    document.getElementById('vidFormatSelect')?.addEventListener('change', function() {
+      if (vidIsRecording) {
+        alert('Format change will apply to the NEXT recording.\nCurrent recording continues in the original format.\n\nTo record in the new format: Stop → then Record again.');
+      }
+      document.getElementById('vidFormatNote').textContent = 'Select before recording';
+    });
+
     window.vidToggleRecord = function() {
       if (vidIsRecording) {
         vidStopRecord();
@@ -4254,7 +4400,7 @@
         return;
       }
 
-      // Video mode (WebM or MP4): use MediaRecorder
+      // Video mode (WebM): use MediaRecorder
       if (typeof canvas.captureStream !== 'function') {
         alert('captureStream() not supported. Use Chrome or Firefox.');
         return;
@@ -4280,34 +4426,15 @@
       vidBlob = null;
       vidFrameCount = 0;
 
-      // Choose codec based on format preference
+      // Choose best WebM codec
       let mimeType = '';
-      if (format === 'mp4') {
-        const mp4Types = [
-          'video/mp4;codecs=avc1',
-          'video/mp4;codecs=h264',
-          'video/mp4'
-        ];
-        for (const mt of mp4Types) {
-          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
-        }
-        if (!mimeType) {
-          // Fallback: record as WebM, will convert filename hint
-          alert('MP4 recording not natively supported in this browser. Recording as WebM — you can convert to MP4 using a free online converter or VLC.');
-          const webmTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-          for (const mt of webmTypes) {
-            if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
-          }
-        }
-      } else {
-        const webmTypes = [
-          'video/webm;codecs=vp9',
-          'video/webm;codecs=vp8',
-          'video/webm'
-        ];
-        for (const mt of webmTypes) {
-          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
-        }
+      const webmTypes = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm'
+      ];
+      for (const mt of webmTypes) {
+        if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
       }
 
       if (!mimeType) {
@@ -4340,12 +4467,14 @@
         const elapsed = (performance.now() - vidStartTime) / 1000;
         const mm = Math.floor(elapsed / 60);
         const ss = Math.floor(elapsed % 60).toString().padStart(2, '0');
-        vidUpdateStatus(`Recorded ${mm}:${ss} (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
+        vidUpdateStatus(`WebM recorded: ${mm}:${ss} (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
 
         const recBtn = document.getElementById('vidRecBtn');
         recBtn.textContent = 'Record';
         recBtn.classList.remove('recording');
-        document.getElementById('vidDownloadBtn').style.display = '';
+        const dlBtn = document.getElementById('vidDownloadBtn');
+        dlBtn.textContent = 'Download WebM';
+        dlBtn.style.display = '';
         document.getElementById('vidTimeline').disabled = false;
         document.getElementById('vidTimeline').max = 100;
         document.getElementById('vidTimeline').value = 100;
@@ -4365,7 +4494,7 @@
       recBtn.classList.add('recording');
       document.getElementById('vidDownloadBtn').style.display = 'none';
       document.getElementById('vidTimeline').disabled = true;
-      vidUpdateStatus('<span class="rec-dot">&#9679;</span> Recording...');
+      vidUpdateStatus('<span class="rec-dot">&#9679;</span> Recording WebM...');
 
       vidTimerInterval = setInterval(vidUpdateTime, 250);
     }
@@ -4448,7 +4577,9 @@
           const recBtn = document.getElementById('vidRecBtn');
           recBtn.textContent = 'Record';
           recBtn.classList.remove('recording');
-          document.getElementById('vidDownloadBtn').style.display = '';
+          const dlBtn = document.getElementById('vidDownloadBtn');
+          dlBtn.textContent = 'Download GIF';
+          dlBtn.style.display = '';
         } catch (e) {
           vidUpdateStatus('GIF encoding failed: ' + e.message);
           const recBtn = document.getElementById('vidRecBtn');
@@ -4634,7 +4765,7 @@
         vidStopGifRecord();
         return;
       }
-      // Video mode (WebM/MP4)
+      // Video mode (WebM)
       if (vidRecorder && vidRecorder.state === 'recording') {
         vidRecorder.stop();
       }
@@ -4725,9 +4856,7 @@
 
     window.vidDownload = function() {
       if (!vidBlob) { alert('No recording to download'); return; }
-      let ext = 'webm';
-      if (vidBlob.type.includes('mp4')) ext = 'mp4';
-      else if (vidBlob.type.includes('gif')) ext = 'gif';
+      const ext = vidBlob.type.includes('gif') ? 'gif' : 'webm';
       const a = document.createElement('a');
       a.href = URL.createObjectURL(vidBlob);
       a.download = `els-matrix-3d-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.${ext}`;

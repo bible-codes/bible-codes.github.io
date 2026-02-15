@@ -1,6 +1,8 @@
 # Uncompressed data files (too large, can be regenerated)
 data/*.json
 !data/precomputed-terms.json
+!data/wrr-list1.json
+!data/wrr-list2.json
 
 # Build artifacts
 __pycache__/
