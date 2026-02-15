@@ -1,34 +1,623 @@
 <!DOCTYPE html>
-<html>
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0;url=bible-codes.html">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bible Codes">
+  <meta name="description" content="Comprehensive Hebrew Bible analysis tools - ELS, Gematria, Notarikon, Tsirufim, and more">
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="manifest" href="manifest.json">
   <title>Bible Codes</title>
   <script>
-    // Force service worker update so old cached pages get replaced
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').then(function(reg) {
-        reg.update();
-        reg.addEventListener('updatefound', function() {
-          var newSW = reg.installing;
-          newSW.addEventListener('statechange', function() {
-            if (newSW.state === 'activated') {
-              // New SW active — clear old caches and redirect
-              caches.keys().then(function(names) {
-                names.forEach(function(name) {
-                  if (name !== 'bible-codes-v6.0') caches.delete(name);
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          reg.update();
+          reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'activated') {
+                caches.keys().then(names => {
+                  names.forEach(name => {
+                    if (name !== 'bible-codes-v6.0') caches.delete(name);
+                  });
                 });
-              });
-            }
+              }
+            });
           });
         });
       });
     }
-    // JS redirect as backup in case meta refresh is blocked
-    window.location.replace('bible-codes.html');
   </script>
+  <style>
+    :root {
+      --primary: #667eea;
+      --primary-dark: #5568d3;
+      --primary-light: #8b9bf0;
+      --primary-bg: #eef1fd;
+      --secondary: #764ba2;
+      --text: #2c3e50;
+      --text-muted: #7f8c8d;
+      --bg: #f4f5f9;
+      --card-bg: #ffffff;
+      --border: #e2e5ea;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --shadow: 0 2px 8px rgba(102,126,234,0.12);
+      --shadow-hover: 0 6px 20px rgba(102,126,234,0.2);
+      --radius: 12px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: calc(70px + var(--safe-bottom));
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: calc(16px + var(--safe-top)) 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(102,126,234,0.3);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header img { width: 36px; height: 36px; border-radius: 8px; }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header-subtitle { font-size: 12px; opacity: 0.85; }
+    .lang-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.3); }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 32px 20px 40px;
+      text-align: center;
+      margin-top: -1px;
+    }
+    .hero h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .hero p {
+      font-size: 15px;
+      opacity: 0.9;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 20px;
+    }
+    .hero-stat {
+      text-align: center;
+    }
+    .hero-stat .val {
+      font-size: 22px;
+      font-weight: 800;
+    }
+    .hero-stat .lbl {
+      font-size: 11px;
+      opacity: 0.8;
+      display: block;
+    }
+
+    /* Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* Section titles */
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin: 24px 0 12px;
+      padding-right: 4px;
+    }
+
+    /* Tool cards grid */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .tool-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      position: relative;
+    }
+    .tool-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-hover);
+    }
+    .tool-card:active {
+      transform: translateY(-1px);
+    }
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .card-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-active {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .badge-new {
+      background: #fff3e0;
+      color: #e65100;
+    }
+    .badge-planned {
+      background: #f3f4f6;
+      color: #9ca3af;
+    }
+
+    /* Card color themes */
+    .icon-els { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+    .icon-search { background: linear-gradient(135deg, #11998e, #38ef7d); color: white; }
+    .icon-gematria { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+    .icon-acronym { background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; }
+    .icon-tsirufim { background: linear-gradient(135deg, #fa709a, #fee140); color: white; }
+    .icon-matrix { background: linear-gradient(135deg, #a18cd1, #fbc2eb); color: white; }
+    .icon-book { background: linear-gradient(135deg, #ffecd2, #fcb69f); color: #8b5e3c; }
+    .icon-resources { background: linear-gradient(135deg, #d4fc79, #96e6a1); color: #2d5016; }
+    .icon-ocr { background: linear-gradient(135deg, #c2e9fb, #a1c4fd); color: #1a5276; }
+
+    /* Features section */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 16px 0 24px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      background: var(--card-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .feature-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 24px 16px calc(24px + var(--safe-bottom));
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .footer a { color: var(--primary); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 6px 0 calc(6px + var(--safe-bottom));
+      z-index: 100;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: color 0.2s;
+      min-width: 56px;
+    }
+    .nav-item:hover, .nav-item.active {
+      color: var(--primary);
+    }
+    .nav-item.active {
+      font-weight: 700;
+    }
+    .nav-icon {
+      font-size: 22px;
+      margin-bottom: 2px;
+    }
+
+    /* RTL/LTR toggle */
+    html[dir="ltr"] .card-badge {
+      left: auto;
+      right: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .hero h2 { font-size: 20px; }
+      .hero-stats { gap: 16px; }
+      .hero-stat .val { font-size: 18px; }
+      .tool-grid { grid-template-columns: 1fr; }
+      .features { grid-template-columns: 1fr 1fr; }
+    }
+    @media (min-width: 768px) {
+      .bottom-nav { display: none; }
+    }
+  </style>
 </head>
 <body>
-  <p>Redirecting to <a href="bible-codes.html">Bible Codes</a>...</p>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <img src="img/favicon.png" alt="Logo">
+      <div>
+        <h1 data-i18n="logo">Bible Codes</h1>
+        <div class="header-subtitle" data-i18n="heroSubtitle">Hebrew Bible Analysis Suite</div>
+      </div>
+    </div>
+    <button class="lang-btn" id="langToggle" onclick="toggleLang()">EN / עב</button>
+  </header>
+
+  <!-- Hero stats -->
+  <section class="hero">
+    <h2 data-i18n="heroTitle">Comprehensive Hebrew Bible Analysis</h2>
+    <p data-i18n="heroDesc">Advanced tools for ELS search, gematria, notarikon, text analysis, and more. 100% offline, 100% in your browser.</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="val">304,805</span><span class="lbl" data-i18n="statLetters">Torah letters</span></div>
+      <div class="hero-stat"><span class="val">39</span><span class="lbl" data-i18n="statBooks">Tanakh books</span></div>
+      <div class="hero-stat"><span class="val">10+</span><span class="lbl" data-i18n="statTools">Analysis tools</span></div>
+    </div>
+  </section>
+
+  <div class="container">
+
+    <!-- Primary Tools -->
+    <div class="section-title" data-i18n="sectionPrimary">Analysis Tools</div>
+    <div class="tool-grid">
+
+      <a href="bible-codes.html" class="tool-card">
+        <span class="card-badge badge-active" data-i18n="statusActive">Active</span>
+        <div class="card-top">
+          <div class="card-icon icon-els">&#x1F50D;</div>
+          <div class="card-title" data-i18n="elsTitle">ELS Bible Codes</div>
+        </div>
+        <div class="card-desc" data-i18n="elsDesc">Search equidistant letter sequences with N-term scanning, 3D matrix view, batch loading, and cluster ranking.</div>
+      </a>
+
+      <a href="text-search.html" class="tool-card">
+        <span class="card-badge badge-active" data-i18n="statusActive">Active</span>
+        <div class="card-top">
+          <div class="card-icon icon-search">&#x1F4D6;</div>
+          <div class="card-title" data-i18n="textSearchTitle">Text Search</div>
+        </div>
+        <div class="card-desc" data-i18n="textSearchDesc">Pattern matching with regex, first/last letter filtering, auto-suggestions, consonantal and full text modes.</div>
+      </a>
+
+      <a href="gematria.html" class="tool-card">
+        <span class="card-badge badge-active" data-i18n="statusActive">Active</span>
+        <div class="card-top">
+          <div class="card-icon icon-gematria">&#x1F522;</div>
+          <div class="card-title" data-i18n="gematriaTitle">Gematria</div>
+        </div>
+        <div class="card-desc" data-i18n="gematriaDesc">Calculate gematria by standard, reduced, and ordinal methods. Search by value or range, find matching words.</div>
+      </a>
+
+      <a href="acronym.html" class="tool-card">
+        <span class="card-badge badge-active" data-i18n="statusActive">Active</span>
+        <div class="card-top">
+          <div class="card-icon icon-acronym">&#x1F524;</div>
+          <div class="card-title" data-i18n="acronymTitle">Acronyms &amp; Notarikon</div>
+        </div>
+        <div class="card-desc" data-i18n="acronymDesc">Extract first letters (Roshei Teivot), last letters (Sofei Teivot), middle letters, and alternating patterns.</div>
+      </a>
+
+      <a href="tsirufim.html" class="tool-card">
+        <span class="card-badge badge-active" data-i18n="statusActive">Active</span>
+        <div class="card-top">
+          <div class="card-icon icon-tsirufim">&#x1F52E;</div>
+          <div class="card-title" data-i18n="tsirufimTitle">Tsirufim</div>
+        </div>
+        <div class="card-desc" data-i18n="tsirufimDesc">Semantic permutation analysis with ML clustering. Discover how letters recombine into related meanings.</div>
+      </a>
+
+    </div>
+
+    <!-- Visualization Tools -->
+    <div class="section-title" data-i18n="sectionViz">Visualization &amp; Reading</div>
+    <div class="tool-grid">
+
+      <a href="matrix-view.html" class="tool-card">
+        <span class="card-badge badge-active" data-i18n="statusActive">Active</span>
+        <div class="card-top">
+          <div class="card-icon icon-matrix">&#x1F4CA;</div>
+          <div class="card-title" data-i18n="matrixViewTitle">Matrix View</div>
+        </div>
+        <div class="card-desc" data-i18n="matrixViewDesc">Character grid visualization with configurable dimensions. Search for ELS patterns within the matrix.</div>
+      </a>
+
+      <a href="book-view.html" class="tool-card">
+        <span class="card-badge badge-active" data-i18n="statusActive">Active</span>
+        <div class="card-top">
+          <div class="card-icon icon-book">&#x1F4D6;</div>
+          <div class="card-title" data-i18n="bookViewTitle">Book View</div>
+        </div>
+        <div class="card-desc" data-i18n="bookViewDesc">Traditional book-style reader with chapter/verse navigation. Toggle niqqud and taamim display.</div>
+      </a>
+
+    </div>
+
+    <!-- Additional Resources -->
+    <div class="section-title" data-i18n="sectionMore">More Resources</div>
+    <div class="tool-grid">
+
+      <a href="other-resources.html" class="tool-card">
+        <div class="card-top">
+          <div class="card-icon icon-resources">&#x1F4C1;</div>
+          <div class="card-title" data-i18n="resourcesTitle">Resources &amp; Data</div>
+        </div>
+        <div class="card-desc" data-i18n="resourcesDesc">Manuscript variants, legacy tools, Jupyter notebooks, Targum Onkelos, and reference materials.</div>
+      </a>
+
+      <a href="heb-ocr.html" class="tool-card">
+        <div class="card-top">
+          <div class="card-icon icon-ocr">&#x1F4F7;</div>
+          <div class="card-title" data-i18n="ocrTitle">Hebrew OCR</div>
+        </div>
+        <div class="card-desc" data-i18n="ocrDesc">Extract Hebrew text from images and PDF files for analysis.</div>
+      </a>
+
+    </div>
+
+    <!-- Features -->
+    <div class="section-title" data-i18n="featuresTitle">Platform Features</div>
+    <div class="features">
+      <div class="feature-item"><span class="feature-icon">&#x26A1;</span><span data-i18n="f1">100% client-side</span></div>
+      <div class="feature-item"><span class="feature-icon">&#x1F4F4;</span><span data-i18n="f2">Works offline</span></div>
+      <div class="feature-item"><span class="feature-icon">&#x1F4BE;</span><span data-i18n="f3">39-book database</span></div>
+      <div class="feature-item"><span class="feature-icon">&#x1F512;</span><span data-i18n="f4">Private (no server)</span></div>
+      <div class="feature-item"><span class="feature-icon">&#x1F4F1;</span><span data-i18n="f5">Mobile optimized</span></div>
+      <div class="feature-item"><span class="feature-icon">&#x1F30D;</span><span data-i18n="f6">PWA installable</span></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Bible Codes &mdash; Hebrew Bible Analysis Suite</p>
+      <p><a href="https://github.com/bible-codes/bible-codes.github.io" target="_blank">GitHub</a></p>
+    </footer>
+
+  </div>
+
+  <!-- Bottom nav (mobile) -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item active">
+      <span class="nav-icon">&#x1F3E0;</span>
+      <span data-i18n="navHome">Home</span>
+    </a>
+    <a href="bible-codes.html" class="nav-item">
+      <span class="nav-icon">&#x1F50D;</span>
+      <span data-i18n="navEls">ELS</span>
+    </a>
+    <a href="gematria.html" class="nav-item">
+      <span class="nav-icon">&#x1F522;</span>
+      <span data-i18n="navGematria">Gematria</span>
+    </a>
+    <a href="text-search.html" class="nav-item">
+      <span class="nav-icon">&#x1F4D6;</span>
+      <span data-i18n="navSearch">Search</span>
+    </a>
+    <a href="other-resources.html" class="nav-item">
+      <span class="nav-icon">&#x1F4C1;</span>
+      <span data-i18n="navMore">More</span>
+    </a>
+  </nav>
+
+  <script>
+    // Language toggle
+    const i18n = {
+      he: {
+        logo: 'ניתוח תנ"ך',
+        heroSubtitle: 'כלי ניתוח תנ"ך מתקדמים',
+        heroTitle: 'ניתוח מקיף של התנ"ך העברי',
+        heroDesc: 'כלים מתקדמים לחיפוש ELS, גימטריה, נוטריקון, ניתוח טקסט ועוד. 100% לא מקוון, 100% בדפדפן.',
+        statLetters: 'אותיות תורה',
+        statBooks: 'ספרי תנ"ך',
+        statTools: 'כלי ניתוח',
+        sectionPrimary: 'כלי ניתוח',
+        sectionViz: 'תצוגה וקריאה',
+        sectionMore: 'משאבים נוספים',
+        statusActive: 'פעיל',
+        statusNew: 'חדש!',
+        statusPlanned: 'מתוכנן',
+        elsTitle: 'קודי תורה (ELS)',
+        elsDesc: 'חיפוש רצפים שווי-מרחק עם סריקת N-מונחים, תצוגת מטריצה תלת-ממדית, טעינת אצווה ודירוג אשכולות.',
+        textSearchTitle: 'חיפוש טקסט',
+        textSearchDesc: 'התאמת תבניות עם regex, סינון אותיות ראשונות/אחרונות, הצעות אוטומטיות, מצבי טקסט עיצורי ומלא.',
+        gematriaTitle: 'גימטריה',
+        gematriaDesc: 'חישוב גימטריה בשיטות רגיל, מצומצם וסידורי. חיפוש לפי ערך או טווח, מציאת מילים תואמות.',
+        acronymTitle: 'ראשי תיבות ונוטריקון',
+        acronymDesc: 'חילוץ אותיות ראשונות, אחרונות, אמצעיות ותבניות מתחלפות.',
+        tsirufimTitle: 'צירופים סמנטיים',
+        tsirufimDesc: 'ניתוח פרמוטציות סמנטי עם אשכולות ML. גלה כיצד אותיות מצטרפות למשמעויות קשורות.',
+        matrixViewTitle: 'תצוגת מטריצה',
+        matrixViewDesc: 'רשת תווים חזותית עם ממדים מותאמים. חפש דפוסי ELS בתוך המטריצה.',
+        bookViewTitle: 'תצוגת ספר',
+        bookViewDesc: 'קורא בסגנון מסורתי עם ניווט פרק/פסוק. הפעל/בטל ניקוד וטעמים.',
+        resourcesTitle: 'משאבים ונתונים',
+        resourcesDesc: 'גרסאות כתבי יד, כלים ישנים, מחברות Jupyter, תרגום אונקלוס וחומר עיון.',
+        ocrTitle: 'OCR עברי',
+        ocrDesc: 'חילוץ טקסט עברי מתמונות וקובצי PDF לניתוח.',
+        featuresTitle: 'תכונות הפלטפורמה',
+        f1: '100% צד-לקוח',
+        f2: 'עובד ללא חיבור',
+        f3: 'מסד 39 ספרים',
+        f4: 'פרטי (ללא שרת)',
+        f5: 'מותאם למובייל',
+        f6: 'ניתן להתקנה כ-PWA',
+        navHome: 'בית',
+        navEls: 'ELS',
+        navGematria: 'גימטריה',
+        navSearch: 'חיפוש',
+        navMore: 'עוד'
+      },
+      en: {
+        logo: 'Bible Codes',
+        heroSubtitle: 'Hebrew Bible Analysis Suite',
+        heroTitle: 'Comprehensive Hebrew Bible Analysis',
+        heroDesc: 'Advanced tools for ELS search, gematria, notarikon, text analysis, and more. 100% offline, 100% in your browser.',
+        statLetters: 'Torah letters',
+        statBooks: 'Tanakh books',
+        statTools: 'Analysis tools',
+        sectionPrimary: 'Analysis Tools',
+        sectionViz: 'Visualization & Reading',
+        sectionMore: 'More Resources',
+        statusActive: 'Active',
+        statusNew: 'New!',
+        statusPlanned: 'Planned',
+        elsTitle: 'ELS Bible Codes',
+        elsDesc: 'Search equidistant letter sequences with N-term scanning, 3D matrix view, batch loading, and cluster ranking.',
+        textSearchTitle: 'Text Search',
+        textSearchDesc: 'Pattern matching with regex, first/last letter filtering, auto-suggestions, consonantal and full text modes.',
+        gematriaTitle: 'Gematria',
+        gematriaDesc: 'Calculate gematria by standard, reduced, and ordinal methods. Search by value or range, find matching words.',
+        acronymTitle: 'Acronyms & Notarikon',
+        acronymDesc: 'Extract first letters (Roshei Teivot), last letters (Sofei Teivot), middle letters, and alternating patterns.',
+        tsirufimTitle: 'Tsirufim',
+        tsirufimDesc: 'Semantic permutation analysis with ML clustering. Discover how letters recombine into related meanings.',
+        matrixViewTitle: 'Matrix View',
+        matrixViewDesc: 'Character grid visualization with configurable dimensions. Search for ELS patterns within the matrix.',
+        bookViewTitle: 'Book View',
+        bookViewDesc: 'Traditional book-style reader with chapter/verse navigation. Toggle niqqud and taamim display.',
+        resourcesTitle: 'Resources & Data',
+        resourcesDesc: 'Manuscript variants, legacy tools, Jupyter notebooks, Targum Onkelos, and reference materials.',
+        ocrTitle: 'Hebrew OCR',
+        ocrDesc: 'Extract Hebrew text from images and PDF files for analysis.',
+        featuresTitle: 'Platform Features',
+        f1: '100% client-side',
+        f2: 'Works offline',
+        f3: '39-book database',
+        f4: 'Private (no server)',
+        f5: 'Mobile optimized',
+        f6: 'PWA installable',
+        navHome: 'Home',
+        navEls: 'ELS',
+        navGematria: 'Gematria',
+        navSearch: 'Search',
+        navMore: 'More'
+      }
+    };
+
+    let currentLang = localStorage.getItem('bible-codes-lang') || 'he';
+
+    function applyLang(lang) {
+      currentLang = lang;
+      const dict = i18n[lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+      localStorage.setItem('bible-codes-lang', lang);
+      document.getElementById('langToggle').textContent = lang === 'he' ? 'EN / עב' : 'EN / עב';
+    }
+
+    function toggleLang() {
+      applyLang(currentLang === 'he' ? 'en' : 'he');
+    }
+
+    applyLang(currentLang);
+  </script>
+  <script src="js/pwa-install.js" defer></script>
 </body>
 </html>

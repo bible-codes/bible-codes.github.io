@@ -4,8 +4,8 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.0
-**Last Updated**: February 13, 2026
+**Version**: 4.1
+**Last Updated**: February 14, 2026
 **Status**: Production (10 active tools, 3 pending)
 
 ---
@@ -82,7 +82,24 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 10. [Implementation Status](#10-implementation-status)
 11. [Changelog](#11-changelog)
 12. [References and Related Projects](#12-references-and-related-projects)
-13. [Contact](#13-contact)
+13. [Research & Development Roadmap](#13-research--development-roadmap)
+   - 13.1 [Near-Term: Completing the Core Suite](#131-near-term-completing-the-core-suite)
+   - 13.2 [WRR 1994 Experiment Replication](#132-wrr-1994-experiment-replication)
+   - 13.3 [Predictive ELS Pipeline](#133-predictive-els-pipeline)
+   - 13.4 [Tsirufim–ELS Integration Loop](#134-tsirufimels-integration-loop)
+   - 13.5 [Machine Learning & Neural Architectures](#135-machine-learning--neural-architectures)
+   - 13.6 [Exploratory: Torah as LLM Latent Space](#136-exploratory-torah-as-llm-latent-space)
+   - 13.7 [Unified Multi-Hypothesis Analysis Pipeline](#137-unified-multi-hypothesis-analysis-pipeline)
+   - 13.8 [Cryptographic & Steganographic Methods Beyond ELS](#138-cryptographic--steganographic-methods-beyond-els)
+   - 13.9 [Matrix Discovery System](#139-matrix-discovery-system)
+   - 13.10 [3D Geometry & Higher-Dimensional Analysis](#1310-3d-geometry--higher-dimensional-analysis)
+   - 13.11 [Sonification & Multimodal Output](#1311-sonification--multimodal-output)
+   - 13.12 [AI Architecture & Knowledge Graphs](#1312-ai-architecture--knowledge-graphs)
+   - 13.13 [Statistical Rigor & Experimental Design](#1313-statistical-rigor--experimental-design)
+   - 13.14 [Book Project: Torah Statistics & Codes](#1314-book-project-torah-statistics--codes)
+   - 13.15 [Infrastructure & Performance](#1315-infrastructure--performance)
+   - 13.16 [Phase Summary](#1316-phase-summary)
+14. [Contact](#14-contact)
 
 ---
 
@@ -1277,7 +1294,605 @@ The `torah-codes/` directory is a fork of the **TorahBibleCodes** project by [@T
 
 ---
 
-## 13. Contact
+## 13. Research & Development Roadmap
+
+This section consolidates all planned research directions, unbuilt features, and long-term goals into a single reference. Items are drawn from internal planning documents, conversation transcripts, and technical design sessions.
+
+### 13.1 Near-Term: Completing the Core Suite
+
+These items have engines already built or detailed plans ready. They represent the shortest path to a complete tool suite.
+
+| Priority | Feature | Status | Effort | Value |
+|----------|---------|--------|--------|-------|
+| 1 | **WRR 1994 Experiment** | Tab added, needs testing/polish | 2-3 hrs | Validates tool against published science |
+| 2 | **Letter Analysis UI** (`letter-analysis.html`) | Engine complete, HTML pending | 2-3 hrs | Unlocks letter frequency research, academic credibility |
+| 3 | **Cantillation Viewer** (`taamim.html` + `engines/taamim.js`) | Not started | 4-5 hrs | Unique differentiator — no competitor offers this |
+| 4 | **Cross-Reference Linking** (`cross-ref.html`) | Not started | 6-8 hrs | Link verses to Talmud, Midrash, Zohar via Sefaria API |
+| 5 | **Dashboard Update** (`index.html`) | Needs new tool cards | 30 min | Users can't discover tools without dashboard links |
+
+**Letter Analysis UI** needs: HTML interface, Chart.js bar/line charts for letter frequencies and word length distributions, book comparison views, and CSV export. The engine (`engines/letter-analysis.js`, ~450 lines) already provides `analyzeLetterFrequency()`, `analyzeWordLengths()`, `analyzePatterns()`, `compareBooks()`, and `analyzeVerses()`.
+
+**Cantillation Viewer** needs: display verses with taamim marks, filter by type (disjunctive/conjunctive), show alternate taamim (Aseret HaDibrot variants), color-coded marks, statistics, and search by taamim pattern. Data is already available in the `chars.taamim` and `chars.alt_taamim` columns of the character database.
+
+**Cross-Reference Linking** needs: verse lookup against Talmud (Bavli & Yerushalmi), Midrash Rabbah, Zohar, and Mishnah. Primary approach: Sefaria API (`/api/links/{ref}`), with optional local JSON cache for offline use.
+
+### 13.2 WRR 1994 Experiment Replication
+
+**Status**: A 4th tab "WRR 1994" has been added to `bible-codes.html` with the 32-rabbi dataset, search logic, and results table. Needs testing, polish, and the full WRR proximity measure.
+
+**Background**: The 1994 Witztum-Rips-Rosenberg experiment (*Statistical Science*, Vol. 9, No. 3) searched Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates. The result — a P-value of approximately 1/62,500 — remains the most cited statistical claim in Torah codes research.
+
+**What's built**:
+- Pre-loaded dataset of 32 rabbis with Hebrew appellations and date forms
+- Genesis-only search (first 78,064 chars of `torahNoSpaces.txt`)
+- ELS search across skip values 2-100 for each name-date pair
+- Per-pair minimum distance calculation
+- Color-coded results table (green/yellow/red by proximity)
+- Click any row to view name + date in matrix
+
+**What's remaining**:
+- Full WRR-style 2D proximity measure (Euclidean distance on the matrix grid, not just linear position distance)
+- Per-term dynamic skip range based on expected occurrence formula: `D(w)` where expected ≈ 10
+- Aggregate P-value computation against randomized control texts
+- Extend to all appellations (currently using primary name forms; WRR used multiple forms per rabbi)
+- CSV export and per-rabbi summary view
+- Performance optimization (currently ~30 rabbis × multiple names × skip range can be slow)
+
+**Detailed plan**: `.claude/plans/temporal-sauteeing-harbor.md`
+
+### 13.3 Predictive ELS Pipeline
+
+**Status**: Detailed 5-phase plan written (`README--plans.md`). Not started.
+
+**Concept**: When a news story breaks, run ELS proximity search around the story's Hebrew keywords and store ALL candidate terms found (accepted and rejected). As the story develops over time, check newly revealed details against the stored candidate pool. Track hit rates across stories to build training data for a machine learning model that learns to rank ELS candidates by predicted relevance.
+
+**Architecture** (5 phases):
+
+**Phase 1 — Story Timeline + Candidate Extraction**: New page `predictive-els.html` with IndexedDB stores for stories, timesteps, and candidate pools. The `PredictiveELSEngine` class composes existing engines (`els-index.js`, `dictionary-service.js`, `tsirufim/scoring.js`) to extract all candidates from a proximity matrix and score them contextually.
+
+**Phase 2 — Retrospective Validation**: When the user adds new timesteps with newly revealed keywords, the system checks them against all prior candidate pools. Matches (exact, root-based, or semantic) are labeled as `wasRelevant = true`, building supervised training signal.
+
+**Phase 3 — Feature Engineering**: Each candidate gets an 18-dimensional feature vector (z-score, proximity distance, occurrence count, word length, dictionary match, era, root confidence, contextual score, coherence, event anchor alignment, semantic drift, embedding similarity, tsirufim-expanded flag, verse cross-count, gematria, centroid distance). Label: `wasRelevant` (0/1).
+
+**Phase 4 — ML Model**: Training happens externally (not in-browser) on exported data. Model options range from XGBoost baseline to fine-tuned Hebrew BERT (AlephBERT/HeBERT) to a custom LLM. Trained model weights imported back into the PWA for inference-only predictions on new candidates.
+
+**Phase 5 — Verse Context + Narrative**: Cross-term verse analysis identifies verses containing multiple ELS terms from the story, providing narrative context. Display crossing verses alongside predictions.
+
+**Future automation**: Scrape Hebrew news media (Ynet, Walla, Maariv) for native Hebrew keyword extraction, auto-generate timesteps, accumulate training data at scale.
+
+**New files planned**: `predictive-els.html` (~800 lines), `engines/predictive-els.js` (~500 lines), `engines/model-inference.js` (~150 lines), `db/predictive-schema.js` (~100 lines).
+
+### 13.4 Tsirufim-ELS Integration Loop
+
+**Status**: Both the Tsirufim engine and ELS index are complete and operational. The integration between them is a key planned connection.
+
+**Concept**: ELS finds terms near a seed keyword. Tsirufim generates permutations/sub-permutations of those terms and scores them against the story context. High-scoring permutations feed back as new ELS seed terms, closing a discovery loop.
+
+**Example workflow**:
+```
+ELS findNearby("חמאס", radius=2000)
+  → candidate: "משח" (found at skip=47, distance=340)
+  → Tsirufim expand "משח":
+    → generateSubwords("משח") → ["שמח", "חמש", "משח"]
+    → score each against conflict context
+    → "שמח" (joy) scores low → reject
+    → "חמש" (five/weapon) scores medium → keep
+  → Feed "חמש" back to ELS as new seed
+  → ELS findNearby position of "חמש"
+    → discovers new cluster of terms
+```
+
+**Reused functions**: `PermutationGenerator.generateSubwords()`, `PermutationGenerator.generateAnagrams()`, `ContextualScorer.scoreCandidates()`, `ElsIndexService.findNearby()`, `ElsIndexService.significanceScore()`.
+
+This integration subsumes the planned **Anagram Solver** (`anagram.html`) — Tsirufim already provides dictionary-validated permutations with semantic scoring, making a standalone anagram page redundant.
+
+### 13.5 Machine Learning & Neural Architectures
+
+These are research directions explored in conversation transcripts, ranging from concrete to speculative.
+
+#### Torah Character Prediction (Neural Networks)
+
+**Concept**: Train a neural network to predict the next character in the Torah text. Measuring prediction accuracy reveals statistical structure — how much of the Torah's character sequence is predictable from context.
+
+**Proposed architecture**: Mixture of Experts (MoE) with 4 specialists:
+1. **N-gram localist expert**: Short-range patterns, letter bigrams/trigrams
+2. **Formulaic repetition detector**: Recognizes recurring phrases ("ויאמר ה׳ אל משה לאמר")
+3. **Morphological/lexical expert**: Hebrew prefix/suffix patterns, word-level frequency
+4. **Long-horizon style expert**: Book-level and section-level stylistic patterns
+
+Router network (~300K total parameters) learns which expert to trust for each position. Training on Torah's ~2.7-3.0 bits/char entropy (vs. modern Hebrew ~3.5-3.8) to quantify redundancy sources.
+
+#### ELS Hyperspace Embedding
+
+**Concept**: Map Torah ELS combinations into a high-dimensional embedding space using graph neural networks. Build a sparse adjacency graph where nodes are ELS hits and edges represent proximity, then embed using Node2Vec/DeepWalk or Graph Attention Networks (GAT).
+
+**Why GAT**: Attention-weighted aggregation over neighbors picks out meaningful ELS co-occurrences from noise. Multi-head attention provides interpretable "reasons" for grouping. Practical for the sparse, irregular topology of ELS hit graphs.
+
+#### Pre-computed ELS Hyperspace
+
+**Concept**: Pre-compute ALL ELS sequences across the Torah using FM-index or suffix array data structures, enabling O(1) queries into an "ELS hyperspace" where any word at any skip is instantly locatable. Current index covers skip ±50; full hyperspace would cover all computationally feasible skips.
+
+#### Information-Theoretic Text Characterization
+
+**Concept**: Systematic statistical characterization of Torah text as a standalone research direction, independent of ELS:
+- **Shannon entropy**: Torah ~2.7-3.0 bits/char vs. modern Hebrew ~3.5-3.8 bits/char
+- **Compression benchmarks**: gzip ~2.0 bits/char, PPM ~1.9 bits/char on Torah; ~37% redundancy
+- **Block entropy**: How entropy changes at different n-gram scales (letter, bigram, trigram, word-level)
+- **Sources of low entropy**: Formulaic repetition, high-frequency prefixes (ה, ו, ב, כ, ל, מ, ש), restricted morphology, small alphabet (22 letters)
+- **Comparative analysis**: Torah vs. Prophets vs. Writings; Torah vs. modern Hebrew corpora; Torah vs. other ancient Near Eastern texts
+
+This provides the mathematical foundation for evaluating whether any pattern (ELS or otherwise) exceeds what the text's statistical structure predicts.
+
+### 13.6 Exploratory: Torah as LLM Latent Space
+
+**Status**: Speculative/theoretical. No implementation. This is a novel research direction.
+
+**Core hypothesis**: What if the Torah text is not merely a corpus to be analyzed, but is itself a kind of trained model — a compressed, latent embedding from which semantic relationships, predictions, and knowledge can be extracted, analogous to how a large language model's weight matrix encodes world knowledge?
+
+In a standard LLM, the weight matrix W (billions of parameters) encodes compressed knowledge about language and the world. The Torah — 304,805 characters drawn from a 22-letter alphabet — is a fixed, finite "weight matrix" of approximately 304,805 × log₂(22) ≈ 1.36 million bits. The question is: can we build a decoder architecture that treats this fixed text as the model's parameters and extracts structured knowledge from it?
+
+#### Approach 1: Torah as Frozen Embedding Matrix
+
+Treat the Torah text as a fixed embedding lookup table:
+
+1. **Tokenization**: Segment the Torah into overlapping windows of length L at stride S. Each window becomes a "token" with a position.
+2. **Embedding extraction**: For each token position, extract a feature vector from the local character context (n-grams, positional encoding, ELS skip patterns emanating from that position). This produces a fixed embedding matrix E of shape (N_tokens × D_features).
+3. **Frozen weights**: E is NEVER trained or modified. It IS the Torah.
+4. **Trainable decoder**: Build a lightweight decoder (attention layers, MLP head) that learns to read from E. The decoder is trained on tasks:
+   - Given a query (Hebrew word/concept), attend to the Torah embedding matrix and produce related concepts
+   - Given a verse reference, predict which other verses are topically linked
+   - Given an ELS seed, predict which candidate terms are significant
+5. **What this tests**: If the decoder achieves non-trivial performance above baseline (random text with same letter frequencies), it demonstrates that the Torah's specific character arrangement encodes retrievable semantic structure beyond statistical noise.
+
+```
+Query: "מלחמה" (war)
+    │
+    ▼
+┌──────────────┐
+│  Trainable   │
+│  Decoder     │──── attention ────▶ Torah Embedding Matrix E
+│  (small)     │                     (FROZEN, derived from text)
+└──────┬───────┘
+       │
+       ▼
+  Ranked outputs: ["חרב" (sword), "שלום" (peace), "מצרים" (Egypt), ...]
+```
+
+#### Approach 2: ELS Skip Values as Attention Heads
+
+In a transformer, each attention head learns to focus on different aspects of the input. Reinterpret ELS skip values as attention heads:
+
+1. **Head d** reads every d-th character starting from each position (this IS the ELS at skip d)
+2. **Multi-head**: Combine information from multiple skip values simultaneously (skip 1, 2, 3, ..., K)
+3. **Positional relationships**: Two positions that are "close" across many skip-based heads may be semantically related, even if linearly far apart in the text
+4. **Attention matrix**: For each skip value d, compute an attention-like matrix A_d[i,j] = similarity(ELS_d starting at i, ELS_d starting at j). The existing proximity matrix infrastructure (`computeProximityMatrix()`) already does this.
+5. **Multi-skip fusion**: Learn weights for combining attention across skip values. This is trainable; the Torah-derived attention matrices are frozen.
+
+#### Approach 3: Torah as Decoder Weights via Reshaping
+
+The most literal interpretation — reshape the Torah's 304,805 characters directly into neural network weight matrices:
+
+1. **Encoding**: Map each Hebrew letter to a number (א=1, ..., ת=22), normalize to [-1, 1]
+2. **Reshape**: Partition the resulting 304,805-element vector into weight matrices for a small neural network (e.g., a 2-layer MLP with hidden dimension 553 → 553×551 ≈ 304,703 parameters)
+3. **Evaluate**: Feed Hebrew word embeddings through this "Torah-weighted" network. Does the output space show ANY meaningful semantic structure?
+4. **Null test**: Compare against networks whose weights are random permutations of the same letter sequence (preserves letter frequencies, destroys positional structure)
+5. **If positive**: The specific arrangement of Torah characters, when interpreted as neural network weights, produces a non-random transformation of Hebrew semantic space
+6. **If null**: The Torah's information is not extractable by naive reshaping — it may require the right architecture (ELS-based attention, root-decomposition, etc.) to unlock
+
+#### Approach 4: Retrieval-Augmented Generation over Torah Structure
+
+Rather than literally using Torah as weights, build a retrieval system where the Torah's internal structure (ELS patterns, gematria networks, root relationships) serves as the knowledge base that augments an LLM's generation:
+
+1. **Structure extraction**: Pre-compute all discoverable structures — ELS co-occurrences, gematria equivalences, shared-root networks, cross-verse references, cantillation phrase groupings
+2. **Index as knowledge graph**: Store these as a queryable knowledge graph (see Section 13.12)
+3. **RAG pipeline**: For any Hebrew query, retrieve relevant Torah structural evidence (which ELS terms cluster near it, which gematria equivalents exist, which verses share roots) and feed it as context to an LLM
+4. **Evaluation**: Does Torah-structure-augmented generation produce more coherent, traditionally-aligned, or predictively useful output than a baseline LLM without this structural context?
+
+#### Validation Framework
+
+Any of these approaches must be tested against rigorous null models:
+
+| Test | What It Shows |
+|------|--------------|
+| Shuffled Torah (same letter frequencies) | Structure vs. noise |
+| Random Hebrew text (Markov-generated) | Torah-specific vs. generic Hebrew |
+| Isaiah / War & Peace (Hebrew) | Torah-specific vs. other long Hebrew texts |
+| Different reshaping / tokenization | Architecture sensitivity |
+
+**Success criterion**: Statistically significant above-chance performance on a pre-registered task (e.g., predicting related concepts, identifying thematically linked passages, ranking ELS candidates) when using the real Torah vs. controls.
+
+**Philosophical framing**: This does not claim the Torah "is" an LLM. It asks: does the Torah's character arrangement encode extractable structure that a decoder can learn to read — and if so, is that structure unique to the Torah, or is it a property of any sufficiently long Hebrew text?
+
+### 13.7 Unified Multi-Hypothesis Analysis Pipeline
+
+**Status**: Discussed in conversation transcripts as a major architectural vision. Not started.
+
+**Concept**: Instead of treating each analysis tool (ELS, gematria, ciphers, morphology, cantillation) as independent, run them in parallel on the same input and combine their signals through a unified scoring pipeline.
+
+**Architecture**:
+
+```
+Input Query (Hebrew word/phrase)
+       │
+       ├──▶ ELS Module (proximity, skip patterns, clusters)
+       ├──▶ Gematria Module (value matches, reduced/ordinal equivalences)
+       ├──▶ Cipher Module (Atbash, Albam, substitution transforms)
+       ├──▶ Morphology Module (root extraction, binyan analysis, NLP)
+       ├──▶ Cantillation Module (taamim groupings, phrase boundaries)
+       ├──▶ Semantic Module (Tsirufim scoring, embedding similarity)
+       ├──▶ Positional Module (verse/word/letter position analysis)
+       ├──▶ Kabbalistic Module (Sefirot mapping, 231 gates, letter paths)
+       │
+       ▼
+┌─────────────────────────────┐
+│  Feature Extraction         │
+│  per candidate per module   │
+│  → combined feature vector  │
+└──────────┬──────────────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│  Aggregator / Scorer        │
+│  Weighted linear / MoE /    │
+│  learnable router           │
+└──────────┬──────────────────┘
+           │
+           ▼
+  Ranked candidates with per-aspect evidence
+  + counterfactuals + sensitivity analysis
+```
+
+**Per-candidate features**: min pairwise distance (ELS), ELS length, gematria match strength, cipher transform hits, morphological-root score, semantic cosine similarity, cantillation grouping weight, Kabbalistic path weight, null z-score per module.
+
+**Key principle**: Output per-aspect evidence (not just a scalar score) with counterfactuals ("this candidate ranks high on ELS proximity but low on semantic coherence") and sensitivity analysis ("removing the gematria signal drops this candidate from rank 3 to rank 47").
+
+### 13.8 Cryptographic & Steganographic Methods Beyond ELS
+
+**Status**: Discussed in conversation transcripts. No implementation.
+
+**Context**: ELS is only one method for detecting hidden structure in text. Classical cryptography, modern steganography, and computational sequence analysis offer additional tools.
+
+#### Classical Cryptographic Transforms
+
+- **Atbash** (את-בש): Alphabet reversal substitution (א↔ת, ב↔ש, ...). Already attested in Jeremiah ("Sheshach" = Babel). Searchable as a transform layer: for any ELS-found term, also check its Atbash equivalent.
+- **Albam** (אל-בם): Alphabet-halving substitution (א↔ל, ב↔מ, ...). Less historically attested but combinatorially interesting.
+- **Avgad**: Shift-by-one substitution (א→ב, ב→ג, ...).
+- **Combined transforms**: Apply cipher + ELS together (e.g., find Atbash of "שלום" at skip 50).
+
+#### Non-Uniform Skip Patterns
+
+Extend beyond equidistant skips to variable-step sequences:
+- **Arithmetic progressions**: Skip values that increase (1, 3, 6, 10, ...) — triangular number skips
+- **Fibonacci skips**: 1, 1, 2, 3, 5, 8, 13, ...
+- **Prime skips**: 2, 3, 5, 7, 11, 13, ...
+- **Sequence alignment with gaps**: Bioinformatics-style alignment allowing gaps between matched letters
+- **Statistical challenge**: The search space explodes; rigorous null models essential
+
+#### Spectral & Information-Theoretic Detection
+
+- **Fourier/spectral analysis**: Detect hidden periodicities in letter streams by transforming character sequences into frequency domain
+- **Entropy scanning**: Slide a window across the text measuring local Shannon entropy; low-entropy pockets may indicate structured regions
+- **Index of Coincidence**: Classical Kasiski/Babbage method for detecting periodic substitution ciphers
+- **Autocorrelation analysis**: Measure how correlated the text is with shifted versions of itself at various lags
+
+#### Computational Sequence Analysis
+
+- **Motif discovery**: Bioinformatics-style search for statistically enriched substrings (short recurring patterns beyond what letter frequencies predict)
+- **Topological Data Analysis (TDA)**: Map text features into persistent homology to identify recurring structural motifs in higher-dimensional space
+- **Lattice embeddings**: Wrap text onto algebraic lattices or torus structures; analyze which lattice geometries produce maximal clustering of meaningful terms
+
+**Academic positioning**: These methods fall under "steganographic symbolic sequence analysis" or "algorithmic text mining" — neutral academic framings that avoid the loaded term "Bible Codes."
+
+### 13.9 Matrix Discovery System
+
+**Status**: Detailed plan exists (`docs/MATRIX-DISCOVERY-PLAN.md`). Not started.
+
+**Concept**: Given a matrix region around one or more ELS results, systematically search for ALL additional dictionary words, names, places, and dates that appear as ELS within that region, and calculate statistical significance for each discovery.
+
+**Components**:
+
+1. **Letter frequency foundation**: Compute expected occurrence rates from Torah letter frequencies
+2. **Dictionary data preparation**: Biblical names (~500), place names (~200), Hebrew dates (generated programmatically), plus the full 82K unified dictionary
+3. **Constrained ELS search engine**: Given a matrix region (center position, radius), find all dictionary words appearing as ELS within that region at any skip value
+4. **Poisson-based statistical analysis**: For each discovered term, compute expected occurrences using `E ≈ N × skip_count × Π(freq(letterᵢ))`, then calculate P-value assuming Poisson distribution
+5. **Discovery UI**: Interactive panel showing discovered terms ranked by significance, with filters by category (name/place/date/word), minimum significance threshold, and click-to-highlight in matrix
+
+**Integration with WRR methodology**: This generalizes the WRR approach from pre-defined name-date pairs to open-ended discovery. The key statistical challenge is multiple comparison correction — when you search for everything, you must adjust for the massive number of implicit tests.
+
+### 13.10 3D Geometry & Higher-Dimensional Analysis
+
+**Status**: 3D matrix viewer (Three.js) is operational. These directions extend the geometric analysis.
+
+#### Torah as 3D Book of Pages
+
+The Torah text can be arranged into a 3D structure where each "page" has a fixed width (skip value). Different skip values produce different pages, and ELS terms trace paths through this 3D space — vertical lines, helixes, or body diagonals depending on the skip-to-page-width relationship.
+
+**Key geometric facts**:
+- Skip = multiple of row length → vertical column within a page
+- Skip = multiple of page size → vertical through pages (Z-axis)
+- Otherwise → slanted/helical path through the 3D book
+
+**Algorithms discussed**:
+- **Minimal bounding matrix**: Given multiple ELS terms, find the smallest 3D box containing all of them
+- **KD-tree proximity**: Fast nearest-neighbor lookup in 3D ELS coordinate space
+- **Body diagonal analysis**: In a 3x3x3 cube, skips of ±13 and ±7 trace body diagonals
+
+#### Traditional Scroll Layout
+
+The Torah scroll has 42-48 columns of ~42-60 lines each, ~30-40 letters per line. Using the traditional column widths (rather than arbitrary skip-based widths) for matrix analysis would produce layouts aligned with how the text has been read for millennia. Requires handling variable column heights (padding or adaptive indexing).
+
+### 13.11 Sonification & Multimodal Output
+
+**Status**: Discussed in detail across research conversations. No implementation started.
+
+#### Torah-to-Sound Mapping
+
+**Proposed scheme** (based on Sefer Yetzirah's 3+7+12 letter groups):
+- **3 mother letters** (א, מ, ש) → root triad (C, E, G)
+- **7 double letters** (ב, ג, ד, כ, פ, ר, ת) → diatonic scale notes
+- **12 simple letters** → chromatic/ornamental tones
+
+Reading Torah text produces a musical sequence; words become chords (letters played simultaneously); verse sequences become chord progressions.
+
+#### Cantillation Integration
+
+Ta'amei ha-mikra (cantillation marks) naturally encode musical phrasing. Integration: letters provide pitch, cantillation marks provide ornamentation (duration, pitch shifts, dynamics, articulation).
+
+#### Torah-to-Image Mapping
+
+Letters as atomic information units → color mapping:
+- Hue → letter identity
+- Saturation → letter frequency at that position
+- Brightness → position in text
+
+2D/3D layout options for generating visual representations of Torah text, ELS proximity maps, or embedding-space projections.
+
+#### Advanced Visualization Ideas
+
+- **Sefirot diagonal color gradient**: Color ELS matrix diagonals by Sefirotic mapping (Chesed=blue, Gevurah=red, Tiferet=green, etc.), highlighting harmonic vs. dissonant letter alignments
+- **Sequential verse-to-image AI generation**: Feed verse text through an image generation model to produce a visual narrative strip — one image per verse, stitched into a scroll-like timeline
+- **t-SNE / UMAP embedding projections**: Visualize semantic clustering of ELS candidates, Tsirufim results, or Torah vocabulary in interactive 2D/3D scatter plots
+- **Matrix heatmap overlays**: Overlay statistical significance as a heatmap on the ELS matrix (red = significant clusters, blue = background noise)
+
+### 13.12 AI Architecture & Knowledge Graphs
+
+**Status**: Extensive design discussions in conversation transcripts. Research-stage.
+
+#### Hermeneutical Logic Engine
+
+**Concept**: Encode the traditional Torah interpretive rules (13 Middot of Rabbi Ishmael, 32 Middot of Rabbi Eliezer ben Yose HaGelili, 22 Middot for aggadic interpretation) as a procedural logic core that guides smaller LLMs.
+
+**Architecture** (8 components):
+1. Corpus preprocessor (Hebrew text canonicalization)
+2. Semantic parser (LLM)
+3. Ontology / Knowledge Graph
+4. Rule compiler (formal encodings of kal va-chomer, gezerah shavah, binyan av, etc.)
+5. Inference engine (Datalog/Prolog — Horn clause rules with evidence scoring, proof traces, authority weighting)
+6. Branch generator (LLM mini-agents as proposal engines, validated by symbolic engine)
+7. Aggregator/scorer (beam expansion: high-precision rules first)
+8. Audit UI for interpretive transparency
+
+**Hybrid inference**: LLMs propose candidate interpretations; the Datalog/Prolog symbolic engine validates them against formalized rules. Beam search expansion algorithm with symbolic rules providing hard constraints and LLM providing soft ranking. This avoids both pure hallucination (LLM-only) and brittleness (symbolic-only).
+
+**Example formalization**: Kal va-chomer (a fortiori reasoning) as Datalog rule:
+```
+kal_vachomer(X, Property, Derived) :-
+  has_property(X, Property, Strength_X),
+  has_property(Y, Property, Strength_Y),
+  Strength_X > Strength_Y,
+  has_derived(Y, Derived),
+  not(exception(X, Derived)).
+```
+
+#### Hebrew-Centered Logical Hyperspace
+
+**Concept**: A layered "onion model" where:
+- **Layer 1** (core): Hebrew conceptual hyperspace — roots, concepts, logical relationships form the substrate
+- **Layer 2**: Language divergence maps — other languages project into the Hebrew logical space
+- **Layer 3**: World model interface — connecting Hebrew concepts to observable phenomena
+
+This is not for halakhic automation but for building an exploratory tool where Hebrew acts as the ideological substrate.
+
+#### Knowledge Graph Schema
+
+**Property graph database** (Neo4j or equivalent) with specific node and edge types:
+
+| Node Type | Description |
+|-----------|-------------|
+| Letter | Individual Hebrew letter with all attributes |
+| Word | Lexical entry with root, morphology, gematria |
+| Root | 3-letter שורש with semantic field |
+| Verse | Biblical verse with structural metadata |
+| Rule | Formalized hermeneutical rule (middah) |
+| Authority | Rabbinic source (Tanna, Amora, Rishon) |
+| EventContext | Historical/narrative event |
+| PlanetState | Astronomical configuration at a time point |
+| Potentiality | Traditional attribution score |
+
+| Edge Type | Connects | Meaning |
+|-----------|----------|---------|
+| occurs_in | Word → Verse | Lexical occurrence |
+| derives_by | Word → Root | Morphological derivation |
+| supports | Rule → Ruling | Logical support |
+| contradicts | Source → Source | Disagreement |
+| equates | Authority → Authority | Equivalent positions |
+| maps_to_concept | Root → Root | Semantic relationship |
+| has_aspect | PlanetState → Potentiality | Traditional scoring |
+
+#### Talmud Logic Graphs
+
+**Concept**: Automatically extract logic graphs from Talmudic passages. Nodes represent sources, markers, and rulings. Edges represent logical relationships (supports, contradicts, equates, restricts, overrides). Worked example: Berakhot 2a sugya about the proper time for Shema.
+
+**Data sources**: Sefaria (open-source, primary), Bar-Ilan Responsa Project (licensed), Schottenstein Talmud (proprietary digital edition).
+
+**Evaluation metrics**: Symbolic correctness vs. expert annotations, provenance coverage, false positive control, rank quality (Precision@k), robustness testing.
+
+#### Jewish Calendar & Traditional Potentialities
+
+**Concept**: Integrate Jewish calendar data with traditional zodiac/planetary attributions from sources like Sefer HaMalchut and Sefer HaTechunah.
+
+**Computational requirements**:
+- **Ephemeris**: Skyfield or SwissEph libraries for planetary positions (Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn)
+- **Zodiac mapping**: Ecliptic longitude → zodiac sign, house index per planet
+- **Aspect computation**: Major aspects (conjunction, opposition, trine, square, sextile) between planet pairs
+- **Traditional scoring**: Planet-sign combinations mapped to potentiality scores from classical sources (constructive/destructive interference, angles of love/hate/conjoined)
+- **Hebrew calendar integration**: Day/month/year → Jewish date mapping via pyluach or similar
+- **Graph encoding**: TimeNode → PlanetState → ZodiacHouseNode with Potentiality edges
+
+**Historical sources**: Abraham Abulafia's letter-combination meditations (Chochmat HaTzeruf), Sefer Yetzirah's 231 gates, and the 3+7+12 letter classification underpin the mapping between celestial mechanics and Hebrew letter symbolism.
+
+### 13.13 Statistical Rigor & Experimental Design
+
+These items ensure that results are scientifically meaningful, not just computationally possible.
+
+#### Null Models and Control Texts
+
+Every ELS finding must be compared against proper null models:
+- **Letter-frequency-preserving shuffles**: Randomize Torah text while keeping letter frequencies identical
+- **Markov chain controls**: Preserve n-gram statistics of the original text
+- **Block randomization**: Shuffle at word or verse level to preserve local structure
+- **Control corpora**: War and Peace (Hebrew translation), Isaiah scroll, other long Hebrew texts
+
+#### Multiple Comparison Correction
+
+When searching for many terms across many skip values, raw P-values are misleading. Planned corrections:
+- Bonferroni correction (conservative)
+- False Discovery Rate (FDR) control (Benjamini-Hochberg)
+- Pre-registration of search terms before running analysis
+
+#### Composite ELS Hits
+
+**Concept**: Allow day, month, and year of a date to appear as separate ELS terms with independent skip values, but in close positional proximity. This dramatically expands the search space vs. requiring a single contiguous date ELS. Statistical evaluation requires careful combinatorial analysis (~78K possible triples for Torah positions).
+
+#### Replication Protocol
+
+For any claimed finding:
+1. Pre-register search terms and methodology
+2. Run on primary text (Koren)
+3. Run on control texts (shuffled, other manuscripts)
+4. Compute P-value with multiple comparison correction
+5. Report effect size, confidence interval, and power analysis
+6. Make data and code publicly available for independent replication
+
+#### Date Format Variant Standardization
+
+**Concept**: A formal experiment to determine which Hebrew date-string formats are most commonly used across classical and modern corpora, informing how dates should be encoded for ELS searches.
+
+**Design**: Define the variant space (~8+ forms: with/without ב prefix, abbreviated/full month names, with/without year, joined/split day-month), sample across genres and periods (Mishnaic, medieval, modern), extract via regex families, build a gold standard annotation set, and compute frequency rankings with confidence intervals.
+
+**Relevance**: The WRR experiment used a specific date format (day ב<month>, no year, single contiguous ELS). Other researchers use different formats. This experiment would establish an empirical basis for format selection, reducing researcher degrees of freedom.
+
+### 13.14 Book Project: Torah Statistics & Codes
+
+**Status**: Discussed extensively in conversation transcripts. Outline and chapter synopses written. Not started.
+
+**Concept**: An academic book covering the mathematics, statistics, and computational analysis of Torah text. 14 planned chapters:
+
+1. **Textual Foundations**: Hebrew alphabet, Masoretic text, vocalization/pointing, textual variants
+2. **Classical Methods**: Gematria, Atbash, Albam, notarikon, 231 gates (Sefer Yetzirah)
+3. **Equidistant Letter Sequences**: Definition, grids, skip-intervals, pictograms
+4. **Statistical Foundations**: Hypothesis testing, permutation tests, Monte Carlo, multiple comparisons, P-values, FDR, protocol pre-registration
+5. **Combinatorics & Information Theory**: Expected counts, Markov models, Kolmogorov complexity, entropy, runs/autocorrelation
+6. **Experimental Design**: Control corpora, shuffling protocols, null models
+7. **Computational Methods**: Indexing algorithms, search complexity, reproducible pipelines
+8. **Case Studies**: WRR Great Rabbis experiment, "War & Peace" controls, pictogram cases
+9. **Critique & Replication**: MBBK rebuttal, Gans experiments, current consensus
+10. **Practitioners & History**: Rips, Witztum, Rosenberg, Drosnin, Abulafia, Scholem, Kaplan
+11. **Kabbalistic Context**: Sefer Yetzirah, Sefirot, letter-combination traditions
+12. **Modern Computational Approaches**: ML applied to biblical texts, stylometry, authorship
+13. **3D Geometry & Visualization**: Cylinder models, multi-page layouts, sonification
+14. **Conclusions & Open Questions**
+
+**Deliverables**: Annotated bibliography (~50+ sources), reproducible experimental protocol template, chapter synopses (300-500 words each).
+
+**Reference**: Lima, B. C. et al., "Artificial Intelligence Applied to the Analysis of Biblical Scriptures: A Systematic Review," *Analytics*, 2025 — comprehensive survey of AI applied to biblical studies.
+
+### 13.15 Infrastructure & Performance
+
+#### Web Worker Migration
+
+Currently, ELS search runs on the main thread with periodic `yield` (`await setTimeout(0)`). Migrating to a dedicated Web Worker would:
+- Eliminate UI blocking entirely
+- Enable parallel searches (multiple workers)
+- Improve cancellation responsiveness
+- Allow progress reporting via `postMessage`
+
+Architecture: `engines/els.worker.js` already exists but is used for a different search mode. The main scan in `bible-codes.html` should be migrated.
+
+#### IndexedDB for Predictive ELS
+
+New IndexedDB stores needed for the Predictive ELS pipeline:
+- `stories`: Story timelines with timesteps and keywords
+- `candidate_pools`: Full candidate pools with features and labels
+- `training_data`: Flattened feature vectors for ML export
+
+#### Testing Suite
+
+| Level | Scope | Status |
+|-------|-------|--------|
+| Unit tests | Core engines (search, gematria, roots) | Not started |
+| Integration tests | Database load → query → display | Not started |
+| E2E tests | Full user flows (search → matrix → export) | Not started |
+| Performance benchmarks | Timing across browsers and devices | Not started |
+| Mobile testing | iOS Safari, Android Chrome | Manual only |
+| Offline validation | Disconnect → use all tools | Manual only |
+
+#### UX Enhancements
+
+- **Default tab change**: Make Full Scan the default tab; grey-out Index Lookup and Dictionary until their engines are loaded
+- **Matrix view improvements**: Zoom controls, configurable color themes, save/load matrix configurations, shareable URLs encoding search parameters, print-friendly mode
+- **Dashboard redesign** (`index.html`): Proper PWA-feel dashboard with tool cards, status indicators, and responsive grid layout (not just a link list)
+- **PWA install banner**: Improve install prompt timing and appearance
+
+#### Dictionary Expansion
+
+The unified dictionary currently holds ~56K words. Remaining expansion targets:
+- **Wikipedia Hebrew**: Extract person names, place names, modern terms (~30% remaining coverage)
+- **Strong's Concordance**: Map Strong's numbers to Hebrew roots for cross-referencing
+- **Era tagging**: Tag all entries as biblical / rabbinic / modern for filtering
+
+#### Accessibility & i18n
+
+- ARIA labels for all interactive elements
+- Full keyboard navigation (tab order, focus indicators, Enter/Escape handlers)
+- Semantic HTML5 elements (`<nav>`, `<main>`, `<article>`, `<aside>`)
+- RTL layout fixes for mixed Hebrew/English content
+- i18n: Extend language support (currently English UI only) to Hebrew UI across all tool pages
+
+#### WebAssembly (Future Option)
+
+For compute-intensive tasks (ELS full scan across ±500 skips, large permutation generation), a Rust/C → WASM compilation could yield 10-50x speedups. Evaluate as an optional performance tier once the JS implementation is stable and profiled.
+
+#### Documentation & Release
+
+- Complete user documentation for all tools
+- SEO optimization (meta tags, sitemap, structured data)
+- Public release announcement
+- Academic-style methodology paper for the Predictive ELS approach
+
+### 13.16 Phase Summary
+
+| Phase | Description | Status | Key Deliverables |
+|-------|-------------|--------|-----------------|
+| **Near-term** | Complete core suite (5 items) | 60% done | letter-analysis.html, taamim.html, cross-ref.html, dashboard |
+| **WRR 1994** | Full experiment replication | Tab added, needs polish | 2D proximity, P-value, CSV export |
+| **Predictive ELS** | News → ELS → ML pipeline | Planned (detailed) | predictive-els.html, 4 new engine files |
+| **Tsirufim-ELS loop** | Permutation feedback into ELS search | Planned | Integration code in predictive-els.js |
+| **ML/Neural** | Character prediction, graph embeddings | Research stage | MoE architecture, GAT experiments |
+| **Torah as LLM** | Torah text as frozen embedding / decoder weights | Exploratory | 4 approaches with validation framework |
+| **Multi-Hypothesis** | Parallel analysis across all methods | Planned | Unified scoring pipeline, feature aggregation |
+| **Cryptographic** | Atbash, Albam, spectral analysis, TDA | Research stage | Non-uniform skip engine, motif discovery |
+| **Matrix Discovery** | Statistical matrix significance scoring | Planned | Poisson model, auto-discovery pipeline |
+| **3D Geometry** | Higher-dimensional ELS analysis | 3D viewer done, extensions planned | Bounding matrix, KD-tree, scroll layout |
+| **Sonification** | Torah-to-sound mapping | Research stage | Audio engine, cantillation integration |
+| **AI/Knowledge Graphs** | Hermeneutical logic, Talmud graphs | Research stage | Inference engine, Sefaria integration |
+| **Statistical rigor** | Null models, replication protocol | Partially implemented | Control text framework, FDR correction |
+| **Book Project** | 14-chapter academic book | Outline complete | Torah Statistics & Codes monograph |
+| **Infrastructure** | Workers, testing, UX, documentation | In progress | Web Worker migration, test suite, release |
+
+---
+
+## 14. Contact
 
 - **Developer**: Aharon
 - **Email**: roni762583@gmail.com
@@ -1286,5 +1901,5 @@ The `torah-codes/` directory is a fork of the **TorahBibleCodes** project by [@T
 
 ---
 
-*Last Updated: February 13, 2026*
-*Version: 4.0*
+*Last Updated: February 14, 2026*
+*Version: 4.1*

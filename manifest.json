@@ -2,7 +2,7 @@
   "name": "Bible Codes",
   "short_name": "Bible Codes",
   "description": "Comprehensive Hebrew Bible analysis tools - ELS, Gematria, Notarikon, Tsirufim, and more",
-  "start_url": "./bible-codes.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

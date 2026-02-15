@@ -626,6 +626,10 @@
         References
         <span class="mode-desc">Dictionary & Texts</span>
       </button>
+      <button class="mode-tab" data-mode="wrr">
+        WRR 1994
+        <span class="mode-desc">Famous experiment</span>
+      </button>
     </div>
 
     <!-- INDEX MODE -->
@@ -877,6 +881,94 @@
         </div>
 
         <p style="font-size:13px;color:var(--gray);">Cross-reference and search across classical Hebrew texts. Data sourced from Sefaria and open-access repositories.</p>
+      </section>
+    </div>
+
+    <!-- WRR 1994 MODE -->
+    <div id="wrr-mode" class="mode-content">
+      <section class="section">
+        <h2 style="display:flex;align-items:center;gap:10px;">
+          WRR 1994 Experiment
+          <span style="font-size:12px;padding:3px 8px;background:var(--blue);color:white;border-radius:12px;">Interactive Demo</span>
+        </h2>
+        <p style="font-size:14px;color:var(--gray);margin-bottom:16px;">
+          Replication of the famous experiment by Witztum, Rips &amp; Rosenberg published in
+          <em>Statistical Science</em> (1994). 32 rabbis from the <em>Encyclopedia of Great Men in Israel</em>,
+          each paired with Hebrew death dates. The proximity of name-date ELS pairs in Genesis was found to be
+          statistically significant at <strong>p = 0.000016</strong> (1 in 62,500).
+        </p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+          <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
+            <div style="font-size:28px;font-weight:bold;color:var(--blue);">32</div>
+            <div style="font-size:12px;color:var(--gray);">Rabbis (List 2)</div>
+          </div>
+          <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
+            <div style="font-size:28px;font-weight:bold;color:var(--blue);">78,064</div>
+            <div style="font-size:12px;color:var(--gray);">Letters in Genesis</div>
+          </div>
+          <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
+            <div style="font-size:28px;font-weight:bold;color:var(--blue);">p &lt; 1/62,500</div>
+            <div style="font-size:12px;color:var(--gray);">Published P-value</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+          <button class="btn" id="wrrRunBtn" onclick="runWRRExperiment()" style="background:linear-gradient(135deg,#667eea,#764ba2);font-size:15px;padding:10px 24px;">
+            Run Experiment
+          </button>
+          <button class="btn btn-secondary" id="wrrCancelBtn" onclick="cancelWRR()" style="display:none;">Cancel</button>
+          <span id="wrrProgress" style="font-size:13px;color:var(--gray);"></span>
+        </div>
+
+        <!-- Progress bar -->
+        <div id="wrrProgressBar" style="display:none;margin-bottom:16px;">
+          <div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;">
+            <div id="wrrProgressFill" style="background:linear-gradient(90deg,#667eea,#764ba2);height:100%;width:0%;transition:width 0.3s;border-radius:4px;"></div>
+          </div>
+          <div id="wrrProgressText" style="font-size:12px;color:var(--gray);margin-top:4px;"></div>
+        </div>
+
+        <!-- Results summary -->
+        <div id="wrrSummary" style="display:none;margin-bottom:16px;padding:16px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:8px;border:1px solid #a5d6a7;">
+        </div>
+
+        <!-- Rabbi table -->
+        <div style="margin-bottom:8px;font-weight:600;color:var(--blue);">Rabbi List (WRR List 2)</div>
+        <div style="overflow-x:auto;max-height:500px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
+          <table id="wrrTable" style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead style="position:sticky;top:0;background:var(--blue);color:white;">
+              <tr>
+                <th style="padding:8px 6px;text-align:center;font-weight:600;">#</th>
+                <th style="padding:8px 6px;text-align:right;font-weight:600;">Name (English)</th>
+                <th style="padding:8px 6px;text-align:right;font-weight:600;direction:rtl;">Appellations</th>
+                <th style="padding:8px 6px;text-align:right;font-weight:600;direction:rtl;">Date</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:600;">Pairs</th>
+                <th style="padding:8px 6px;text-align:center;font-weight:600;">Result</th>
+              </tr>
+            </thead>
+            <tbody id="wrrTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Methodology -->
+        <details style="margin-top:16px;">
+          <summary style="cursor:pointer;font-weight:600;color:var(--blue);font-size:14px;">Methodology Details</summary>
+          <div style="padding:12px;font-size:13px;color:#555;line-height:1.7;">
+            <p><strong>Source:</strong> Witztum, Rips &amp; Rosenberg, "Equidistant Letter Sequences in the Book of Genesis",
+            <em>Statistical Science</em>, Vol. 9, No. 3, August 1994, pp. 429-438.</p>
+            <p><strong>Text:</strong> Genesis, Koren edition, 78,064 consonantal letters (no spaces).</p>
+            <p><strong>Method:</strong> For each rabbi, multiple name forms (appellations) and Hebrew death date forms are searched as
+            Equidistant Letter Sequences (ELS) in Genesis. The proximity of each name-date pair is measured using the
+            c(w,w') statistic, which normalizes the raw distance by comparing it against 125 perturbation variants.</p>
+            <p><strong>Significance:</strong> 999,999 random permutations of the name-date assignments were tested.
+            The actual assignment ranked 4th out of 1,000,000, yielding <strong>p = 0.000016</strong> after Bonferroni correction.</p>
+            <p><strong>This demo:</strong> Performs a simplified proximity search. For each rabbi, we find the closest ELS occurrences
+            of their name(s) and date(s) in Genesis, and compute a basic proximity score. The full c(w,w') statistic
+            requires extensive computation (cylindrical arrays, perturbation tests) which is beyond this interactive demo.</p>
+          </div>
+        </details>
       </section>
     </div>
   </main>
@@ -1180,9 +1272,11 @@
       if (!currentResults) { alert('No results'); return; }
       const blob = new Blob([JSON.stringify(currentResults, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      a.href = url;
       a.download = `els-search-${new Date().toISOString().slice(0,10)}.json`;
       a.click();
+      URL.revokeObjectURL(url);
     };
 
     window.clearSession = function() {
@@ -1221,6 +1315,11 @@
         hebKbTarget.focus();
       }
     };
+
+    // Prevent keyboard keys from stealing focus from textarea
+    document.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.heb-kb-key')) e.preventDefault();
+    });
 
     // Keyboard click handler — insert character at cursor position in target
     document.addEventListener('click', function(e) {
@@ -1574,8 +1673,8 @@
       displayScanResults(scanTerms, scanAllResults, scanClusters);
 
       if (hasBatch) {
-        batchTerms.forEach((t, i) => t._origIdx = i);
         renderBatchTable();
+        document.getElementById('batchExportBtn').style.display = '';
       }
     };
 
@@ -1936,7 +2035,7 @@
       document.getElementById('batchPreviewCount').textContent = `${batchTerms.length} terms parsed`;
 
       // Time estimate
-      const skipRange = Math.abs(parseInt(document.getElementById('maxSkip').value) || 500) -
+      const skipRange = (parseInt(document.getElementById('maxSkip').value) || 500) -
                          (parseInt(document.getElementById('minSkip').value) || -500) + 1;
       const estSec = Math.round(batchTerms.length * (skipRange / 200) * 4);
       const estMin = Math.floor(estSec / 60);
@@ -2003,9 +2102,11 @@
       });
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      a.href = url;
       a.download = `batch-els-results-${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
+      URL.revokeObjectURL(url);
     };
 
     let batchSortCol = -1, batchSortAsc = true;
@@ -2047,7 +2148,12 @@
         savedAt: new Date().toISOString()
       });
       if (sessions.length > 20) sessions.length = 20;
-      localStorage.setItem('elsScanSessions', JSON.stringify(sessions));
+      try {
+        localStorage.setItem('elsScanSessions', JSON.stringify(sessions));
+      } catch (e) {
+        alert('Session too large to save. Try reducing the skip range or number of terms.');
+        return;
+      }
       loadSavedScanSessions();
       document.getElementById('scanSessionName').value = '';
     };
@@ -2088,9 +2194,10 @@
         return;
       }
       let html = '';
+      const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       sessions.forEach((s, i) => {
         html += `<div class="saved-item">
-          <div><span class="name">${s.name}</span><br><span class="meta">${s.terms.join(', ')}</span></div>
+          <div><span class="name">${esc(s.name)}</span><br><span class="meta">${esc(s.terms.join(', '))}</span></div>
           <div><button class="btn btn-small btn-secondary" onclick="loadScanSession(${i})">Load</button>
           <button class="btn btn-small btn-danger" onclick="deleteScanSession(${i})">×</button></div>
         </div>`;
@@ -2103,9 +2210,11 @@
       const data = { terms: scanTerms, allResults: scanAllResults, clusters: scanClusters, timestamp: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      a.href = url;
       a.download = `els-scan-${scanTerms.join('-')}-${new Date().toISOString().slice(0,10)}.json`;
       a.click();
+      URL.revokeObjectURL(url);
     };
 
     window.clearScanSession = function() {
@@ -2357,6 +2466,264 @@
       container.appendChild(div);
     };
 
+    // ============= WRR 1994 EXPERIMENT =============
+    // Rabbi dataset from WRR List 2 (Statistical Science 1994)
+    // Transliterated from Michigan-Claremont scheme to Hebrew
+    const WRR_RABBIS = [
+      { id:1, en:"Abraham ben David (RABaD)", names:["רבי אברהם","הראבי","הרבאבד","הראבד","האשכול","בעל האשכול","ראבי","הרב אב בית דין","ראבד"], dates:["כ חשון","כ בחשון","בכ חשון"] },
+      { id:2, en:"Abraham Yitzhaki", names:["רבי אברהם","יצחקי","זרע אברהם","בעל זרע אברהם","אברהם יצחקי"], dates:["יג סיון","יג בסיון","ביג סיון"] },
+      { id:3, en:"Abraham HaMalakh", names:["רבי אברהם","המלאך","חסד לאברהם","בעל חסד לאברהם"], dates:["יב תשרי","יב בתשרי","ביב תשרי"] },
+      { id:4, en:"Abraham Saba", names:["רבי אברהם","אברהם סבע","צרור המר","בעל צרור המר"], dates:[] },
+      { id:5, en:"Aaron HaGadol of Karlin", names:["רבי אהרן","אהרן הגדול מקרלין"], dates:["יט ניסן","יט בניסן","ביט ניסן"] },
+      { id:6, en:"Eliezer Ashkenazi", names:["מעשי השם","מעשי יהוה","בעל מעשי השם","בעל מעשי יהוה","אליעזר אשכנזי","רבי אליעזר"], dates:["כב כסלו","כב בכסלו","בכב כסלו"] },
+      { id:7, en:"David Oppenheim", names:["רבי דוד","אופנהיים","הרדא","מהרדא אופנהיים","דוד אופנהיים"], dates:["ז תשרי","ז בתשרי","בז תשרי"] },
+      { id:8, en:"David HaNagid", names:["רבי דוד","דוד הנגיד"], dates:[] },
+      { id:9, en:"David Nieto", names:["רבי דוד","דוד ניטו","הכוזרי השני","בעל הכוזרי השני","ניטו"], dates:["כח טבת","כח בטבת","בכח טבת"] },
+      { id:10, en:"Hayyim Abulafia", names:["רבי חיים","חיים אבולעפיה","אבולעפיה"], dates:["ו ניסן","ו בניסן","בו ניסן"] },
+      { id:11, en:"Hayyim Benveniste", names:["רבי חיים","בנבנשת","כנסת הגדולה","בעל כנסת הגדולה","חיים בנבנשת"], dates:["יט אלול","יט באלול","ביט אלול"] },
+      { id:12, en:"Hayyim Capusi", names:["רבי חיים","כפוסי","בעל נס","בעל הנס","חיים כפוסי"], dates:["יב שבט","יב בשבט","ביב שבט"] },
+      { id:13, en:"Hayyim Shabetai", names:["רבי חיים","חיים שבתי","מהרחש","המהרחש"], dates:["יג ניסן","יג בניסן","ביג ניסן"] },
+      { id:14, en:"Yair Hayyim Bacharach", names:["חוות יאיר","בעל חוות יאיר","יאיר חיים בכרך","בכרך","רבי יאיר חיים"], dates:["א טבת","א בטבת","בא טבת"] },
+      { id:15, en:"Yehuda HeHasid", names:["רבי יהודה","יהודה חסיד","יהודה החסיד"], dates:["ה חשון","ה בחשון","בה חשון"] },
+      { id:16, en:"Yehuda Ayash", names:["רבי יהודה","מהריע איש","יהודה עיאש","עיאש"], dates:["א תשרי","א בתשרי","בא תשרי"] },
+      { id:17, en:"Yehosef HaNagid", names:["רבי יהוסף"], dates:["ט טבת","ט בטבת","בט טבת"] },
+      { id:18, en:"Yehoshua (Maginei Shlomo)", names:["רבי יהושע","מגיני שלמה"], dates:["כז אב","כז באב","בכז אב"] },
+      { id:19, en:"Yosef di Trani (MaHaRiT)", names:["רבי יוסף","מטראני","יוסף טראני","טראני","מהרימט","המהרימט","מהריט","המהריט","יוסף מטראני"], dates:["יד תמוז","יד בתמוז","ביד תמוז"] },
+      { id:20, en:"Yosef Te'omim", names:["רבי יוסף","תאומים","פרי מגדים","בעל פרי מגדים","יוסף תאומים"], dates:["ד אייר","ד באייר","בד אייר"] },
+      { id:21, en:"Ya'akov BeRav", names:["רבי יעקב","יעקב בירב","מהרי בירב","הריבר","בירב"], dates:["ל ניסן","ל בניסן","בל ניסן"] },
+      { id:22, en:"Yisrael Ya'akov Hagiz", names:["חגיז","בעל הלקט","הלקט","ישראל יעקב","רבי ישראל יעקב"], dates:["כו שבט","כו בשבט","בכו שבט"] },
+      { id:23, en:"Ya'akov Moelin (MaHaRIL)", names:["רבי יעקב","מולין","יעקב סגל","יעקב הלוי","מהרי סגל","מהרי הלוי","מהריל","המהריל","יעקב מולין"], dates:["כב אלול","כב באלול","בכב אלול"] },
+      { id:24, en:"Ya'akov Emden (Ya'avetz)", names:["היעבץ","הריעבץ","עמדין","הריע עמדן","הריע עמדין","יעקב ישראל עמדן","יעקב ישראל עמדין","עמדן","רבי יעקב ישראל"], dates:["ל ניסן","ל בניסן","בל ניסן"] },
+      { id:25, en:"Yitzhak HaLevi Horowitz", names:["רבי יצחק","הורוויץ","יצחק הלוי","רבי אייצקל המבורגר","יצחק הלוי איש הורוויץ"], dates:["ו אייר","ו באייר","בו אייר"] },
+      { id:26, en:"Menachem Mendel Krochmal", names:["רבי מנחם","קרוכמל","רבי מענדל","צמח צדק","בעל צמח צדק","מנחם מענדל"], dates:["ב שבט","ב בשבט","בב שבט"] },
+      { id:27, en:"Moshe Zacuto", names:["רבי משה","זכותא","זכותו","משה זכות","משה זכותא","משה זכותו","מהרם זכות","מהרמז","המהרמז","קול הרמז","בעל קול הרמז","זכות"], dates:["כז תשרי","כז בתשרי","בכז תשרי","יו תשרי","יו בתשרי","ביו תשרי"] },
+      { id:28, en:"Moshe Margalit", names:["רבי משה","מרגלית","פני משה","בעל פני משה","משה מרגלית"], dates:["יב טבת","יב בטבת","ביב טבת"] },
+      { id:29, en:"Azariah Figo", names:["רבי עזריה","עזריה פיגו"], dates:["א אדרא","א באדרא","בא אדרא"] },
+      { id:30, en:"Immanuel Hai Ricchi", names:["משנת חסידים","בעל משנת חסידים","עמנואל חירפל ריקי","ריקי","רבי עמנואל חירפל"], dates:["א אדר","א באדר","בא אדר"] },
+      { id:31, en:"Shalom Sharabi (RaShaSh)", names:["רבי שלום","מזרחי","שר עבי","שר שלום","מהרשש","המהרשש","שמש","השמש","שלום מזרחי"], dates:["י שבט","י בשבט","בי שבט"] },
+      { id:32, en:"Shlomo HaMa'almi", names:["רבי שלמה","מרכבת המשנה","בעל מרכבת המשנה","שלמה מחלמא","שלמה מחעלמא"], dates:["כא תמוז","כא בתמוז","בכא תמוז"] }
+    ];
+
+    let wrrAbort = false;
+    let wrrGenesisText = null;
+    let wrrGenesisNorm = null;
+
+    // Populate the WRR table on load
+    function populateWRRTable() {
+      const tbody = document.getElementById('wrrTableBody');
+      if (!tbody) return;
+      let html = '';
+      WRR_RABBIS.forEach(r => {
+        const hasDates = r.dates.length > 0;
+        const pairCount = hasDates ? r.names.length * r.dates.length : 0;
+        const dateStr = hasDates ? r.dates[0] : '—';
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;text-align:center;color:var(--gray);">${r.id}</td>
+          <td style="padding:6px;font-size:12px;">${r.en}</td>
+          <td style="padding:6px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${r.names[0]}${r.names.length > 1 ? ` <span style="color:#999;font-size:11px;">(+${r.names.length - 1})</span>` : ''}</td>
+          <td style="padding:6px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${dateStr}</td>
+          <td style="padding:6px;text-align:center;">${pairCount || '—'}</td>
+          <td style="padding:6px;text-align:center;" id="wrrResult${r.id}"><span style="color:#ccc;">—</span></td>
+        </tr>`;
+      });
+      tbody.innerHTML = html;
+    }
+
+    // Get Genesis text (first 78,064 chars of Torah)
+    async function getGenesisText() {
+      if (wrrGenesisNorm) return;
+      if (torahText && torahText.length >= 78064) {
+        wrrGenesisText = torahText.slice(0, 78064);
+        wrrGenesisNorm = normalizeSofiot(wrrGenesisText);
+        return;
+      }
+      // Load Torah text if not loaded
+      const resp = await fetch('data/torahNoSpaces.txt');
+      const full = await resp.text();
+      wrrGenesisText = full.trim().slice(0, 78064);
+      wrrGenesisNorm = normalizeSofiot(wrrGenesisText);
+    }
+
+    // Find ELS occurrences of a word in text, limited to first few per skip for speed
+    function findClosestELS(text, word, maxSkip) {
+      const norm = normalizeSofiot(word.replace(/\s+/g, ''));
+      if (norm.length < 2) return [];
+      const results = [];
+      // Skip 1 (open text)
+      let idx = 0;
+      while ((idx = text.indexOf(norm, idx)) !== -1) {
+        results.push({ pos: idx, skip: 1 });
+        idx++;
+      }
+      // ELS skips 2..maxSkip (positive only — negative skips produce same letter positions)
+      for (let skip = 2; skip <= maxSkip; skip++) {
+        const found = findELS(text, norm, skip);
+        for (const pos of found) {
+          results.push({ pos, skip });
+        }
+      }
+      return results;
+    }
+
+    // Compute minimum distance between two sets of ELS occurrences
+    function minPairDistance(nameHits, dateHits) {
+      let minDist = Infinity;
+      let bestPair = null;
+      for (const n of nameHits) {
+        const nPositions = [];
+        const nLen = typeof n.termLen === 'number' ? n.termLen : 1;
+        for (let i = 0; i < nLen; i++) nPositions.push(n.pos + i * (n.skip || 1));
+        for (const d of dateHits) {
+          const dPositions = [];
+          const dLen = typeof d.termLen === 'number' ? d.termLen : 1;
+          for (let i = 0; i < dLen; i++) dPositions.push(d.pos + i * (d.skip || 1));
+          // Min distance between any letter of name and any letter of date
+          for (const np of nPositions) {
+            for (const dp of dPositions) {
+              const dist = Math.abs(np - dp);
+              if (dist < minDist) {
+                minDist = dist;
+                bestPair = { name: n, date: d, dist };
+              }
+            }
+          }
+        }
+      }
+      return bestPair;
+    }
+
+    window.runWRRExperiment = async function() {
+      wrrAbort = false;
+      const runBtn = document.getElementById('wrrRunBtn');
+      const cancelBtn = document.getElementById('wrrCancelBtn');
+      const progressBar = document.getElementById('wrrProgressBar');
+      const progressFill = document.getElementById('wrrProgressFill');
+      const progressText = document.getElementById('wrrProgressText');
+      const summary = document.getElementById('wrrSummary');
+
+      runBtn.disabled = true;
+      cancelBtn.style.display = '';
+      progressBar.style.display = '';
+      summary.style.display = 'none';
+
+      // Load Genesis
+      progressText.textContent = 'Loading Genesis text (78,064 letters)...';
+      await getGenesisText();
+
+      const maxSkip = 100; // Search skips 2..100 (full WRR used much larger range)
+      const rabbisWithDates = WRR_RABBIS.filter(r => r.dates.length > 0);
+      const totalPairs = rabbisWithDates.length;
+      let completed = 0;
+      let totalClose = 0;
+      const results = [];
+
+      for (const rabbi of rabbisWithDates) {
+        if (wrrAbort) break;
+
+        const cell = document.getElementById(`wrrResult${rabbi.id}`);
+        cell.innerHTML = '<span style="color:var(--orange);">Scanning...</span>';
+
+        let bestOverall = null;
+        let bestDist = Infinity;
+
+        // For each name-date pair
+        for (const name of rabbi.names) {
+          if (wrrAbort) break;
+          const nameNorm = normalizeSofiot(name.replace(/\s+/g, ''));
+          if (nameNorm.length < 2) continue;
+
+          // Find ELS occurrences of name
+          const nameHits = findClosestELS(wrrGenesisNorm, name, maxSkip);
+          if (nameHits.length === 0) continue;
+          nameHits.forEach(h => h.termLen = nameNorm.length);
+          await new Promise(r => setTimeout(r, 0)); // yield for UI
+
+          for (const date of rabbi.dates) {
+            if (wrrAbort) break;
+            const dateNorm = normalizeSofiot(date.replace(/\s+/g, ''));
+            if (dateNorm.length < 2) continue;
+
+            const dateHits = findClosestELS(wrrGenesisNorm, date, maxSkip);
+            if (dateHits.length === 0) continue;
+            dateHits.forEach(h => h.termLen = dateNorm.length);
+
+            const pair = minPairDistance(nameHits, dateHits);
+            if (pair && pair.dist < bestDist) {
+              bestDist = pair.dist;
+              bestOverall = { ...pair, name: name, date: date, nameSkip: pair.name.skip, dateSkip: pair.date.skip };
+            }
+          }
+        }
+
+        completed++;
+        const pct = Math.round((completed / totalPairs) * 100);
+        progressFill.style.width = pct + '%';
+        progressText.textContent = `${completed}/${totalPairs} rabbis processed...`;
+
+        if (bestOverall) {
+          const isClose = bestDist < 100;
+          if (isClose) totalClose++;
+          const color = bestDist < 10 ? '#2e7d32' : bestDist < 50 ? '#558b2f' : bestDist < 100 ? '#f57f17' : bestDist < 500 ? '#e65100' : '#c62828';
+          cell.innerHTML = `<span style="color:${color};font-weight:bold;cursor:pointer;" title="Name: ${bestOverall.name} (skip ${bestOverall.nameSkip})\nDate: ${bestOverall.date} (skip ${bestOverall.dateSkip})\nDistance: ${bestDist} letters" onclick="viewWRRPair(${rabbi.id})">${bestDist}</span>`;
+          results.push({ rabbi, dist: bestDist, pair: bestOverall });
+        } else {
+          cell.innerHTML = '<span style="color:#ccc;">N/F</span>';
+        }
+
+        // Yield to UI
+        await new Promise(r => setTimeout(r, 0));
+      }
+
+      // Show summary
+      runBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      progressBar.style.display = 'none';
+
+      if (!wrrAbort && results.length > 0) {
+        results.sort((a, b) => a.dist - b.dist);
+        const avgDist = Math.round(results.reduce((s, r) => s + r.dist, 0) / results.length);
+        const closeCount = results.filter(r => r.dist < 100).length;
+        summary.style.display = '';
+        summary.innerHTML = `
+          <div style="font-weight:bold;color:#2e7d32;font-size:16px;margin-bottom:8px;">Experiment Complete</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div><strong>${results.length}</strong> rabbis with ELS pairs found</div>
+            <div><strong>${closeCount}</strong> pairs within 100 letters</div>
+            <div>Average closest distance: <strong>${avgDist}</strong> letters</div>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:#555;">
+            Click any distance value to view the name-date pair in the ELS matrix.
+            Lower distances indicate closer proximity of name and date ELS sequences.
+          </div>`;
+      }
+    };
+
+    window.cancelWRR = function() {
+      wrrAbort = true;
+      document.getElementById('wrrCancelBtn').style.display = 'none';
+      document.getElementById('wrrRunBtn').disabled = false;
+      document.getElementById('wrrProgress').textContent = 'Cancelled';
+    };
+
+    // View a specific rabbi's name-date pair in the scan matrix
+    window.viewWRRPair = function(rabbiId) {
+      const rabbi = WRR_RABBIS.find(r => r.id === rabbiId);
+      if (!rabbi || rabbi.dates.length === 0) return;
+      // Switch to scan mode with the best name and date as search terms
+      const nameToSearch = rabbi.names[0].replace(/\s+/g, '');
+      const dateToSearch = rabbi.dates[0].replace(/\s+/g, '');
+      // Put terms in textarea
+      document.getElementById('batchTextarea').value = nameToSearch + '\n' + dateToSearch;
+      // Switch to scan tab
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
+      document.querySelector('[data-mode="scan"]').classList.add('active');
+      document.getElementById('scan-mode').classList.add('active');
+    };
+
+    // Initialize WRR table when tab is shown
+    populateWRRTable();
+
     // ============= 3D MATRIX VIEW =============
     let THREE = null, OrbitControls = null;
     let scene3D = null, camera3D = null, renderer3D = null, controls3D = null;
@@ -2501,10 +2868,12 @@
     function render3DMatrix(hits, W, H) {
       if (!scene3D || !THREE) return;
 
-      // Clear existing meshes
+      // Clear existing meshes (geometry shared — dispose once separately)
       const toRemove = [];
+      const geoSet = new Set();
       scene3D.traverse(obj => { if (obj.isMesh) toRemove.push(obj); });
-      toRemove.forEach(obj => { obj.geometry.dispose(); obj.material.dispose(); scene3D.remove(obj); });
+      toRemove.forEach(obj => { geoSet.add(obj.geometry); obj.material.dispose(); scene3D.remove(obj); });
+      geoSet.forEach(g => g.dispose());
       meshUserData = [];
 
       // Build posMap: position -> { termIdxs, letter }
@@ -2735,6 +3104,8 @@
       }
       camera3D = null;
       meshUserData = [];
+      textureCache.forEach(t => t.dispose());
+      textureCache.clear();
       document.getElementById('matrix3DInfo').style.display = 'none';
       document.getElementById('matrix3DTooltip').style.display = 'none';
     }
