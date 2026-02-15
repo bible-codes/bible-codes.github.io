@@ -933,7 +933,8 @@
               <button class="btn-3d-ctrl" id="btn3DPause" onclick="toggle3DAutoRotate()" style="display:none;">Pause Rotation</button>
               <button class="btn-3d-ctrl" id="btn3DReset" onclick="reset3DCamera()" style="display:none;">Reset Camera</button>
               <button class="btn-3d-ctrl" id="btn3DVideo" onclick="vidShowPanel()" style="display:none;background:#c62828;">Video</button>
-              <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Download PNG</button>
+              <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Export PNG</button>
+              <button class="btn btn-small" onclick="exportMatrixJSON()" style="background:#555;">Export JSON</button>
               <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover Terms</button>
               <span style="display:inline-flex;gap:8px;align-items:center;font-size:11px;color:#333;margin-left:4px;">
                 <label style="cursor:pointer;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
@@ -2982,7 +2983,6 @@
       const matrixView = document.getElementById('scanMatrixView');
       if (!matrixView || matrixView.style.display === 'none') { alert('No matrix displayed'); return; }
 
-      // Use canvas rendering approach
       const grid = document.getElementById('scanMatrixGrid');
       const cells = grid.querySelectorAll('.matrix-cell');
       if (cells.length === 0) return;
@@ -2992,28 +2992,83 @@
       const rows = Math.ceil(cells.length / cols);
       const cellSize = 22;
       const padding = 40;
-      const headerHeight = 80;
+      const headerHeight = 60;
+
+      // --- Build term info lines (all terms with verses) ---
+      const termLines = [];
+      if (current3DHits && current3DHits.length > 0) {
+        for (const h of current3DHits) {
+          const color = TERM_COLORS[h.termIdx % 8];
+          const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+          const verseStr = verses.length > 0 ? verses.join(', ') : '';
+          termLines.push({ text: `${h.term}  pos:${h.pos.toLocaleString()} skip:${h.skip}  ${verseStr}`, color });
+        }
+      }
+
+      // --- Build verse text lines (all unique verses with full text) ---
+      const verseLines = [];
+      if (current3DHits && charDatabase) {
+        const seenVerses = new Set();
+        for (const h of current3DHits) {
+          for (let i = 0; i < h.term.length; i++) {
+            const p = h.pos + i * h.skip;
+            const vk = getVerseKey(p);
+            if (vk && !seenVerses.has(vk)) {
+              seenVerses.add(vk);
+              const verseLabel = getVerseForPosition(p);
+              const verseText = getVerseTextByKey(vk);
+              if (verseLabel && verseText) {
+                verseLines.push(`${verseLabel}: ${verseText}`);
+              }
+            }
+          }
+        }
+      }
+
+      // --- Build discovered terms lines ---
+      const discLines = [];
+      if (discoveredResults && discoveredResults.length > 0) {
+        const top = discoveredResults.filter(d => d.inDict).slice(0, 20);
+        for (const d of top) {
+          let line = `${d.word}  skip:${d.bestOcc.skip}  dist:${d.minDistance}  z:${d.zScore.toFixed(1)}`;
+          if (d.dictSource) line += `  [${d.dictSource}]`;
+          if (d.definition) line += `  — ${d.definition.substring(0, 50)}`;
+          discLines.push(line);
+        }
+      }
+
+      // --- Compute canvas size ---
+      const lineH = 18;
+      const sectionGap = 14;
+      const termSectionH = termLines.length > 0 ? termLines.length * lineH + sectionGap + 16 : 0;
+      const verseSectionH = verseLines.length > 0 ? verseLines.length * lineH + sectionGap + 16 : 0;
+      const discSectionH = discLines.length > 0 ? discLines.length * lineH + sectionGap + 16 : 0;
+      const footerH = termSectionH + verseSectionH + discSectionH + 20;
+
+      const matrixW = cols * cellSize;
+      const infoW = 700;
+      const canvasW = Math.max(matrixW + padding * 2, infoW + padding * 2);
+      const canvasH = headerHeight + rows * cellSize + padding * 2 + footerH;
 
       const canvas = document.createElement('canvas');
-      canvas.width = cols * cellSize + padding * 2;
-      canvas.height = rows * cellSize + padding * 2 + headerHeight;
+      canvas.width = canvasW;
+      canvas.height = canvasH;
       const ctx = canvas.getContext('2d');
 
       // Background
       ctx.fillStyle = '#1a1a28';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvasW, canvasH);
 
       // Title
       ctx.fillStyle = '#8bb8e8';
       ctx.font = 'bold 16px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(title, canvas.width / 2, 30);
+      ctx.fillText(title, canvasW / 2, 30);
 
-      // Stats/legend text
-      const legend = document.getElementById('scanMatrixLegend');
-      ctx.font = '12px sans-serif';
-      ctx.fillStyle = '#ccc';
-      ctx.fillText(legend?.textContent?.trim() || '', canvas.width / 2, 55);
+      // Subtitle with date
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#888';
+      ctx.fillText(`bible-codes.github.io — ${new Date().toLocaleDateString()}`, canvasW / 2, 48);
 
       // Color map
       const colorMap = {
@@ -3022,18 +3077,18 @@
         'term-color-6': '#795548', 'term-color-7': '#607d8b', 'multi-term': '#9c27b0'
       };
 
-      // Draw cells
+      // Draw matrix cells
       ctx.font = '14px Courier New';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      const matrixX = Math.floor((canvasW - matrixW) / 2);
 
       cells.forEach((cell, i) => {
         const col = i % cols;
         const row = Math.floor(i / cols);
-        const x = padding + col * cellSize;
-        const y = headerHeight + padding + row * cellSize;
+        const x = matrixX + col * cellSize;
+        const y = headerHeight + row * cellSize;
 
-        // Determine cell color
         let bg = '#2d2d44';
         let fg = '#e0e0e0';
         for (const [cls, color] of Object.entries(colorMap)) {
@@ -3050,11 +3105,109 @@
         ctx.fillText(cell.textContent, x + cellSize / 2, y + cellSize / 2);
       });
 
-      // Download as PNG (simpler, universally supported, better quality than canvas-to-PDF)
+      // --- Footer sections ---
+      ctx.textAlign = 'right'; // RTL-friendly
+      let yPos = headerHeight + rows * cellSize + padding;
+
+      // Terms section
+      if (termLines.length > 0) {
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillStyle = '#8bb8e8';
+        ctx.textAlign = 'left';
+        ctx.fillText('Search Terms:', padding, yPos);
+        yPos += lineH;
+        ctx.font = '12px Courier New';
+        for (const tl of termLines) {
+          ctx.fillStyle = tl.color;
+          ctx.fillText('■', padding, yPos);
+          ctx.fillStyle = '#e0e0e0';
+          ctx.textAlign = 'right';
+          ctx.fillText(tl.text, canvasW - padding, yPos);
+          ctx.textAlign = 'left';
+          yPos += lineH;
+        }
+        yPos += sectionGap;
+      }
+
+      // Verses section
+      if (verseLines.length > 0) {
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillStyle = '#a5d6a7';
+        ctx.textAlign = 'left';
+        ctx.fillText('Verses:', padding, yPos);
+        yPos += lineH;
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = '#ccc';
+        for (const vl of verseLines) {
+          ctx.textAlign = 'right';
+          ctx.fillText(vl, canvasW - padding, yPos);
+          ctx.textAlign = 'left';
+          yPos += lineH;
+        }
+        yPos += sectionGap;
+      }
+
+      // Discovered terms section
+      if (discLines.length > 0) {
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillStyle = '#ffcc80';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Discovered Terms (top ${discLines.length}):`, padding, yPos);
+        yPos += lineH;
+        ctx.font = '11px Courier New';
+        ctx.fillStyle = '#ddd';
+        for (const dl of discLines) {
+          ctx.textAlign = 'right';
+          ctx.fillText(dl, canvasW - padding, yPos);
+          ctx.textAlign = 'left';
+          yPos += lineH;
+        }
+      }
+
+      // Download
       const link = document.createElement('a');
       link.download = `els-matrix-${title.replace(/[^a-zA-Z0-9א-ת]/g, '-')}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
+    };
+
+    // --- Export matrix data as JSON ---
+    window.exportMatrixJSON = function() {
+      if (!current3DHits || current3DHits.length === 0) { alert('No matrix displayed'); return; }
+      const title = document.getElementById('scanMatrixTitle')?.textContent || 'ELS Matrix';
+
+      // Terms with verse info
+      const terms = current3DHits.map(h => {
+        const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+        const verseTexts = [];
+        if (charDatabase) {
+          const seen = new Set();
+          for (let i = 0; i < h.term.length; i++) {
+            const vk = getVerseKey(h.pos + i * h.skip);
+            if (vk && !seen.has(vk)) {
+              seen.add(vk);
+              const txt = getVerseTextByKey(vk);
+              if (txt) verseTexts.push({ ref: getVerseForPosition(h.pos + i * h.skip), text: txt });
+            }
+          }
+        }
+        return { term: h.term, position: h.pos, skip: h.skip, termIndex: h.termIdx, verses, verseTexts };
+      });
+
+      // Discovered terms
+      const discovered = (discoveredResults || []).filter(d => d.inDict).slice(0, 50).map(d => ({
+        word: d.word, skip: d.bestOcc.skip, position: d.bestOcc.pos, distance: d.minDistance,
+        zScore: d.zScore, source: d.dictSource, definition: d.definition, root: d.root,
+        isName: d.isName, isDate: d.isDate,
+      }));
+
+      const data = { title, exportedAt: new Date().toISOString(), searchTerms: terms, discoveredTerms: discovered };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.download = `els-matrix-${title.replace(/[^a-zA-Z0-9א-ת]/g, '-')}.json`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
     };
 
     // ============= DICTIONARY MODE =============
