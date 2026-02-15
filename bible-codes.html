@@ -598,6 +598,111 @@
       direction: rtl;
     }
 
+    /* 3D Video Capture Controls */
+    #videoControlPanel {
+      background: #1e1e30;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-top: 8px;
+      display: none;
+    }
+    #videoControlPanel .vid-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    #videoControlPanel .vid-row:last-child { margin-bottom: 0; }
+    .vid-btn {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+    }
+    .vid-btn-rec { background: #c62828; }
+    .vid-btn-rec:hover { background: #e53935; }
+    .vid-btn-rec.recording { background: #f44336; animation: rec-pulse 1s infinite; }
+    @keyframes rec-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .vid-btn-stop { background: #555; }
+    .vid-btn-stop:hover { background: #777; }
+    .vid-btn-frame { background: #37474f; }
+    .vid-btn-frame:hover { background: #546e7a; }
+    .vid-btn-dl { background: #2e7d32; }
+    .vid-btn-dl:hover { background: #43a047; }
+    #vidTimeline {
+      flex: 1;
+      min-width: 120px;
+      height: 6px;
+      appearance: none;
+      background: #333;
+      border-radius: 3px;
+      outline: none;
+    }
+    #vidTimeline::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #8bb8e8;
+      cursor: pointer;
+    }
+    #vidTimeline::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #8bb8e8;
+      cursor: pointer;
+      border: none;
+    }
+    #vidStatus {
+      font-size: 12px;
+      color: #aaa;
+      min-width: 140px;
+    }
+    #vidStatus .rec-dot { color: #f44336; }
+    .vid-label {
+      font-size: 11px;
+      color: #888;
+      white-space: nowrap;
+    }
+    #vidSpeedSlider {
+      width: 80px;
+      height: 4px;
+      appearance: none;
+      background: #444;
+      border-radius: 2px;
+      outline: none;
+    }
+    #vidSpeedSlider::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ce93d8;
+      cursor: pointer;
+    }
+    #vidSpeedSlider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ce93d8;
+      cursor: pointer;
+      border: none;
+    }
+    #vidFPSSelect {
+      background: #2a2a3d;
+      color: #ccc;
+      border: 1px solid #555;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
     @media (max-width: 600px) {
       .mode-tab .mode-desc { display: none; }
       .matrix-cell { width: 22px; height: 22px; font-size: 14px; }
@@ -822,6 +927,7 @@
               <button class="btn btn-small" id="btn3DToggle" onclick="toggle3DView()">3D View</button>
               <button class="btn-3d-ctrl" id="btn3DPause" onclick="toggle3DAutoRotate()" style="display:none;">Pause Rotation</button>
               <button class="btn-3d-ctrl" id="btn3DReset" onclick="reset3DCamera()" style="display:none;">Reset Camera</button>
+              <button class="btn-3d-ctrl" id="btn3DVideo" onclick="vidShowPanel()" style="display:none;background:#c62828;">Video</button>
               <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Download PNG</button>
             </div>
           </div>
@@ -836,6 +942,32 @@
               <div id="matrix3DTooltip"></div>
             </div>
             <div id="matrix3DInfo" style="display:none;"></div>
+            <div id="videoControlPanel">
+              <div class="vid-row">
+                <button class="vid-btn vid-btn-rec" id="vidRecBtn" onclick="vidToggleRecord()">Record</button>
+                <button class="vid-btn vid-btn-frame" onclick="vidCaptureFrame()" title="Capture single frame">+ Frame</button>
+                <button class="vid-btn vid-btn-frame" onclick="vidStepRotation(-1)" title="Step back 5 degrees">&#9664; Step</button>
+                <button class="vid-btn vid-btn-frame" onclick="vidStepRotation(1)" title="Step forward 5 degrees">Step &#9654;</button>
+                <span id="vidStatus">Ready</span>
+              </div>
+              <div class="vid-row">
+                <span class="vid-label">Timeline:</span>
+                <input type="range" id="vidTimeline" min="0" max="100" value="0" step="1" oninput="vidSeekTimeline(this.value)" disabled>
+                <span class="vid-label" id="vidTimeDisplay">0:00 / 0:00</span>
+              </div>
+              <div class="vid-row">
+                <span class="vid-label">Rotation speed:</span>
+                <input type="range" id="vidSpeedSlider" min="0" max="5" value="1" step="0.1" oninput="vidSetSpeed(this.value)">
+                <span class="vid-label" id="vidSpeedLabel">1.0x</span>
+                <span class="vid-label" style="margin-left:12px;">FPS:</span>
+                <select id="vidFPSSelect">
+                  <option value="24">24</option>
+                  <option value="30" selected>30</option>
+                  <option value="60">60</option>
+                </select>
+                <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download Video</button>
+              </div>
+            </div>
           </div>
           <div class="matrix-legend" id="scanMatrixLegend"></div>
         </div>
@@ -2942,6 +3074,17 @@
     let textureCache = new Map();
     let raycaster3D = null, mouse3D = null;
 
+    // Video capture state
+    let vidRecorder = null;
+    let vidStream = null;
+    let vidChunks = [];
+    let vidBlob = null;
+    let vidStartTime = 0;
+    let vidTimerInterval = null;
+    let vidFrameCount = 0;
+    let vidIsRecording = false;
+    let vidFrameBlobs = [];  // for frame-by-frame mode
+
     // Lazy-load Three.js from CDN
     async function load3DDeps() {
       if (THREE) return;
@@ -3038,7 +3181,7 @@
       camera3D = new THREE.PerspectiveCamera(50, w / h, 0.1, 2000);
       camera3D.position.set(0, 0, 50);
 
-      renderer3D = new THREE.WebGLRenderer({ antialias: true });
+      renderer3D = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
       renderer3D.setSize(w, h);
       renderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       container.appendChild(renderer3D.domElement);
@@ -3227,8 +3370,11 @@
       const d3 = document.getElementById('scanMatrix3D');
       const pauseBtn = document.getElementById('btn3DPause');
       const resetBtn = document.getElementById('btn3DReset');
+      const videoBtn = document.getElementById('btn3DVideo');
 
       if (is3DActive) {
+        // Stop any active recording
+        if (vidRecorder && vidRecorder.state === 'recording') vidStopRecord();
         // Switch back to 2D
         is3DActive = false;
         btn.textContent = '3D View';
@@ -3237,6 +3383,8 @@
         d3.style.display = 'none';
         pauseBtn.style.display = 'none';
         resetBtn.style.display = 'none';
+        videoBtn.style.display = 'none';
+        document.getElementById('videoControlPanel').style.display = 'none';
         destroy3DScene();
         return;
       }
@@ -3261,6 +3409,7 @@
       d3.style.display = '';
       pauseBtn.style.display = '';
       resetBtn.style.display = '';
+      videoBtn.style.display = '';
 
       const container = document.getElementById('matrix3DCanvas');
       // Remove old canvas if any
@@ -3316,6 +3465,7 @@
       textureCache.clear();
       document.getElementById('matrix3DInfo').style.display = 'none';
       document.getElementById('matrix3DTooltip').style.display = 'none';
+      vidCleanup();
     }
 
     // Resize handler
@@ -3328,6 +3478,238 @@
       renderer3D.setSize(w, h);
     }
     window.addEventListener('resize', onResize3D);
+
+    // ============= 3D VIDEO CAPTURE =============
+
+    window.vidShowPanel = function() {
+      const panel = document.getElementById('videoControlPanel');
+      panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    };
+
+    function vidUpdateStatus(text) {
+      document.getElementById('vidStatus').innerHTML = text;
+    }
+
+    function vidUpdateTime() {
+      if (!vidIsRecording) return;
+      const elapsed = (performance.now() - vidStartTime) / 1000;
+      const mm = Math.floor(elapsed / 60);
+      const ss = Math.floor(elapsed % 60).toString().padStart(2, '0');
+      document.getElementById('vidTimeDisplay').textContent = `${mm}:${ss}`;
+    }
+
+    window.vidToggleRecord = function() {
+      if (vidIsRecording) {
+        vidStopRecord();
+      } else {
+        vidStartRecord();
+      }
+    };
+
+    function vidStartRecord() {
+      if (!renderer3D) { alert('3D view not active'); return; }
+
+      const canvas = renderer3D.domElement;
+      const fps = parseInt(document.getElementById('vidFPSSelect').value) || 30;
+
+      // Capture stream from the WebGL canvas
+      vidStream = canvas.captureStream(fps);
+      vidChunks = [];
+      vidBlob = null;
+      vidFrameCount = 0;
+
+      // Choose best available codec
+      const mimeTypes = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+        'video/mp4'
+      ];
+      let mimeType = '';
+      for (const mt of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+      }
+      if (!mimeType) {
+        alert('Video recording not supported in this browser. Try Chrome or Firefox.');
+        return;
+      }
+
+      try {
+        vidRecorder = new MediaRecorder(vidStream, {
+          mimeType,
+          videoBitsPerSecond: 5000000 // 5 Mbps for quality
+        });
+      } catch (e) {
+        alert('Failed to create recorder: ' + e.message);
+        return;
+      }
+
+      vidRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          vidChunks.push(e.data);
+          vidFrameCount++;
+        }
+      };
+
+      vidRecorder.onstop = () => {
+        vidBlob = new Blob(vidChunks, { type: mimeType });
+        vidIsRecording = false;
+        clearInterval(vidTimerInterval);
+
+        const elapsed = (performance.now() - vidStartTime) / 1000;
+        const mm = Math.floor(elapsed / 60);
+        const ss = Math.floor(elapsed % 60).toString().padStart(2, '0');
+        vidUpdateStatus(`Recorded ${mm}:${ss} (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
+
+        const recBtn = document.getElementById('vidRecBtn');
+        recBtn.textContent = 'Record';
+        recBtn.classList.remove('recording');
+        document.getElementById('vidDownloadBtn').style.display = '';
+        document.getElementById('vidTimeline').disabled = false;
+        document.getElementById('vidTimeline').max = 100;
+        document.getElementById('vidTimeline').value = 100;
+
+        // Create preview URL for timeline scrubbing
+        const url = URL.createObjectURL(vidBlob);
+        vidSetupPreview(url, elapsed);
+      };
+
+      // Request data every 100ms for smooth timeline updates
+      vidRecorder.start(100);
+      vidIsRecording = true;
+      vidStartTime = performance.now();
+
+      const recBtn = document.getElementById('vidRecBtn');
+      recBtn.textContent = 'Stop';
+      recBtn.classList.add('recording');
+      document.getElementById('vidDownloadBtn').style.display = 'none';
+      document.getElementById('vidTimeline').disabled = true;
+      vidUpdateStatus('<span class="rec-dot">&#9679;</span> Recording...');
+
+      vidTimerInterval = setInterval(vidUpdateTime, 250);
+    }
+
+    function vidStopRecord() {
+      if (vidRecorder && vidRecorder.state === 'recording') {
+        vidRecorder.stop();
+      }
+      if (vidStream) {
+        vidStream.getTracks().forEach(t => t.stop());
+        vidStream = null;
+      }
+    }
+
+    // Frame-by-frame: pause rotation, capture one render frame
+    window.vidCaptureFrame = function() {
+      if (!renderer3D || !scene3D) return;
+      // Pause rotation during frame capture
+      if (controls3D) controls3D.autoRotate = false;
+      document.getElementById('btn3DPause').textContent = 'Resume Rotation';
+
+      // Force one render
+      controls3D.update();
+      renderer3D.render(scene3D, camera3D);
+
+      // Capture frame as PNG
+      const dataUrl = renderer3D.domElement.toDataURL('image/png');
+      vidFrameBlobs.push(dataUrl);
+      vidUpdateStatus(`${vidFrameBlobs.length} frame(s) captured`);
+    };
+
+    // Step rotation by degrees (for precise framing)
+    window.vidStepRotation = function(dir) {
+      if (!controls3D || !camera3D) return;
+      controls3D.autoRotate = false;
+      document.getElementById('btn3DPause').textContent = 'Resume Rotation';
+
+      const angle = dir * 5 * (Math.PI / 180); // 5 degree steps
+      const pos = camera3D.position.clone();
+      const target = controls3D.target.clone();
+      const offset = pos.sub(target);
+
+      // Rotate around Y axis
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      const x = offset.x * cos - offset.z * sin;
+      const z = offset.x * sin + offset.z * cos;
+      camera3D.position.set(target.x + x, camera3D.position.y, target.z + z);
+      camera3D.lookAt(target);
+      controls3D.update();
+      renderer3D.render(scene3D, camera3D);
+    };
+
+    // Rotation speed control
+    window.vidSetSpeed = function(val) {
+      const speed = parseFloat(val);
+      document.getElementById('vidSpeedLabel').textContent = speed.toFixed(1) + 'x';
+      if (controls3D) controls3D.autoRotateSpeed = speed;
+    };
+
+    // Timeline scrubbing for recorded video
+    let vidPreviewEl = null;
+    let vidDuration = 0;
+
+    function vidSetupPreview(url, duration) {
+      vidDuration = duration;
+      // Create hidden video element for seeking
+      if (vidPreviewEl) { vidPreviewEl.pause(); vidPreviewEl.remove(); }
+      vidPreviewEl = document.createElement('video');
+      vidPreviewEl.src = url;
+      vidPreviewEl.muted = true;
+      vidPreviewEl.style.display = 'none';
+      document.body.appendChild(vidPreviewEl);
+
+      vidPreviewEl.onloadedmetadata = () => {
+        vidDuration = vidPreviewEl.duration || duration;
+        const mm = Math.floor(vidDuration / 60);
+        const ss = Math.floor(vidDuration % 60).toString().padStart(2, '0');
+        document.getElementById('vidTimeDisplay').textContent = `${mm}:${ss} / ${mm}:${ss}`;
+      };
+    }
+
+    window.vidSeekTimeline = function(val) {
+      if (!vidPreviewEl || !vidDuration) return;
+      const pct = parseInt(val) / 100;
+      const time = pct * vidDuration;
+      vidPreviewEl.currentTime = time;
+      const mm = Math.floor(time / 60);
+      const ss = Math.floor(time % 60).toString().padStart(2, '0');
+      const tMM = Math.floor(vidDuration / 60);
+      const tSS = Math.floor(vidDuration % 60).toString().padStart(2, '0');
+      document.getElementById('vidTimeDisplay').textContent = `${mm}:${ss} / ${tMM}:${tSS}`;
+    };
+
+    window.vidDownload = function() {
+      if (!vidBlob) { alert('No recording to download'); return; }
+      const ext = vidBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(vidBlob);
+      a.download = `els-matrix-3d-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.${ext}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+
+    // Cleanup video state on 3D scene destroy
+    function vidCleanup() {
+      if (vidRecorder && vidRecorder.state === 'recording') {
+        vidRecorder.stop();
+      }
+      if (vidStream) {
+        vidStream.getTracks().forEach(t => t.stop());
+        vidStream = null;
+      }
+      if (vidPreviewEl) {
+        vidPreviewEl.pause();
+        vidPreviewEl.remove();
+        vidPreviewEl = null;
+      }
+      vidRecorder = null;
+      vidChunks = [];
+      vidBlob = null;
+      vidIsRecording = false;
+      vidFrameBlobs = [];
+      vidFrameCount = 0;
+      if (vidTimerInterval) { clearInterval(vidTimerInterval); vidTimerInterval = null; }
+    }
 
     // ============= INIT ON LOAD =============
     init();
