@@ -85,6 +85,26 @@ function wrrFindELSBoth(text, termNorm, maxSkip, cache) {
   return results;
 }
 
+// ---- SL (String of Letters) search: consecutive letters (skip=1) ----
+// Used in WRR2 for category expressions. Also searches reversed term.
+function findSL(text, termNorm) {
+  const results = [];
+  let idx = text.indexOf(termNorm);
+  while (idx !== -1) {
+    results.push({ pos: idx, skip: 1, len: termNorm.length });
+    idx = text.indexOf(termNorm, idx + 1);
+  }
+  const rev = [...termNorm].reverse().join('');
+  if (rev !== termNorm) {
+    idx = text.indexOf(rev);
+    while (idx !== -1) {
+      results.push({ pos: idx, skip: 1, len: termNorm.length });
+      idx = text.indexOf(rev, idx + 1);
+    }
+  }
+  return results;
+}
+
 // ---- 2D Euclidean distance on cylindrical array ----
 function wrr2DDist(p1, p2, w) {
   const r1 = Math.floor(p1 / w), c1 = p1 % w;
@@ -251,18 +271,32 @@ function epsilon(namePositions, nameSkips, datePositions, dateSkips) {
 }
 
 // ---- Perturb last 3 ELS positions by cumulative (x, x+y, x+y+z) ----
-// Returns new position array, or null if out of bounds or word too short.
+// Returns new position array, or null if out of bounds.
+// For words with k < 3, perturbs fewer positions:
+//   k >= 3: shift last 3 by (x, x+y, x+y+z)  [standard WRR]
+//   k = 2:  shift last 2 by (x, x+y)
+//   k = 1:  shift last 1 by (x)
 function perturbPositions(positions, x, y, z, textLen) {
   const k = positions.length;
-  if (k < 3) return null;
+  if (k === 0) return null;
 
   const perturbed = positions.slice();
-  perturbed[k - 3] += x;
-  perturbed[k - 2] += x + y;
-  perturbed[k - 1] += x + y + z;
-
-  for (let i = k - 3; i < k; i++) {
-    if (perturbed[i] < 0 || perturbed[i] >= textLen) return null;
+  if (k >= 3) {
+    perturbed[k - 3] += x;
+    perturbed[k - 2] += x + y;
+    perturbed[k - 1] += x + y + z;
+    for (let i = k - 3; i < k; i++) {
+      if (perturbed[i] < 0 || perturbed[i] >= textLen) return null;
+    }
+  } else if (k === 2) {
+    perturbed[0] += x;
+    perturbed[1] += x + y;
+    for (let i = 0; i < k; i++) {
+      if (perturbed[i] < 0 || perturbed[i] >= textLen) return null;
+    }
+  } else { // k === 1
+    perturbed[0] += x;
+    if (perturbed[0] < 0 || perturbed[0] >= textLen) return null;
   }
   return perturbed;
 }
@@ -372,15 +406,18 @@ self.onmessage = function(e) {
     runPermutationTest(e.data);
   } else if (action === 'run-wrr-full') {
     runWRRFull(e.data);
+  } else if (action === 'run-wrr2-nations') {
+    runWRR2Nations(e.data);
   }
 };
 
 // ---- ACTION: run — Main WRR experiment ----
 function runExperiment(data) {
-  const { genesisNorm, rabbis, skipCap, letterFreqs } = data;
+  const { genesisNorm, rabbis, skipCap, letterFreqs, expressionMode } = data;
+  const useSL = expressionMode === 'sl';
   try {
     const L = genesisNorm.length;
-    const rabbisWithDates = rabbis.filter(r => r.dates.length > 0);
+    const rabbisWithDates = rabbis.filter(r => r.dates && r.dates.length > 0);
     const elsCache = new Map();
     let completed = 0;
 
@@ -404,10 +441,15 @@ function runExperiment(data) {
           const dateNorm = normalizeSofiot(dateRaw.replace(/\s+/g, ''));
           if (dateNorm.length < 2) continue;
 
-          const dDate = wrrMaxSkip(dateNorm, L, letterFreqs, skipCap);
-          if (dDate > maxDw) maxDw = dDate;
-
-          const dateHits = wrrFindELSBoth(genesisNorm, dateNorm, dDate, elsCache);
+          let dateHits;
+          if (useSL) {
+            // WRR2: expressions searched as consecutive letters (SL)
+            dateHits = findSL(genesisNorm, dateNorm);
+          } else {
+            const dDate = wrrMaxSkip(dateNorm, L, letterFreqs, skipCap);
+            if (dDate > maxDw) maxDw = dDate;
+            dateHits = wrrFindELSBoth(genesisNorm, dateNorm, dDate, elsCache);
+          }
           if (dateHits.length === 0) continue;
 
           const pair = wrrBestProximity(nameHits, dateHits);
@@ -458,11 +500,12 @@ function runExperiment(data) {
 // Each permutation only re-computes proximity measures (~100ms each).
 function runPermutationTest(data) {
   const { genesisNorm, rabbis, skipCap, letterFreqs,
-          numPermutations, actualGeoMean } = data;
+          numPermutations, actualGeoMean, expressionMode } = data;
+  const useSL = expressionMode === 'sl';
 
   try {
     const L = genesisNorm.length;
-    const rabbisWithDates = rabbis.filter(r => r.dates.length > 0);
+    const rabbisWithDates = rabbis.filter(r => r.dates && r.dates.length > 0);
     const elsCache = new Map();
 
     // Step 1: Pre-process rabbis — normalize all name/date forms
@@ -484,14 +527,14 @@ function runPermutationTest(data) {
       allDateNorms.push(dateNorms);
     }
 
-    // Step 2: Pre-compute all ELS hits for every unique name and date form
+    // Step 2: Pre-compute all ELS hits for names, and ELS or SL hits for dates/expressions
     self.postMessage({
       type: 'perm-progress', completed: 0, total: numPermutations,
       betterCount: 0, currentPValue: 1, phase: 'precomputing'
     });
 
     const nameHitsMap = new Map();  // normalized name → hits[]
-    const dateHitsMap = new Map();  // normalized date → hits[]
+    const dateHitsMap = new Map();  // normalized date/expression → hits[]
 
     for (const r of processedRabbis) {
       for (const nn of r.nameNorms) {
@@ -502,8 +545,12 @@ function runPermutationTest(data) {
       }
       for (const dn of r.dateNorms) {
         if (!dateHitsMap.has(dn)) {
-          const d = wrrMaxSkip(dn, L, letterFreqs, skipCap);
-          dateHitsMap.set(dn, wrrFindELSBoth(genesisNorm, dn, d, elsCache));
+          if (useSL) {
+            dateHitsMap.set(dn, findSL(genesisNorm, dn));
+          } else {
+            const d = wrrMaxSkip(dn, L, letterFreqs, skipCap);
+            dateHitsMap.set(dn, wrrFindELSBoth(genesisNorm, dn, d, elsCache));
+          }
         }
       }
     }
@@ -779,4 +826,127 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen)
     pValue: betterCount / numPermutations,
     numPermutations, betterCount, actualOverallP
   });
+}
+
+// =============================================================================
+// ACTION: run-wrr2-nations — WRR2 Nations experiment (ELS names × SL expressions)
+// =============================================================================
+// Same c(w,w') methodology as WRR1, but:
+//   - Nation names (w)  → ELS search (|skip| ≥ 2)
+//   - Expressions (w')  → SL search (consecutive letters, skip=1)
+// Reuses computeC(), P-statistics, and permutation test infrastructure.
+//
+function runWRR2Nations(data) {
+  const { genesisNorm, nations, skipCap, letterFreqs,
+          runPermTest, numPermutations } = data;
+
+  try {
+    const L = genesisNorm.length;
+    const nationsWithExpr = nations.filter(n => n.expressions && n.expressions.length > 0);
+    const elsCache = new Map();
+
+    // ---- Phase 1: Find all ELS hits (names) and SL hits (expressions) ----
+    self.postMessage({
+      type: 'wrr-phase', phase: 'els-search',
+      message: 'Finding ELS (nation names) and SL (category expressions)...'
+    });
+
+    const processed = [];
+
+    for (const nation of nationsWithExpr) {
+      const nameNorms = [], nameHitsArr = [];
+      for (const nameRaw of nation.names) {
+        const nn = normalizeSofiot(nameRaw.replace(/\s+/g, ''));
+        if (nn.length < 2) continue;
+        const dw = wrrMaxSkip(nn, L, letterFreqs, skipCap);
+        const hits = wrrFindELSBoth(genesisNorm, nn, dw, elsCache);
+        nameNorms.push(nn);
+        nameHitsArr.push(hits);
+      }
+
+      // SL search for category expressions (consecutive letters in text)
+      const dateNorms = [], dateHitsArr = [];
+      for (const exprRaw of nation.expressions) {
+        const en = normalizeSofiot(exprRaw.replace(/\s+/g, ''));
+        if (en.length < 2) continue;
+        const hits = findSL(genesisNorm, en);
+        dateNorms.push(en);
+        dateHitsArr.push(hits);
+      }
+
+      // Use dateHitsArr/dateNorms field names for compatibility with permutation test
+      processed.push({
+        id: nation.id, en: nation.en,
+        names: nation.names, dates: nation.expressions,
+        nameNorms, dateNorms, nameHitsArr, dateHitsArr
+      });
+    }
+
+    // ---- Phase 2: Compute c(w,w') for each nation ----
+    self.postMessage({
+      type: 'wrr-phase', phase: 'computing-c',
+      message: 'Computing c(w,w\') perturbation statistics (125 perturbations each)...'
+    });
+
+    const rabbiResults = [];
+    let completed = 0;
+
+    for (const r of processed) {
+      let bestC = 1.0, bestNameIdx = -1, bestDateIdx = -1;
+      let bestNameHitCount = 0, bestDateHitCount = 0;
+
+      for (let ni = 0; ni < r.nameHitsArr.length; ni++) {
+        if (r.nameHitsArr[ni].length === 0) continue;
+        for (let di = 0; di < r.dateHitsArr.length; di++) {
+          if (r.dateHitsArr[di].length === 0) continue;
+          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L);
+          if (c < bestC) {
+            bestC = c;
+            bestNameIdx = ni;
+            bestDateIdx = di;
+            bestNameHitCount = r.nameHitsArr[ni].length;
+            bestDateHitCount = r.dateHitsArr[di].length;
+          }
+        }
+      }
+
+      completed++;
+      const result = {
+        rabbiId: r.id, en: r.en, c: bestC,
+        name: bestNameIdx >= 0 ? r.names[bestNameIdx] : null,
+        date: bestDateIdx >= 0 ? r.dates[bestDateIdx] : null,
+        nameHitCount: bestNameHitCount,
+        dateHitCount: bestDateHitCount
+      };
+      rabbiResults.push(result);
+
+      self.postMessage({
+        type: 'wrr-rabbi-done', completed, total: processed.length, result
+      });
+    }
+
+    // ---- Phase 3: Compute P₁, P₂, P₃, P₄ ----
+    const cValues = rabbiResults.filter(r => r.c < 1.0).map(r => r.c);
+    const p1 = computeP1(cValues);
+    const p2 = computeP2(cValues);
+    const p3 = computeP3(cValues);
+    const p4 = computeP4(cValues);
+    const overallP = 4 * Math.min(p1, p2, p3, p4);
+
+    self.postMessage({
+      type: 'wrr-complete',
+      rabbiResults, cValues, p1, p2, p3, p4, overallP,
+      matchedCount: cValues.length,
+      totalRabbis: processed.length
+    });
+
+    // ---- Phase 4: Optional permutation test ----
+    // Reuses runWRRPermTestFull — processed data has compatible field names
+    if (runPermTest && numPermutations > 0) {
+      runWRRPermTestFull(processed, overallP, numPermutations, L);
+    }
+
+  } catch (err) {
+    self.postMessage({ type: 'error', message: err.message || String(err) });
+  }
 }

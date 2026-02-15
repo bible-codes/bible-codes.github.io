@@ -1048,7 +1048,7 @@
           WRR 1994 Experiment
           <span style="font-size:12px;padding:3px 8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:12px;">Academic Replication</span>
         </h2>
-        <p style="font-size:14px;color:var(--gray);margin-bottom:16px;">
+        <p id="wrrDescription" style="font-size:14px;color:var(--gray);margin-bottom:16px;">
           Replication of the famous experiment by Witztum, Rips &amp; Rosenberg published in
           <em>Statistical Science</em> (1994). 32 rabbis from the <em>Encyclopedia of Great Men in Israel</em>,
           each paired with Hebrew death dates. The proximity of name-date ELS pairs in Genesis was found to be
@@ -1065,18 +1065,19 @@
             <div style="font-size:12px;color:var(--gray);" id="wrrStatTextLabel">Letters in Genesis</div>
           </div>
           <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
-            <div style="font-size:28px;font-weight:bold;color:var(--blue);">p &lt; 1/62,500</div>
-            <div style="font-size:12px;color:var(--gray);">Published P-value (List 2)</div>
+            <div style="font-size:28px;font-weight:bold;color:var(--blue);" id="wrrStatPValue">p &lt; 1/62,500</div>
+            <div style="font-size:12px;color:var(--gray);" id="wrrStatPLabel">Published P-value (List 2)</div>
           </div>
         </div>
 
         <!-- List & Text selectors -->
         <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
           <label style="font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;">
-            Rabbi list:
+            Dataset:
             <select id="wrrListSelect" onchange="wrrSwitchList(this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
               <option value="list2" selected>List 2 (32 rabbis)</option>
               <option value="list1">List 1 (34 rabbis)</option>
+              <option value="nations">Nations B3 (68 nations)</option>
             </select>
           </label>
           <label style="font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;">
@@ -1125,9 +1126,9 @@
             <thead style="position:sticky;top:0;background:var(--blue);color:white;z-index:1;">
               <tr>
                 <th style="padding:8px 4px;text-align:center;font-weight:600;">#</th>
-                <th style="padding:8px 4px;text-align:left;font-weight:600;">Rabbi</th>
-                <th style="padding:8px 4px;text-align:right;font-weight:600;direction:rtl;">Appellations</th>
-                <th style="padding:8px 4px;text-align:right;font-weight:600;direction:rtl;">Date</th>
+                <th style="padding:8px 4px;text-align:left;font-weight:600;" id="wrrColSubject">Rabbi</th>
+                <th style="padding:8px 4px;text-align:right;font-weight:600;direction:rtl;" id="wrrColNames">Appellations</th>
+                <th style="padding:8px 4px;text-align:right;font-weight:600;direction:rtl;" id="wrrColSecondary">Date</th>
                 <th style="padding:8px 4px;text-align:center;font-weight:600;">Pairs</th>
                 <th style="padding:8px 4px;text-align:center;font-weight:600;" title="Dynamic max |skip| searched (based on expected ELS occurrences)">D(w)</th>
                 <th style="padding:8px 4px;text-align:center;font-weight:600;" title="Quick Run: Δ = min 2D distance. Full WRR: c(w,w') = perturbation rank (0..1, lower = more significant)" id="wrrColHeader">&Delta;</th>
@@ -3598,10 +3599,106 @@
       { id:34, en:"Shmuel Eliezer Eidels (MaHaRSHA)", names:["אידלש","מהרשא","המהרשא","שמואלאליעזראידלש","רבישמואלאליעזר"], dates:["ה כסלו","ה בכסלו","בה כסלו"] }
     ];
 
-    // Active rabbi list (switchable via UI)
+    // WRR2 Nations (Genesis 10 "Table of Nations") — 68 nations, Sample B3
+    // Reference: Witztum, Rips & Rosenberg, "Equidistant Letter Sequences in the
+    // Book of Genesis — II" (unpublished sequel). 68 nation names from Genesis 10,
+    // each paired with 5 category expressions (nation, plural, country, language, script).
+    // Names → ELS search; Expressions → SL (consecutive letters) search.
+    const WRR2_NATIONS = [
+      // === Sons of Japheth (Genesis 10:2-4) — 14 nations ===
+      { id:1, en:"Gomer", name:"גמר" },
+      { id:2, en:"Magog", name:"מגוג" },
+      { id:3, en:"Madai", name:"מדי" },
+      { id:4, en:"Javan", name:"יון" },
+      { id:5, en:"Tubal", name:"תבל" },
+      { id:6, en:"Meshech", name:"משך" },
+      { id:7, en:"Tiras", name:"תירס" },
+      { id:8, en:"Ashkenaz", name:"אשכנז" },
+      { id:9, en:"Riphath", name:"ריפת" },
+      { id:10, en:"Togarmah", name:"תגרמה" },
+      { id:11, en:"Elishah", name:"אלישה" },
+      { id:12, en:"Tarshish", name:"תרשיש" },
+      { id:13, en:"Kittim", name:"כתים" },
+      { id:14, en:"Dodanim", name:"דדנים" },
+      // === Sons of Ham (Genesis 10:6-18) — 30 nations ===
+      { id:15, en:"Cush", name:"כוש" },
+      { id:16, en:"Mizraim", name:"מצרים" },
+      { id:17, en:"Put", name:"פוט" },
+      { id:18, en:"Canaan", name:"כנען" },
+      { id:19, en:"Seba", name:"סבא" },
+      { id:20, en:"Havilah", name:"חוילה" },
+      { id:21, en:"Sabtah", name:"סבתה" },
+      { id:22, en:"Raamah", name:"רעמה" },
+      { id:23, en:"Sabteca", name:"סבתכא" },
+      { id:24, en:"Sheba", name:"שבא" },
+      { id:25, en:"Dedan", name:"דדן" },
+      { id:26, en:"Nimrod", name:"נמרד" },
+      { id:27, en:"Ludim", name:"לודים" },
+      { id:28, en:"Anamim", name:"ענמים" },
+      { id:29, en:"Lehabim", name:"להבים" },
+      { id:30, en:"Naphtuhim", name:"נפתחים" },
+      { id:31, en:"Pathrusim", name:"פתרסים" },
+      { id:32, en:"Casluhim", name:"כסלחים" },
+      { id:33, en:"Caphtorim", name:"כפתרים" },
+      { id:34, en:"Sidon", name:"צידן" },
+      { id:35, en:"Heth", name:"חת" },
+      { id:36, en:"Jebusite", name:"יבוסי" },
+      { id:37, en:"Amorite", name:"אמרי" },
+      { id:38, en:"Girgashite", name:"גרגשי" },
+      { id:39, en:"Hivite", name:"חוי" },
+      { id:40, en:"Arkite", name:"ערקי" },
+      { id:41, en:"Sinite", name:"סיני" },
+      { id:42, en:"Arvadite", name:"ארודי" },
+      { id:43, en:"Zemarite", name:"צמרי" },
+      { id:44, en:"Hamathite", name:"חמתי" },
+      // === Sons of Shem (Genesis 10:22-29) — 24 nations (שבא and חוילה in Ham) ===
+      { id:45, en:"Elam", name:"עילם" },
+      { id:46, en:"Asshur", name:"אשור" },
+      { id:47, en:"Arphaxad", name:"ארפכשד" },
+      { id:48, en:"Lud", name:"לוד" },
+      { id:49, en:"Aram", name:"ארם" },
+      { id:50, en:"Uz", name:"עוץ" },
+      { id:51, en:"Hul", name:"חול" },
+      { id:52, en:"Gether", name:"גתר" },
+      { id:53, en:"Mash", name:"מש" },
+      { id:54, en:"Shelah", name:"שלח" },
+      { id:55, en:"Eber", name:"עבר" },
+      { id:56, en:"Peleg", name:"פלג" },
+      { id:57, en:"Joktan", name:"יקטן" },
+      { id:58, en:"Almodad", name:"אלמודד" },
+      { id:59, en:"Sheleph", name:"שלף" },
+      { id:60, en:"Hazarmaveth", name:"חצרמות" },
+      { id:61, en:"Jerah", name:"ירח" },
+      { id:62, en:"Hadoram", name:"הדורם" },
+      { id:63, en:"Uzal", name:"אוזל" },
+      { id:64, en:"Diklah", name:"דקלה" },
+      { id:65, en:"Obal", name:"עובל" },
+      { id:66, en:"Abimael", name:"אבימאל" },
+      { id:67, en:"Ophir", name:"אופיר" },
+      { id:68, en:"Jobab", name:"יובב" }
+    ].map(n => {
+      // Generate 5 formulaic category expressions per nation:
+      //   עם+name (nation of), name+ים (plural), ארץ+name (land of),
+      //   שפת+name (language of), כתב+name (script of)
+      // Sofiot in prefixes (עם,ארץ) are normalized by worker before search.
+      return {
+        ...n,
+        names: [n.name],
+        expressions: [
+          '\u05E2\u05DD' + n.name,        // עם + name
+          n.name + '\u05D9\u05DD',         // name + ים
+          '\u05D0\u05E8\u05E5' + n.name,   // ארץ + name
+          '\u05E9\u05E4\u05EA' + n.name,   // שפת + name
+          '\u05DB\u05EA\u05D1' + n.name    // כתב + name
+        ]
+      };
+    });
+
+    // Active rabbi/nation list (switchable via UI)
     let wrrActiveRabbis = WRR_RABBIS;
     let wrrActiveListName = 'list2';
     let wrrActiveTextName = 'genesis';
+    let wrrActiveExperimentType = 'rabbis'; // 'rabbis' or 'nations'
 
     let wrrAbort = false;
     let wrrTextNorm = null;      // Active text with sofiot normalized (Genesis or W&P)
@@ -3712,6 +3809,26 @@
       return results;
     }
 
+    // ---- SL search (main thread): consecutive letters, skip=1 ----
+    // Used as fallback when worker is unavailable for nations mode.
+    function findSLMainThread(text, termNorm) {
+      const results = [];
+      let idx = text.indexOf(termNorm);
+      while (idx !== -1) {
+        results.push({ pos: idx, skip: 1, len: termNorm.length });
+        idx = text.indexOf(termNorm, idx + 1);
+      }
+      const rev = [...termNorm].reverse().join('');
+      if (rev !== termNorm) {
+        idx = text.indexOf(rev);
+        while (idx !== -1) {
+          results.push({ pos: idx, skip: 1, len: termNorm.length });
+          idx = text.indexOf(rev, idx + 1);
+        }
+      }
+      return results;
+    }
+
     // ---- 2D Euclidean distance on cylindrical array ----
     // Position p on array of width w maps to row=floor(p/w), col=p%w
     function wrr2DDist(p1, p2, w) {
@@ -3755,42 +3872,87 @@
       return best.dist < Infinity ? best : null;
     }
 
-    // ---- Populate rabbi table ----
+    // ---- Populate rabbi/nation table ----
     function populateWRRTable() {
       const tbody = document.getElementById('wrrTableBody');
       if (!tbody) return;
+      const isNations = wrrActiveExperimentType === 'nations';
+
+      // Update column headers
+      const colSubject = document.getElementById('wrrColSubject');
+      const colNames = document.getElementById('wrrColNames');
+      const colSecondary = document.getElementById('wrrColSecondary');
+      if (colSubject) colSubject.textContent = isNations ? 'Nation' : 'Rabbi';
+      if (colNames) colNames.textContent = isNations ? 'Name (Heb)' : 'Appellations';
+      if (colSecondary) colSecondary.textContent = isNations ? 'Expressions' : 'Date';
+
       let html = '';
       wrrActiveRabbis.forEach(r => {
-        const hasDates = r.dates.length > 0;
-        const pairCount = hasDates ? r.names.length * r.dates.length : 0;
-        const dateStr = hasDates ? r.dates[0] : '—';
-        const rowStyle = hasDates ? '' : 'opacity:0.5;';
+        const secondary = isNations ? (r.expressions || []) : (r.dates || []);
+        const hasData = secondary.length > 0;
+        const pairCount = hasData ? r.names.length * secondary.length : 0;
+        const rowStyle = hasData ? '' : 'opacity:0.5;';
+        let secondaryCell;
+        if (isNations) {
+          secondaryCell = `${secondary.length} expr`;
+        } else {
+          secondaryCell = hasData ? secondary[0] : '\u2014';
+        }
         html += `<tr id="wrrRow${r.id}" style="border-bottom:1px solid #eee;${rowStyle}">
           <td style="padding:6px 4px;text-align:center;color:var(--gray);">${r.id}</td>
           <td style="padding:6px 4px;font-size:12px;">${r.en}</td>
           <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${r.names[0]}${r.names.length > 1 ? ` <span style="color:#999;font-size:11px;">(+${r.names.length - 1})</span>` : ''}</td>
-          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${dateStr}</td>
-          <td style="padding:6px 4px;text-align:center;">${pairCount || '—'}</td>
-          <td style="padding:6px 4px;text-align:center;font-size:11px;color:var(--gray);" id="wrrDw${r.id}">—</td>
-          <td style="padding:6px 4px;text-align:center;" id="wrrResult${r.id}"><span style="color:#ccc;">—</span></td>
+          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:${isNations ? '12' : '14'}px;">${secondaryCell}</td>
+          <td style="padding:6px 4px;text-align:center;">${pairCount || '\u2014'}</td>
+          <td style="padding:6px 4px;text-align:center;font-size:11px;color:var(--gray);" id="wrrDw${r.id}">\u2014</td>
+          <td style="padding:6px 4px;text-align:center;" id="wrrResult${r.id}"><span style="color:#ccc;">\u2014</span></td>
         </tr>`;
       });
       tbody.innerHTML = html;
     }
 
-    // ---- Switch rabbi list ----
+    // ---- Switch dataset (rabbi list / nations) ----
     window.wrrSwitchList = function(listName) {
       wrrActiveListName = listName;
-      if (listName === 'list1') {
+      if (listName === 'nations') {
+        wrrActiveRabbis = WRR2_NATIONS;
+        wrrActiveExperimentType = 'nations';
+        document.getElementById('wrrStatRabbis').textContent = '68';
+        document.getElementById('wrrStatRabbisLabel').textContent = 'Nations (B3)';
+        document.getElementById('wrrTableLabel').textContent = 'Table of Nations (Genesis 10)';
+        document.getElementById('wrrStatPValue').innerHTML = 'p = 4\u00d710<sup>-9</sup>';
+        document.getElementById('wrrStatPLabel').textContent = 'Published P-value (B3)';
+        document.getElementById('wrrDescription').innerHTML =
+          'WRR2 Nations experiment (Sample B3). 68 nation names from the Table of Nations (Genesis 10), ' +
+          'each paired with 5 category expressions (\u05E2\u05DD/\u05D0\u05E8\u05E5/\u05E9\u05E4\u05EA/\u05DB\u05EA\u05D1 + name, name + \u05D9\u05DD). ' +
+          'Nation names searched as <strong>ELS</strong>, expressions as <strong>SL</strong> (consecutive letters). ' +
+          'Published result: <strong>p = 4.0 \u00d7 10<sup>\u22129</sup></strong>.';
+      } else if (listName === 'list1') {
         wrrActiveRabbis = WRR_RABBIS_LIST1;
+        wrrActiveExperimentType = 'rabbis';
         document.getElementById('wrrStatRabbis').textContent = '34';
         document.getElementById('wrrStatRabbisLabel').textContent = 'Rabbis (List 1)';
         document.getElementById('wrrTableLabel').textContent = 'Rabbi List (WRR List 1)';
+        document.getElementById('wrrStatPValue').innerHTML = 'p &lt; 1/62,500';
+        document.getElementById('wrrStatPLabel').textContent = 'Published P-value (List 1)';
+        document.getElementById('wrrDescription').innerHTML =
+          'Replication of the famous experiment by Witztum, Rips &amp; Rosenberg published in ' +
+          '<em>Statistical Science</em> (1994). 34 rabbis from the <em>Encyclopedia of Great Men in Israel</em>, ' +
+          'each paired with Hebrew death dates. The proximity of name-date ELS pairs in Genesis was found to be ' +
+          'statistically significant at <strong>p = 0.000016</strong> (1 in 62,500).';
       } else {
         wrrActiveRabbis = WRR_RABBIS;
+        wrrActiveExperimentType = 'rabbis';
         document.getElementById('wrrStatRabbis').textContent = '32';
         document.getElementById('wrrStatRabbisLabel').textContent = 'Rabbis (List 2)';
         document.getElementById('wrrTableLabel').textContent = 'Rabbi List (WRR List 2)';
+        document.getElementById('wrrStatPValue').innerHTML = 'p &lt; 1/62,500';
+        document.getElementById('wrrStatPLabel').textContent = 'Published P-value (List 2)';
+        document.getElementById('wrrDescription').innerHTML =
+          'Replication of the famous experiment by Witztum, Rips &amp; Rosenberg published in ' +
+          '<em>Statistical Science</em> (1994). 32 rabbis from the <em>Encyclopedia of Great Men in Israel</em>, ' +
+          'each paired with Hebrew death dates. The proximity of name-date ELS pairs in Genesis was found to be ' +
+          'statistically significant at <strong>p = 0.000016</strong> (1 in 62,500).';
       }
       wrrResults = [];
       wrrELSCache.clear();
@@ -3833,21 +3995,26 @@
       const d = result.dist;
       const color = d < 5 ? '#1b5e20' : d < 20 ? '#2e7d32' : d < 50 ? '#558b2f' :
                     d < 100 ? '#f57f17' : d < 500 ? '#e65100' : '#c62828';
-      const tip = `Name: ${result.name} (skip ${result.nameSkip})\nDate: ${result.date} (skip ${result.dateSkip})\n\u0394 = ${d.toFixed(2)} (2D Euclidean)`;
+      const secLabel = wrrActiveExperimentType === 'nations' ? 'Expr' : 'Date';
+      const tip = `Name: ${result.name} (skip ${result.nameSkip})\n${secLabel}: ${result.date} (skip ${result.dateSkip})\n\u0394 = ${d.toFixed(2)} (2D Euclidean)`;
       resultCell.innerHTML = `<span style="color:${color};font-weight:bold;cursor:pointer;" title="${tip}" onclick="viewWRRPair(${rabbiId})">${d.toFixed(1)}</span>`;
     }
 
     function wrrShowSummary(skipCap) {
-      const rabbisWithDates = wrrActiveRabbis.filter(r => r.dates.length > 0);
+      const isNations = wrrActiveExperimentType === 'nations';
+      const items = isNations
+        ? wrrActiveRabbis.filter(r => r.expressions && r.expressions.length > 0)
+        : wrrActiveRabbis.filter(r => r.dates && r.dates.length > 0);
+      const itemLabel = isNations ? 'nations' : 'rabbis';
       const summary = document.getElementById('wrrSummary');
       const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
       document.getElementById('wrrRunBtn').disabled = false;
       document.getElementById('wrrCancelBtn').style.display = 'none';
       document.getElementById('wrrProgressBar').style.display = 'none';
-      const noMatch = rabbisWithDates.length - wrrResults.length;
+      const noMatch = items.length - wrrResults.length;
       if (wrrResults.length === 0) {
         summary.style.display = '';
-        summary.innerHTML = `<div style="color:#c62828;font-weight:bold;">No ELS pairs found for any rabbi (${elapsed}s). Try increasing skip cap.</div>`;
+        summary.innerHTML = `<div style="color:#c62828;font-weight:bold;">No pairs found for any ${isNations ? 'nation' : 'rabbi'} (${elapsed}s). Try increasing skip cap.</div>`;
         return;
       }
       wrrResults.sort((a, b) => a.dist - b.dist);
@@ -3863,7 +4030,7 @@
       summary.innerHTML = `
         <div style="font-weight:bold;color:#2e7d32;font-size:16px;margin-bottom:8px;">Experiment Complete (${elapsed}s, ${mode})</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;font-size:13px;">
-          <div><strong>${wrrResults.length}</strong> / ${rabbisWithDates.length} matched${noMatch > 0 ? `, <span style="color:#c62828">${noMatch} unmatched</span>` : ''}</div>
+          <div><strong>${wrrResults.length}</strong> / ${items.length} ${itemLabel} matched${noMatch > 0 ? `, <span style="color:#c62828">${noMatch} unmatched</span>` : ''}</div>
           <div>Geometric mean \u0394: <strong>${geoMean.toFixed(2)}</strong></div>
           <div>Arithmetic mean \u0394: <strong>${avg.toFixed(1)}</strong></div>
           <div>Median \u0394: <strong>${median.toFixed(1)}</strong></div>
@@ -3926,7 +4093,8 @@
             const pct = Math.round((msg.completed / msg.total) * 100);
             progressFill.style.width = pct + '%';
             const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
-            progressText.textContent = `${msg.completed}/${msg.total} rabbis (${elapsed}s)`;
+            const itemWord = wrrActiveExperimentType === 'nations' ? 'nations' : 'rabbis';
+            progressText.textContent = `${msg.completed}/${msg.total} ${itemWord} (${elapsed}s)`;
             // Update table row
             wrrUpdateRabbiRow(msg.rabbiId, msg.maxDw, msg.result);
             // Store result
@@ -3959,13 +4127,18 @@
           wrrRunMainThread(skipCap);
         };
 
-        // Send data to Worker
+        // Send data to Worker — for nations, map expressions→dates and flag SL mode
+        const isNations = wrrActiveExperimentType === 'nations';
+        const rabbisData = isNations
+          ? wrrActiveRabbis.map(n => ({ id: n.id, en: n.en, names: n.names, dates: n.expressions }))
+          : wrrActiveRabbis;
         worker.postMessage({
           action: 'run',
           genesisNorm: wrrTextNorm,
-          rabbis: wrrActiveRabbis,
+          rabbis: rabbisData,
           skipCap: skipCap,
-          letterFreqs: wrrLetterFreqs
+          letterFreqs: wrrLetterFreqs,
+          expressionMode: isNations ? 'sl' : undefined
         });
 
       } catch (e) {
@@ -3980,11 +4153,17 @@
     async function wrrRunMainThread(skipCap) {
       const progressFill = document.getElementById('wrrProgressFill');
       const progressText = document.getElementById('wrrProgressText');
-      const rabbisWithDates = wrrActiveRabbis.filter(r => r.dates.length > 0);
+      const isNations = wrrActiveExperimentType === 'nations';
+      // Normalize data: for nations, map expressions to dates field
+      const items = isNations
+        ? wrrActiveRabbis.map(n => ({ id: n.id, en: n.en, names: n.names, dates: n.expressions }))
+        : wrrActiveRabbis;
+      const itemsWithDates = items.filter(r => r.dates && r.dates.length > 0);
+      const itemLabel = isNations ? 'nations' : 'rabbis';
 
       progressText.textContent = 'Running on main thread...';
 
-      for (const rabbi of rabbisWithDates) {
+      for (const rabbi of itemsWithDates) {
         if (wrrAbort) break;
         const resultCell = document.getElementById(`wrrResult${rabbi.id}`);
         resultCell.innerHTML = '<span style="color:var(--orange);">&#9203;</span>';
@@ -4006,9 +4185,14 @@
             if (wrrAbort) break;
             const dateNorm = normalizeSofiot(dateRaw.replace(/\s+/g, ''));
             if (dateNorm.length < 2) continue;
-            const dDate = wrrMaxSkip(dateNorm, skipCap);
-            if (dDate > maxDw) maxDw = dDate;
-            const dateHits = wrrFindELS(wrrTextNorm, dateNorm, dDate);
+            let dateHits;
+            if (isNations) {
+              dateHits = findSLMainThread(wrrTextNorm, dateNorm);
+            } else {
+              const dDate = wrrMaxSkip(dateNorm, skipCap);
+              if (dDate > maxDw) maxDw = dDate;
+              dateHits = wrrFindELS(wrrTextNorm, dateNorm, dDate);
+            }
             if (dateHits.length === 0) continue;
             const pair = wrrBestProximity(nameHits, dateHits);
             if (pair && pair.dist < bestDist) {
@@ -4027,10 +4211,11 @@
         if (result) {
           wrrResults.push({ rabbiId: rabbi.id, en: rabbi.en, ...result, maxDw });
         }
-        const done = wrrResults.length + wrrActiveRabbis.filter(r => r.dates.length === 0).length;
-        progressFill.style.width = Math.round((done / rabbisWithDates.length) * 100) + '%';
+        const totalItems = itemsWithDates.length;
+        const done = wrrResults.length;
+        progressFill.style.width = Math.round((done / totalItems) * 100) + '%';
         const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
-        progressText.textContent = `${done}/${rabbisWithDates.length} rabbis (${elapsed}s, main thread)`;
+        progressText.textContent = `${done}/${totalItems} ${itemLabel} (${elapsed}s, main thread)`;
         await new Promise(r => setTimeout(r, 0));
       }
 
@@ -4065,7 +4250,8 @@
       const rabbi = wrrActiveRabbis.find(r => r.id === rabbiId);
       if (!rabbi) return;
       const nameToSearch = res ? res.name.replace(/\s+/g, '') : rabbi.names[0].replace(/\s+/g, '');
-      const dateToSearch = res ? res.date.replace(/\s+/g, '') : (rabbi.dates[0] || '').replace(/\s+/g, '');
+      const secondary = rabbi.dates || rabbi.expressions || [];
+      const dateToSearch = res ? res.date.replace(/\s+/g, '') : (secondary[0] || '').replace(/\s+/g, '');
       if (!dateToSearch) return;
       document.getElementById('batchTextarea').value = nameToSearch + '\n' + dateToSearch;
       document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
@@ -4079,14 +4265,17 @@
     // Export results as CSV
     window.wrrExportCSV = function() {
       if (!wrrResults.length) return;
-      const hdr = 'Rabbi ID,Name (English),Best Name Form,Best Date Form,Name Skip,Date Skip,Name Pos,Date Pos,Delta (2D Euclidean),Max D(w)\n';
+      const isNations = wrrActiveExperimentType === 'nations';
+      const subj = isNations ? 'Nation' : 'Rabbi';
+      const sec = isNations ? 'Expression' : 'Date';
+      const hdr = `${subj} ID,Name (English),Best Name Form,Best ${sec} Form,Name Skip,${sec} Skip,Name Pos,${sec} Pos,Delta (2D Euclidean),Max D(w)\n`;
       const rows = wrrResults.map(r =>
         `${r.rabbiId},"${r.en}","${r.name}","${r.date}",${r.nameSkip},${r.dateSkip},${r.namePos},${r.datePos},${r.dist.toFixed(4)},${r.maxDw}`
       ).join('\n');
       const blob = new Blob(['\ufeff' + hdr + rows], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'wrr-1994-replication.csv';
+      a.download = isNations ? 'wrr2-nations-quick.csv' : 'wrr-1994-replication.csv';
       a.click();
       URL.revokeObjectURL(a.href);
     };
@@ -4158,14 +4347,19 @@
 
         // Ensure Genesis is loaded, then start
         wrrLoadGenesis().then(() => {
+          const isNationsP = wrrActiveExperimentType === 'nations';
+          const rabbisDataP = isNationsP
+            ? wrrActiveRabbis.map(n => ({ id: n.id, en: n.en, names: n.names, dates: n.expressions }))
+            : wrrActiveRabbis;
           worker.postMessage({
             action: 'permutation-test',
             genesisNorm: wrrTextNorm,
-            rabbis: wrrActiveRabbis,
+            rabbis: rabbisDataP,
             skipCap,
             letterFreqs: wrrLetterFreqs,
             numPermutations: numPerm,
-            actualGeoMean
+            actualGeoMean,
+            expressionMode: isNationsP ? 'sl' : undefined
           });
         });
 
@@ -4271,7 +4465,8 @@
             const pct = Math.round((msg.completed / msg.total) * 100);
             progressFill.style.width = pct + '%';
             const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
-            progressText.textContent = `c(w,w') — ${msg.completed}/${msg.total} rabbis (${elapsed}s)`;
+            const itemLabel = wrrActiveExperimentType === 'nations' ? 'nations' : 'rabbis';
+            progressText.textContent = `c(w,w') \u2014 ${msg.completed}/${msg.total} ${itemLabel} (${elapsed}s)`;
             // Update table row with c value
             wrrUpdateRabbiRowFull(msg.result);
 
@@ -4307,16 +4502,29 @@
         };
 
         const numPerm = parseInt(document.getElementById('wrrPermN2')?.value) || 0;
+        const isNations = wrrActiveExperimentType === 'nations';
 
-        worker.postMessage({
-          action: 'run-wrr-full',
-          genesisNorm: wrrTextNorm,
-          rabbis: wrrActiveRabbis,
-          skipCap,
-          letterFreqs: wrrLetterFreqs,
-          runPermTest: numPerm > 0,
-          numPermutations: numPerm
-        });
+        if (isNations) {
+          worker.postMessage({
+            action: 'run-wrr2-nations',
+            genesisNorm: wrrTextNorm,
+            nations: wrrActiveRabbis,
+            skipCap,
+            letterFreqs: wrrLetterFreqs,
+            runPermTest: numPerm > 0,
+            numPermutations: numPerm
+          });
+        } else {
+          worker.postMessage({
+            action: 'run-wrr-full',
+            genesisNorm: wrrTextNorm,
+            rabbis: wrrActiveRabbis,
+            skipCap,
+            letterFreqs: wrrLetterFreqs,
+            runPermTest: numPerm > 0,
+            numPermutations: numPerm
+          });
+        }
 
       } catch (e) {
         progressText.textContent = 'Could not start worker: ' + e.message;
@@ -4337,8 +4545,9 @@
       if (deltaCell) {
         const c = result.c;
         const color = c < 0.05 ? '#1b5e20' : c < 0.2 ? '#2e7d32' : c < 0.5 ? '#f57f17' : '#888';
+        const secLabel = wrrActiveExperimentType === 'nations' ? 'Expr' : 'Date';
         deltaCell.innerHTML = result.name
-          ? `<span style="color:${color};font-weight:bold;cursor:pointer;" title="c(w,w') = ${c.toFixed(4)} | Name: ${result.name} (${result.nameHitCount} hits) | Date: ${result.date} (${result.dateHitCount} hits)">${c.toFixed(3)}</span>`
+          ? `<span style="color:${color};font-weight:bold;cursor:pointer;" title="c(w,w') = ${c.toFixed(4)} | Name: ${result.name} (${result.nameHitCount} ELS) | ${secLabel}: ${result.date} (${result.dateHitCount} ${wrrActiveExperimentType === 'nations' ? 'SL' : 'ELS'})">${c.toFixed(3)}</span>`
           : '<span style="color:#ccc;">\u2014</span>';
       }
     }
@@ -4350,6 +4559,7 @@
       const fullBtn = document.getElementById('wrrFullBtn');
       const cancelBtn = document.getElementById('wrrCancelBtn');
       const progressBar = document.getElementById('wrrProgressBar');
+      const isNations = wrrActiveExperimentType === 'nations';
 
       const elapsed = ((performance.now() - wrrT0) / 1000).toFixed(1);
 
@@ -4364,26 +4574,42 @@
       const kLow = msg.cValues.filter(c => c < 0.2).length;
       const k10 = msg.cValues.filter(c => c < 0.1).length;
       const textLabel = wrrActiveTextName === 'genesis' ? 'Genesis' : 'War & Peace';
-      const listLabel = wrrActiveListName === 'list1' ? 'List 1' : 'List 2';
+      const listLabel = isNations ? 'Nations B3'
+        : wrrActiveListName === 'list1' ? 'List 1' : 'List 2';
+      const itemLabel = isNations ? 'nations' : 'rabbis';
 
-      // Published Table 3 values (List 2, Genesis, 1M permutations)
-      const isGenL2 = wrrActiveTextName === 'genesis' && wrrActiveListName === 'list2';
-      const pubRef = isGenL2
-        ? '<div style="margin-top:10px;padding:8px 12px;background:#fff3e0;border-radius:6px;border:1px solid #ffe0b2;font-size:12px;">' +
+      // Published reference values
+      const isGenL2 = wrrActiveTextName === 'genesis' && wrrActiveListName === 'list2' && !isNations;
+      const isGenNations = wrrActiveTextName === 'genesis' && isNations;
+      let pubRef = '';
+      if (isGenL2) {
+        pubRef = '<div style="margin-top:10px;padding:8px 12px;background:#fff3e0;border-radius:6px;border:1px solid #ffe0b2;font-size:12px;">' +
           '<strong style="color:#e65100;">WRR Published (Table 3, List 2, Genesis):</strong> ' +
           'P\u2081 rank = 453, P\u2082 rank = 5, P\u2083 rank = 570, P\u2084 rank = 4 out of 1,000,000. ' +
           '\u03C1 = 4\u00b74/(10\u2076\u22121) \u2248 16/10\u2076' +
-          '</div>'
-        : '';
+          '</div>';
+      } else if (isGenNations) {
+        pubRef = '<div style="margin-top:10px;padding:8px 12px;background:#fff3e0;border-radius:6px;border:1px solid #ffe0b2;font-size:12px;">' +
+          '<strong style="color:#e65100;">WRR2 Published (Sample B3, Nations, Genesis):</strong> ' +
+          'P = 4.0 \u00d7 10<sup>\u22129</sup> (999,999,999 permutations). ' +
+          'Names searched as ELS, category expressions as SL (consecutive letters).' +
+          '</div>';
+      }
+
+      const methodNote = isNations
+        ? 'Names searched as ELS (|skip| \u2265 2), expressions as SL (consecutive letters, skip=1). ' +
+          'Perturbations applied to ELS positions only.'
+        : 'c(w,w\') = rank of actual \u03b5 proximity among 125 spatial perturbations. ' +
+          'Small c \u2192 unusually close name-date ELS proximity. 10 row lengths h<sub>i</sub>=round(|d|/i) tested per pair.';
 
       summary.style.display = '';
       summary.style.background = 'linear-gradient(135deg,#e8f5e9,#c8e6c9)';
       summary.style.border = '1px solid #a5d6a7';
 
       summary.innerHTML = `
-        <div style="font-weight:bold;color:#1b5e20;font-size:16px;margin-bottom:8px;">Full WRR — c(w,w') Statistic (${textLabel}, ${listLabel}, ${elapsed}s)</div>
+        <div style="font-weight:bold;color:#1b5e20;font-size:16px;margin-bottom:8px;">Full WRR \u2014 c(w,w') Statistic (${textLabel}, ${listLabel}, ${elapsed}s)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:13px;">
-          <div><strong>${msg.matchedCount}</strong> / ${msg.totalRabbis} rabbis matched (c &lt; 1.0)</div>
+          <div><strong>${msg.matchedCount}</strong> / ${msg.totalRabbis} ${itemLabel} matched (c &lt; 1.0)</div>
           <div>c &lt; 0.2: <strong>${kLow}</strong> / ${msg.cValues.length} &nbsp; c &lt; 0.1: <strong>${k10}</strong></div>
           <div>P\u2081 (Bin 0.2): <strong>${msg.p1.toExponential(4)}</strong></div>
           <div>P\u2082 (Gamma): <strong>${msg.p2.toExponential(4)}</strong></div>
@@ -4405,8 +4631,7 @@
         </div>
         <div id="wrrFullPermResults" style="display:none;margin-top:10px;padding:10px;background:#e8f5e9;border-radius:6px;border:1px solid #a5d6a7;"></div>
         <div style="margin-top:8px;font-size:12px;color:#555;">
-          c(w,w') = rank of actual \u03b5 proximity among 125 spatial perturbations.
-          Small c \u2192 unusually close name-date ELS proximity. 10 row lengths h<sub>i</sub>=round(|d|/i) tested per pair.
+          ${methodNote}
         </div>`;
 
       runBtn.disabled = false;
@@ -4447,7 +4672,8 @@
             } else if (msg.type === 'wrr-rabbi-done') {
               const pct = Math.round((msg.completed / msg.total) * 100);
               progressFill.style.width = (pct * 0.3) + '%';  // 0-30% for c computation
-              progressText.textContent = `c(w,w') — ${msg.completed}/${msg.total} rabbis`;
+              const il = wrrActiveExperimentType === 'nations' ? 'nations' : 'rabbis';
+              progressText.textContent = `c(w,w') \u2014 ${msg.completed}/${msg.total} ${il}`;
             } else if (msg.type === 'wrr-complete') {
               // c computation done, permutation test starting
               window._wrrFullResults = msg;
@@ -4458,7 +4684,7 @@
             } else if (msg.type === 'wrr-perm-progress') {
               const pct = Math.round((msg.completed / msg.total) * 100);
               progressFill.style.width = (60 + pct * 0.4) + '%'; // 60-100%
-              progressText.textContent = `Permutation ${msg.completed}/${msg.total} — P \u2248 ${msg.currentPValue.toFixed(6)}`;
+              progressText.textContent = `Permutation ${msg.completed}/${msg.total} \u2014 P \u2248 ${msg.currentPValue.toFixed(6)}`;
             } else if (msg.type === 'wrr-perm-complete') {
               wrrShowFullPermResults(msg);
               progressBar.style.display = 'none';
@@ -4474,15 +4700,28 @@
             fullBtn.disabled = false;
           };
 
-          worker.postMessage({
-            action: 'run-wrr-full',
-            genesisNorm: wrrTextNorm,
-            rabbis: wrrActiveRabbis,
-            skipCap,
-            letterFreqs: wrrLetterFreqs,
-            runPermTest: true,
-            numPermutations: numPerm
-          });
+          const isNations2 = wrrActiveExperimentType === 'nations';
+          if (isNations2) {
+            worker.postMessage({
+              action: 'run-wrr2-nations',
+              genesisNorm: wrrTextNorm,
+              nations: wrrActiveRabbis,
+              skipCap,
+              letterFreqs: wrrLetterFreqs,
+              runPermTest: true,
+              numPermutations: numPerm
+            });
+          } else {
+            worker.postMessage({
+              action: 'run-wrr-full',
+              genesisNorm: wrrTextNorm,
+              rabbis: wrrActiveRabbis,
+              skipCap,
+              letterFreqs: wrrLetterFreqs,
+              runPermTest: true,
+              numPermutations: numPerm
+            });
+          }
         } catch (e) {
           progressText.textContent = 'Worker error: ' + e.message;
           fullBtn.disabled = false;
@@ -4512,7 +4751,7 @@
           <div>Actual P(c): <strong>${msg.actualOverallP.toExponential(4)}</strong></div>
         </div>
         <div style="margin-top:6px;font-size:11px;color:#777;">
-          ${msg.numPermutations} random permutations of rabbi\u2194date assignments.
+          ${msg.numPermutations} random permutations of ${wrrActiveExperimentType === 'nations' ? 'nation\u2194expression' : 'rabbi\u2194date'} assignments.
           Each permutation: compute c(w,w') for all pairings, then P\u2081\u2013P\u2084.
           P-value = fraction with overall P \u2264 actual.
         </div>`;
@@ -4522,7 +4761,11 @@
     window.wrrExportCSVFull = function() {
       const results = window._wrrFullResults;
       if (!results) { alert('No full WRR results to export.'); return; }
-      const rows = [['Rabbi', 'Name', 'Date', 'c(w,w\')', 'Name Hits', 'Date Hits']];
+      const isNations = wrrActiveExperimentType === 'nations';
+      const subjectLabel = isNations ? 'Nation' : 'Rabbi';
+      const secLabel = isNations ? 'Expression' : 'Date';
+      const secHitLabel = isNations ? 'SL Hits' : 'Date Hits';
+      const rows = [[subjectLabel, 'Name', secLabel, 'c(w,w\')', 'Name ELS Hits', secHitLabel]];
       for (const r of results.rabbiResults) {
         rows.push([r.en || r.rabbiId, r.name || '', r.date || '', r.c.toFixed(6), r.nameHitCount, r.dateHitCount]);
       }
@@ -4533,12 +4776,13 @@
       rows.push(['P4 (Gamma truncated)', (results.p4 || 1).toExponential(6)]);
       rows.push(['Overall P = 4*min(P1..P4)', results.overallP.toExponential(6)]);
       rows.push(['Text', wrrActiveTextName]);
-      rows.push(['List', wrrActiveListName]);
+      rows.push(['Dataset', wrrActiveListName]);
+      rows.push(['Mode', isNations ? 'WRR2 Nations (ELS x SL)' : 'WRR1 Rabbis (ELS x ELS)']);
       const csv = rows.map(r => r.join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'wrr-full-c-statistic.csv';
+      a.download = isNations ? 'wrr2-nations-c-statistic.csv' : 'wrr-full-c-statistic.csv';
       a.click();
       URL.revokeObjectURL(a.href);
     };

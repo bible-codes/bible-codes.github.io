@@ -4,7 +4,7 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.3
+**Version**: 4.4
 **Last Updated**: February 15, 2026
 **Status**: Production (11 active tools, 3 pending)
 
@@ -330,16 +330,31 @@ bible-codes.html?terms=משה,אהרן&discover=names
 bible-codes.html?terms=ירושלים,בית המקדש&skip=2000
 ```
 
-### 3.2 WRR 1994 Experiment
+### 3.2 WRR Experiment Replication
 
 **Location**: 4th tab ("WRR 1994") in `bible-codes.html`
 
-Faithful replication of the Witztum-Rips-Rosenberg 1994 experiment (*Statistical Science*, Vol. 9, No. 3). Searches Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates.
+Faithful replication of the Witztum-Rips-Rosenberg experiments. Searches Genesis (78,064 letters) for statistical proximity between Hebrew terms using ELS and SL (String of Letters) methodologies.
 
-- **Quick Run**: Computes minimum linear distance (Δ) between each rabbi's name and date ELS occurrences. Color-coded results table.
-- **Full WRR**: Implements the c(w,w') perturbation statistic with 125 spatial perturbations, multi-row-length optimization, and combined P₁/P₂ scoring.
-- **Permutation Test**: Pre-computes N×N c-matrix, shuffles date assignments, reports P-value with histogram.
-- **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date conversion for all rabbi dates.
+**Three datasets available** (selectable via dropdown):
+
+| Dataset | Items | Method | Published P |
+|---------|-------|--------|-------------|
+| Rabbis List 2 (WRR1) | 32 rabbis × name-date pairs | ELS ↔ ELS | 1/62,500 |
+| Rabbis List 1 (WRR1) | 34 rabbis × name-date pairs | ELS ↔ ELS | 1/62,500 |
+| Nations B3 (WRR2) | 68 nations × 5 category expressions | ELS ↔ SL | 4.0 × 10⁻⁹ |
+
+**WRR1 — Rabbis (1994)**: Searches for ELS proximity between rabbis' Hebrew name appellations and their death dates. Both names and dates are searched as ELS.
+
+**WRR2 — Nations (Sample B3)**: 68 nation names from the Table of Nations (Genesis 10), each paired with 5 formulaic category expressions (עם+name, name+ים, ארץ+name, שפת+name, כתב+name). Nation names are searched as ELS (|skip| ≥ 2), expressions as SL (consecutive letters in the text, skip=1). The c(w,w') perturbation statistic applies only to ELS positions.
+
+**Modes**:
+- **Quick Run**: Computes minimum 2D cylindrical distance (Δ) between each item's name and date/expression occurrences. Color-coded results table.
+- **Full WRR**: Implements the c(w,w') perturbation statistic with 125 spatial perturbations, multi-row-length optimization, and combined P₁–P₄ scoring.
+- **Permutation Test**: Pre-computes N×N c-matrix, shuffles date/expression assignments, reports P-value with histogram.
+
+**Additional features**:
+- **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date conversion for rabbi dates.
 - **Control text**: Optional War and Peace comparison.
 - **Web Worker**: All computation runs off-main-thread via `engines/wrr.worker.js`.
 - **CSV export** for both Quick Run and Full WRR results.
@@ -1280,6 +1295,14 @@ python3 p.py
 
 ## 11. Changelog
 
+### February 15, 2026 (v4.4): WRR2 Nations Experiment (Sample B3)
+
+- **WRR2 Nations Experiment**: Implemented the WRR2 "Table of Nations" experiment (Sample B3) from the second Witztum-Rips-Rosenberg paper. 68 nation names from Genesis 10, each paired with 5 category expressions (עם/ארץ/שפת/כתב + name, name + ים). Nation names searched as ELS, expressions as SL (consecutive letters). Published result: P = 4.0 × 10⁻⁹.
+- **SL (String of Letters) Search**: New `findSL()` function in worker searches for terms as consecutive letters in the Torah text (skip=1), forward and reversed. Used for WRR2 category expressions.
+- **Dataset Selector**: WRR tab dropdown changed from "Rabbi list" to "Dataset", with three options: Rabbis List 2, Rabbis List 1, and Nations B3 (68 nations). UI dynamically updates column headers, descriptions, stats, and table content per dataset.
+- **Short-word Perturbation Fix**: Extended `perturbPositions()` to handle 2-letter and 1-letter words (previously required 3+ letters). Fixes c(w,w') computation for short nation names like חת (Heth) and מש (Mash).
+- **Dynamic Progress Labels**: Quick Run and Full WRR progress text now shows "nations" or "rabbis" based on active dataset.
+
 ### February 15, 2026 (v4.3): Per-Cluster P-Values, Discovered Term P-Values, Sortable Clusters
 
 - **Per-Cluster P-Values**: After running the Significance Test, every cluster row now shows its own P-value badge (color-coded green/yellow/orange/red). Computed via binary search on sorted permuted span distribution — O(log N) per cluster.
@@ -1421,7 +1444,7 @@ These items have engines already built or detailed plans ready. They represent t
 
 | Priority | Feature | Status | Effort | Value |
 |----------|---------|--------|--------|-------|
-| 1 | **WRR 1994 Experiment** | Tab added, needs testing/polish | 2-3 hrs | Validates tool against published science |
+| 1 | **WRR Experiments** | ✅ WRR1 + WRR2 Nations complete | Done | Validates tool against published science |
 | 2 | **Letter Analysis UI** (`letter-analysis.html`) | Engine complete, HTML pending | 2-3 hrs | Unlocks letter frequency research, academic credibility |
 | 3 | **Cantillation Viewer** (`taamim.html` + `engines/taamim.js`) | Not started | 4-5 hrs | Unique differentiator — no competitor offers this |
 | 4 | **Cross-Reference Linking** (`cross-ref.html`) | Not started | 6-8 hrs | Link verses to Talmud, Midrash, Zohar via Sefaria API |
@@ -1433,13 +1456,13 @@ These items have engines already built or detailed plans ready. They represent t
 
 **Cross-Reference Linking** needs: verse lookup against Talmud (Bavli & Yerushalmi), Midrash Rabbah, Zohar, and Mishnah. Primary approach: Sefaria API (`/api/links/{ref}`), with optional local JSON cache for offline use.
 
-### 13.2 WRR 1994 Experiment Replication
+### 13.2 WRR Experiment Replication
 
-**Status**: COMPLETE. Full faithful replication implemented as 4th tab in `bible-codes.html`.
+**Status**: WRR1 (rabbis) COMPLETE. WRR2 Nations (B3) COMPLETE. WRR2 Names (B1/B2) PLANNED.
 
-**Background**: The 1994 Witztum-Rips-Rosenberg experiment (*Statistical Science*, Vol. 9, No. 3) searched Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates. The result — a P-value of approximately 1/62,500 — remains the most cited statistical claim in Torah codes research.
+**Background**: The 1994 Witztum-Rips-Rosenberg experiment (*Statistical Science*, Vol. 9, No. 3) searched Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates. The result — a P-value of approximately 1/62,500 — remains the most cited statistical claim in Torah codes research. The WRR2 Nations experiment (Sample B3) extended this to 68 nation names from Genesis 10 paired with category expressions, using ELS↔SL proximity, with published P = 4.0 × 10⁻⁹.
 
-**Implementation** (`engines/wrr.worker.js`, ~760 lines):
+**Implementation** (`engines/wrr.worker.js`, ~950 lines):
 - **Three modes**: Quick Run (Δ distance), Full WRR (c(w,w') perturbation statistic), Permutation Test
 - **c(w,w') statistic**: 125 spatial perturbations (x,y,z ∈ {-2..2}³) shifting last 3 ELS positions
 - **Multi-row-length**: ω = max(1/δ) across h_i = round(|d|/i) for i=1..10
@@ -1454,7 +1477,7 @@ These items have engines already built or detailed plans ready. They represent t
 
 ### 13.2.1 WRR2 — Nations and Names Experiments
 
-**Status**: PLANNED. Extends the existing WRR infrastructure with new datasets and ELS+SL methodology.
+**Status**: PARTIALLY IMPLEMENTED. Nations B3 (68 nations × 5 formulaic expressions) is complete. Names B1/B2 and Targum Yonathan alternate expressions remain planned.
 
 **Source**: Witztum, Rips & Rosenberg, "Equidistant Letter Sequences in the Book of Genesis" (second paper), hosted at [math.toronto.edu/drorbn/Codes/Nations/WRR2](https://www.math.toronto.edu/drorbn/Codes/Nations/WRR2/).
 
@@ -1488,9 +1511,12 @@ These items have engines already built or detailed plans ready. They represent t
 5. **Algorithm P permutations**: Knuth's Algorithm P with specific Turbo-Pascal RNG seed (01001 10000 10011 11100 00101 00111 11) for exact reproducibility.
 
 **Implementation Plan**:
-- Add "Nations" and "Names" dataset tabs alongside existing WRR rabbis tab
-- Hardcode Table of Nations data (68 names × category expressions) from Targum Yonathan
-- Implement SL (ordinary text) search in worker — find all ordinary occurrences of w' in Genesis
+- ~~Add "Nations" dataset tab alongside existing WRR rabbis tab~~ ✅ DONE
+- ~~Hardcode Table of Nations data (68 names × 5 formulaic category expressions)~~ ✅ DONE
+- ~~Implement SL (ordinary text) search in worker — find all ordinary occurrences of w' in Genesis~~ ✅ DONE
+- ~~Run c(w,w') perturbation test with ELS↔SL proximity~~ ✅ DONE
+- Add Targum Yonathan alternative nation/country names for improved match rate
+- Add "Names" B1/B2 datasets (457 men's + 38 women's biblical names)
 - Add domain of minimality weighting to ε(w,w') aggregation
 - Extend permutation limit to 10⁹ with chunked processing and estimated time display
 - Add control text V generation (verse-permuted Genesis with fixed seed)

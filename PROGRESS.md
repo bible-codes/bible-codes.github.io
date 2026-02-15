@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-15 (Per-Cluster P-Values, Discovered Term P-Values, Sortable Clusters)
+**Last Updated**: 2026-02-15 (WRR2 Nations Experiment B3)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -10,6 +10,46 @@ This document tracks the implementation progress of all features in the Hebrew B
 ---
 
 ## Current Session: 2026-02-15
+
+### WRR2 Nations Experiment (Sample B3) ✅ COMPLETE
+
+Implemented the WRR2 "Table of Nations" experiment from the second Witztum-Rips-Rosenberg paper. Extends the existing WRR1 infrastructure with a new dataset: 68 nation names from Genesis 10, each paired with 5 category expressions.
+
+#### What's New
+
+1. **WRR2 Nations Dataset** — 68 nations from Genesis 10 (Japheth: 14, Ham: 30, Shem: 24), each with 5 formulaic category expressions: עם+name (nation), name+ים (plural), ארץ+name (country), שפת+name (language), כתב+name (script). Auto-generated via `.map()` on base nation data.
+
+2. **SL (String of Letters) Search** — New `findSL()` function in `wrr.worker.js` searches for terms as consecutive letters (skip=1) in the Torah text, forward and reversed. Used for WRR2 category expressions (vs. ELS for nation names).
+
+3. **Dataset Selector** — Dropdown changed from "Rabbi list" to "Dataset" with three options: Rabbis List 2, Rabbis List 1, Nations B3 (68 nations). Dynamic UI updates: column headers (Nation/Rabbi, Name/Appellations, Expressions/Date), descriptions, stat cards, and table content.
+
+4. **Short-Word Perturbation Fix** — Extended `perturbPositions()` to handle 2-letter and 1-letter words (previously required 3+ letters, returning null). For k=2: perturbs both positions by (x, x+y). For k=1: perturbs single position by (x). Fixes Heth (חת) and Mash (מש) in Nations experiment.
+
+5. **Full WRR Integration** — New `run-wrr2-nations` worker action and `runWRR2Nations()` function. Reuses `computeC()`, P-statistics, and `runWRRPermTestFull()` — expression SL hits stored in `dateHitsArr` for compatibility.
+
+6. **Main Thread Fallback** — `findSLMainThread()` function added for SL search when Web Worker is unavailable. Quick Run and Full WRR both support nations mode with automatic ELS/SL dispatch.
+
+#### Browser Test Results (Puppeteer automated)
+
+| Test | Result |
+|------|--------|
+| Switch to Nations B3 (68 rows, headers, stats) | ✅ |
+| Switch back to Rabbis (32 rows, headers) | ✅ |
+| Quick Run Nations (10/68 matched) | ✅ |
+| Full WRR Nations (10/68 matched, P-stats) | ✅ |
+| viewWRRPair (no crash, populates textarea) | ✅ |
+| CSV Export | ✅ |
+| Cancel button | ✅ |
+| WRR1 Rabbis still works (23/30 matched) | ✅ |
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `engines/wrr.worker.js` | +190 lines: `findSL()`, `runWRR2Nations()`, `run-wrr2-nations` action, `perturbPositions()` fix |
+| `bible-codes.html` | +200 lines: `WRR2_NATIONS` array, UI updates, `findSLMainThread()`, dynamic labels |
+
+---
 
 ### Per-Cluster P-Values & Sortable Clusters ✅ COMPLETE
 
@@ -99,22 +139,22 @@ Full client-side replication of Witztum, Rips & Rosenberg (1994) "Equidistant Le
    - Would need Hebrew War and Peace text file
    - Same algorithm, just different input text
 
-3. **Second list (List 1)** — WRR Table 2 has an additional set of 34 rabbis
-   - Need dataset entry for List 1 rabbis
-
-4. **Date format variations** — WRR used specific date encoding rules
+3. **Date format variations** — WRR used specific date encoding rules
    - Our implementation uses the dates from WRR Table 3 directly
    - Could add programmatic Hebrew date generation from Gregorian dates
 
-5. **Exact D(w) threshold** — WRR defines D(w) based on expected 10 occurrences
-   - Our implementation matches this, but edge cases may differ
+4. **WRR2 Targum Yonathan expressions** — Add alternative nation/country names from Targum Yonathan for improved match rate beyond the 5 formulaic expressions
+
+5. **WRR2 Names experiments (B1/B2)** — 457 men's + 38 women's biblical names paired with "name beginning with [letter]" expressions
+
+6. **Domain of minimality weighting** — WRR2 weights each ELS occurrence by the range of skip values over which it is the closest occurrence to the SL text
 
 #### Files
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `engines/wrr.worker.js` | ~760 | Web Worker: ELS search, c(w,w'), P₁/P₂, permutation test |
-| `bible-codes.html` | ~4200 | WRR UI: rabbi table, controls, results, methodology |
+| `engines/wrr.worker.js` | ~950 | Web Worker: ELS search, SL search, c(w,w'), P₁–P₄, permutation test, WRR2 nations |
+| `bible-codes.html` | ~5820 | WRR UI: rabbi/nation table, dataset selector, controls, results, methodology |
 
 #### Key Functions (Worker)
 
@@ -131,7 +171,9 @@ perturbPositions(pos, x, y, z, L)  — Spatial perturbation
 computeC(nameHits, dateHits, L)     — c(w,w') from 125 perturbations
 computeP1(cValues)                   — Binomial tail probability
 computeP2(cValues)                   — Gamma CDF
-runWRRFull(data)                     — Full experiment action
+runWRRFull(data)                     — Full experiment action (rabbis)
+runWRR2Nations(data)                 — Full experiment action (nations ELS+SL)
+findSL(text, termNorm)               — SL search (consecutive letters, skip=1)
 runWRRPermTestFull(...)              — Permutation test with c-matrix
 ```
 
@@ -856,7 +898,7 @@ function showAnagramInMatrix(anagram) {
 | `engines/gematria.js` | 454 | ✅ Complete |
 | `engines/acronym.js` | 448 | ✅ Complete |
 | `engines/els.worker.js` | 343 | ✅ Complete |
-| `engines/wrr.worker.js` | **~760** | ✅ **Complete** (WRR c statistic, P₁/P₂, permutation test) |
+| `engines/wrr.worker.js` | **~950** | ✅ **Complete** (WRR1 rabbis + WRR2 nations, c statistic, SL search, P₁–P₄) |
 | `engines/roots.js` | 335 | ✅ Complete |
 | `engines/root-integration.js` | 290 | ✅ Complete |
 | `engines/matrix.js` | **~600** | ✅ Complete |
@@ -879,14 +921,16 @@ function showAnagramInMatrix(anagram) {
 
 ## Next Session TODO (Updated Priority Order)
 
-### ✅ DONE - WRR 1994 Experiment
+### ✅ DONE - WRR Experiments
 1. ~~**Implement WRR 1994 Experiment Demo**~~ ✅ COMPLETE (2026-02-13/15)
    - Quick Run + Full WRR with c(w,w') perturbation statistic
    - Permutation test, P₁/P₂, CSV export, methodology docs
+2. ~~**WRR2 Nations Experiment (B3)**~~ ✅ COMPLETE (2026-02-15)
+   - 68 nations × 5 expressions, ELS↔SL, dataset selector, browser-tested
 
 ### 🔴 PRIORITY 0 - Immediate
-2. **WRR numerical validation** — Compare per-rabbi c values vs published WRR Table 4
-3. **Default tab = Full Scan + grey out Index/Dictionary tabs**
+3. **WRR numerical validation** — Compare per-rabbi c values vs published WRR Table 4
+4. **Default tab = Full Scan + grey out Index/Dictionary tabs**
 
 ### 🚨 PRIORITY 1 (30 minutes)
 4. **Update index.html dashboard**
@@ -959,8 +1003,8 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 - **Database**: 5/5 (100% complete) ✅
 - **Total Code**: ~14,000+ lines
 - **Data**: 117+ files, 21 MB compressed ✅
-- **bible-codes.html**: ~4,200 lines (single-file app)
-- **wrr.worker.js**: ~760 lines (WRR Web Worker)
+- **bible-codes.html**: ~5,820 lines (single-file app)
+- **wrr.worker.js**: ~950 lines (WRR Web Worker: rabbis + nations)
 
 ### Session Progress (2026-02-13/15)
 - ✅ WRR 1994 experiment: Quick Run mode (geometric mean distance)
@@ -970,6 +1014,11 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 - ✅ WRR: Backward ELS search (both directions, |d| ≥ 2)
 - ✅ WRR: Dynamic skip range D(w) per term
 - ✅ WRR: CSV export, per-rabbi results, methodology documentation
+- ✅ WRR2 Nations (B3): 68 nations × 5 expressions, ELS↔SL proximity
+- ✅ WRR2: SL search (findSL) for category expressions
+- ✅ WRR2: Dataset selector dropdown (rabbis / nations)
+- ✅ WRR2: Short-word perturbation fix (2-letter names)
+- ✅ WRR2: Browser-tested with Puppeteer (all tests passing)
 - ✅ Alternate spellings: space-separated terms on same line
 - ✅ Sofit normalization for search terms
 - ✅ Hebrew virtual keyboard
@@ -994,7 +1043,7 @@ const matches = matrixEngine.findELSInMatrix(result.matrix, 'משה', 50);
 - Phase 5: Advanced Features - ✅ 95% (WRR complete, 3D, batch, verse hover)
 - Phase 5.5: Tsirufim - ✅ 100%
 - Phase 5.6: PWA & i18n - ✅ 100%
-- Phase 5.7: WRR 1994 Replication - ✅ 100%
+- Phase 5.7: WRR 1994 Replication - ✅ 100% (WRR1 + WRR2 Nations)
 - Phase 6: Testing - ⏳ 0%
 - Phase 7: Release - ⏳ 0%
 
@@ -1057,6 +1106,7 @@ python3 build-database.py --book genesis
 - ~~Batch term loading~~ ✅ DONE (paste/upload .txt, auto-clean Hebrew names, 2026-02-07)
 - ~~Verse hover tooltips~~ ✅ DONE (full verse text + glow highlight, 2026-02-07)
 - ~~WRR 1994 experiment replication~~ ✅ DONE (Quick Run + Full WRR with c statistic, 2026-02-15)
+- ~~WRR2 Nations experiment~~ ✅ DONE (68 nations × 5 expressions, ELS↔SL, 2026-02-15)
 - ~~Alternate spelling support~~ ✅ DONE (space-separated terms on same line, 2026-02-15)
 - Web Worker for non-blocking scan (currently runs on main thread with yield)
 
