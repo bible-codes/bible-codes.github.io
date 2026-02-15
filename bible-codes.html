@@ -935,6 +935,11 @@
               <button class="btn-3d-ctrl" id="btn3DVideo" onclick="vidShowPanel()" style="display:none;background:#c62828;">Video</button>
               <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Download PNG</button>
               <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover Terms</button>
+              <span style="display:inline-flex;gap:8px;align-items:center;font-size:11px;color:#333;margin-left:4px;">
+                <label style="cursor:pointer;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
+                <label style="cursor:pointer;" title="Show only names"><input type="checkbox" id="discFilterNames" onchange="applyDiscoverFilter()"> Names</label>
+                <label style="cursor:pointer;" title="Show only dates/numbers"><input type="checkbox" id="discFilterDates" onchange="applyDiscoverFilter()"> Dates</label>
+              </span>
             </div>
           </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
@@ -1745,6 +1750,7 @@
     let scanTerms = [];
     let scanClusters = [];
     let clusterPermRunning = false;
+    let discoveredResults = []; // stored for filter toggling
 
     window.cancelScan = function() { scanAbort = true; batchAbort = true; };
 
@@ -2402,6 +2408,12 @@
         // Get significance
         const sig = elsService.significanceScore(item.word);
 
+        // Categorize: is it a name?
+        const isName = dictSource.includes('Names') || dictSource.includes('names');
+
+        // Categorize: is it a date-related term? (Hebrew months, days, years)
+        const isDate = /^(ניסן|אייר|סיון|תמוז|אלול|תשרי|חשון|חשוון|כסלו|טבת|שבט|אדר|יום|חדש|שנה|שנת|נולד|נפטר)$/.test(item.word);
+
         discovered.push({
           word: item.word,
           minDistance: item.minDistance,
@@ -2412,6 +2424,8 @@
           definition,
           root,
           dictSource,
+          isName,
+          isDate,
           bestOcc: item.occurrences[0] // closest occurrence
         });
       }
@@ -2422,12 +2436,43 @@
         return b.zScore - a.zScore;
       });
 
-      // Render results table
-      const dictCount = discovered.filter(d => d.inDict).length;
-      statusSpan.textContent = `${dictCount} dictionary terms / ${discovered.length} total found in ±${radius}`;
+      // Store for filter toggling
+      discoveredResults = discovered;
 
-      if (discovered.length === 0) {
-        resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;">No additional terms found in this region.</div>';
+      // Render with current filter
+      renderDiscoveredResults();
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    // --- Render discovered results with active filter ---
+    function renderDiscoveredResults() {
+      const resultsDiv = document.getElementById('discoverTermsResults');
+      const statusSpan = document.getElementById('discoverTermsStatus');
+      if (!resultsDiv || discoveredResults.length === 0) {
+        if (resultsDiv) resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;">No additional terms found in this region.</div>';
+        return;
+      }
+
+      // Determine active filter
+      const fAll = document.getElementById('discFilterAll');
+      const fNames = document.getElementById('discFilterNames');
+      const fDates = document.getElementById('discFilterDates');
+      let filtered = discoveredResults;
+      let filterLabel = '';
+      if (fNames && fNames.checked) {
+        filtered = discoveredResults.filter(d => d.isName);
+        filterLabel = ' (Names only)';
+      } else if (fDates && fDates.checked) {
+        filtered = discoveredResults.filter(d => d.isDate);
+        filterLabel = ' (Dates only)';
+      }
+
+      const dictCount = filtered.filter(d => d.inDict).length;
+      const totalAll = discoveredResults.length;
+      statusSpan.textContent = `${dictCount} dict / ${filtered.length} shown / ${totalAll} total${filterLabel}`;
+
+      if (filtered.length === 0) {
+        resultsDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#333;">No ${fNames && fNames.checked ? 'names' : 'date terms'} found. Try "All" filter.</div>`;
         return;
       }
 
@@ -2444,14 +2489,16 @@
           <th style="padding:5px 6px;">Add</th>
         </tr></thead><tbody>`;
 
-      for (let i = 0; i < discovered.length; i++) {
-        const d = discovered[i];
-        const bgColor = d.inDict ? '#dcedc8' : '#fff';
+      for (let i = 0; i < filtered.length; i++) {
+        const d = filtered[i];
+        const bgColor = d.isName ? '#e3f2fd' : d.isDate ? '#fff3e0' : d.inDict ? '#dcedc8' : '#fff';
         const zColor = d.zScore > 3 ? '#b71c1c' : d.zScore > 2 ? '#bf360c' : '#000';
         const defText = d.definition ? d.definition.substring(0, 60) : '';
+        const catBadge = d.isName ? '<span style="font-size:9px;background:#1565c0;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">Name</span>' :
+                         d.isDate ? '<span style="font-size:9px;background:#e65100;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">Date</span>' : '';
         html += `<tr style="background:${bgColor};border-bottom:1px solid #ccc;color:#000;" title="Position: ${d.bestOcc.pos}, Total ELS occurrences: ${d.totalOccurrences}">
           <td style="padding:4px 6px;">${i + 1}</td>
-          <td style="padding:4px 6px;font-weight:bold;font-size:15px;direction:rtl;color:#000;">${d.word}</td>
+          <td style="padding:4px 6px;font-weight:bold;font-size:15px;direction:rtl;color:#000;">${d.word}${catBadge}</td>
           <td style="padding:4px 6px;direction:rtl;color:#000;font-weight:600;">${d.root}</td>
           <td style="padding:4px 6px;color:#000;">${d.minDistance}</td>
           <td style="padding:4px 6px;color:#000;">${d.bestOcc.skip}</td>
@@ -2464,7 +2511,21 @@
 
       html += '</tbody></table>';
       resultsDiv.innerHTML = html;
-      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // --- Filter checkbox handler (radio-style: only one active) ---
+    window.applyDiscoverFilter = function() {
+      const fAll = document.getElementById('discFilterAll');
+      const fNames = document.getElementById('discFilterNames');
+      const fDates = document.getElementById('discFilterDates');
+      // Radio-style: uncheck others when one is checked
+      const clicked = event && event.target;
+      if (clicked === fAll && fAll.checked) { fNames.checked = false; fDates.checked = false; }
+      else if (clicked === fNames && fNames.checked) { fAll.checked = false; fDates.checked = false; }
+      else if (clicked === fDates && fDates.checked) { fAll.checked = false; fNames.checked = false; }
+      // If nothing checked, default to All
+      if (!fAll.checked && !fNames.checked && !fDates.checked) fAll.checked = true;
+      if (discoveredResults.length > 0) renderDiscoveredResults();
     };
 
     // Add a discovered term to the search textarea and re-scan
