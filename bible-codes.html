@@ -2476,8 +2476,15 @@
         return;
       }
 
-      let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;color:#000;">
+      let html = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+        <button class="btn btn-small" style="padding:3px 10px;font-size:11px;background:#1565c0;" onclick="discSelectAll(true)">Check All</button>
+        <button class="btn btn-small" style="padding:3px 10px;font-size:11px;background:#666;" onclick="discSelectAll(false)">Clear All</button>
+        <button class="btn btn-small" style="padding:3px 10px;font-size:11px;background:#2e7d32;" onclick="addSelectedTerms()">Add Selected</button>
+        <span id="discSelectedCount" style="font-size:11px;color:#555;">0 selected</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;color:#000;">
         <thead><tr style="background:#d0d0d0;text-align:left;color:#000;font-weight:bold;">
+          <th style="padding:5px 4px;width:28px;"><input type="checkbox" id="discCheckAllHeader" onchange="discSelectAll(this.checked)" title="Check/uncheck all"></th>
           <th style="padding:5px 6px;">#</th>
           <th style="padding:5px 6px;">Term</th>
           <th style="padding:5px 6px;">Root</th>
@@ -2486,7 +2493,6 @@
           <th style="padding:5px 6px;">z-Score</th>
           <th style="padding:5px 6px;">Source</th>
           <th style="padding:5px 6px;">Definition</th>
-          <th style="padding:5px 6px;">Add</th>
         </tr></thead><tbody>`;
 
       for (let i = 0; i < filtered.length; i++) {
@@ -2496,7 +2502,9 @@
         const defText = d.definition ? d.definition.substring(0, 60) : '';
         const catBadge = d.isName ? '<span style="font-size:9px;background:#1565c0;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">Name</span>' :
                          d.isDate ? '<span style="font-size:9px;background:#e65100;color:#fff;padding:1px 4px;border-radius:3px;margin-left:3px;">Date</span>' : '';
+        const safeWord = d.word.replace(/'/g, "\\'");
         html += `<tr style="background:${bgColor};border-bottom:1px solid #ccc;color:#000;" title="Position: ${d.bestOcc.pos}, Total ELS occurrences: ${d.totalOccurrences}">
+          <td style="padding:4px 4px;text-align:center;"><input type="checkbox" class="disc-term-cb" data-word="${safeWord}" data-pos="${d.bestOcc.pos}" data-skip="${d.bestOcc.skip}" onchange="updateDiscSelectedCount()"></td>
           <td style="padding:4px 6px;">${i + 1}</td>
           <td style="padding:4px 6px;font-weight:bold;font-size:15px;direction:rtl;color:#000;">${d.word}${catBadge}</td>
           <td style="padding:4px 6px;direction:rtl;color:#000;font-weight:600;">${d.root}</td>
@@ -2505,7 +2513,6 @@
           <td style="padding:4px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
           <td style="padding:4px 6px;font-size:11px;color:#000;">${d.dictSource || (d.inDict ? '✓' : '')}</td>
           <td style="padding:4px 6px;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">${defText}</td>
-          <td style="padding:4px 6px;"><button class="btn btn-small" style="padding:2px 8px;font-size:11px;" onclick="addDiscoveredTerm('${d.word}', ${d.bestOcc.pos}, ${d.bestOcc.skip})">+</button></td>
         </tr>`;
       }
 
@@ -2526,6 +2533,50 @@
       // If nothing checked, default to All
       if (!fAll.checked && !fNames.checked && !fDates.checked) fAll.checked = true;
       if (discoveredResults.length > 0) renderDiscoveredResults();
+    };
+
+    // --- Check/uncheck all discovered term checkboxes ---
+    window.discSelectAll = function(checked) {
+      document.querySelectorAll('.disc-term-cb').forEach(cb => cb.checked = checked);
+      const hdr = document.getElementById('discCheckAllHeader');
+      if (hdr) hdr.checked = checked;
+      updateDiscSelectedCount();
+    };
+
+    // --- Update selected count display ---
+    window.updateDiscSelectedCount = function() {
+      const all = document.querySelectorAll('.disc-term-cb');
+      const checked = document.querySelectorAll('.disc-term-cb:checked');
+      const span = document.getElementById('discSelectedCount');
+      if (span) span.textContent = `${checked.length} selected`;
+      const hdr = document.getElementById('discCheckAllHeader');
+      if (hdr) hdr.checked = all.length > 0 && checked.length === all.length;
+    };
+
+    // --- Add all checked terms to textarea ---
+    window.addSelectedTerms = function() {
+      const checked = document.querySelectorAll('.disc-term-cb:checked');
+      if (checked.length === 0) { alert('No terms selected. Check the boxes first.'); return; }
+      const textarea = document.getElementById('batchTextarea');
+      if (!textarea) return;
+      const current = textarea.value.trim();
+      const lines = current ? current.split('\n') : [];
+      const existingWords = new Set();
+      for (const line of lines) {
+        for (const w of line.split(/\s+/)) existingWords.add(w);
+      }
+      let added = 0, skipped = 0;
+      for (const cb of checked) {
+        const word = cb.dataset.word;
+        if (existingWords.has(word)) { skipped++; continue; }
+        lines.push(word);
+        existingWords.add(word);
+        added++;
+      }
+      textarea.value = lines.join('\n');
+      const msg = `Added ${added} term${added !== 1 ? 's' : ''}` + (skipped > 0 ? ` (${skipped} already present)` : '');
+      const span = document.getElementById('discSelectedCount');
+      if (span) { span.textContent = msg; span.style.color = '#2e7d32'; setTimeout(() => { span.style.color = '#555'; updateDiscSelectedCount(); }, 2000); }
     };
 
     // Add a discovered term to the search textarea and re-scan
