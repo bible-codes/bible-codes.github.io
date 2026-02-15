@@ -936,10 +936,10 @@
               <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Export PNG</button>
               <button class="btn btn-small" onclick="exportMatrixJSON()" style="background:#555;">Export JSON</button>
               <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover Terms</button>
-              <span style="display:inline-flex;gap:8px;align-items:center;font-size:11px;color:#333;margin-left:4px;">
-                <label style="cursor:pointer;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
-                <label style="cursor:pointer;" title="Show only names"><input type="checkbox" id="discFilterNames" onchange="applyDiscoverFilter()"> Names</label>
-                <label style="cursor:pointer;" title="Show only dates/numbers"><input type="checkbox" id="discFilterDates" onchange="applyDiscoverFilter()"> Dates</label>
+              <span style="display:inline-flex;gap:8px;align-items:center;font-size:11px;color:#ddd;margin-left:4px;">
+                <label style="cursor:pointer;color:#ddd;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
+                <label style="cursor:pointer;color:#ddd;" title="Show only names"><input type="checkbox" id="discFilterNames" onchange="applyDiscoverFilter()"> Names</label>
+                <label style="cursor:pointer;color:#ddd;" title="Show only dates/numbers"><input type="checkbox" id="discFilterDates" onchange="applyDiscoverFilter()"> Dates</label>
               </span>
             </div>
           </div>
@@ -1751,6 +1751,9 @@
     let scanTerms = [];
     let scanClusters = [];
     let clusterPermRunning = false;
+    let clusterPValues = [];         // P-value per cluster
+    let clusterSortMode = 'span';    // 'span' or 'pvalue'
+    let permSpanDistribution = null; // sorted permuted spans for re-use
     let discoveredResults = []; // stored for filter toggling
     let discSortCol = 'default'; // current sort column
     let discSortAsc = true;      // sort direction
@@ -2003,25 +2006,18 @@
         html += `<h3 style="color:#e65100;margin:0;">Clusters (${clusters.length}) — sorted by smallest region</h3>`;
         html += `<button onclick="runClusterPermTest()" id="clusterPermBtn" style="background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Significance Test</button>`;
         html += `<label style="font-size:12px;color:#666;">N=<input id="clusterPermN" type="number" value="1000" min="100" max="100000" step="100" style="width:70px;margin-left:4px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;font-size:12px;"></label>`;
+        html += `<button id="clusterSortSpan" onclick="sortClusters('span')" style="background:#e65100;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:1;">Sort: Span</button>`;
+        html += `<button id="clusterSortP" onclick="sortClusters('pvalue')" disabled style="background:#7b1fa2;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:0.4;">Sort: P-value</button>`;
         html += `</div>`;
         html += `<div id="clusterPermResults" style="display:none;margin-bottom:12px;"></div>`;
         html += `<p style="font-size:13px;color:#666;margin-bottom:12px;">Click to view matrix with all terms</p>`;
-        html += '<div class="results-scrollable" style="max-height:500px;">';
-        clusters.forEach((c, idx) => {
-          html += `<div class="cluster-row" onclick="showClusterMatrix(${idx})">`;
-          html += `<div><span class="cluster-span">${c.span.toLocaleString()} chars</span></div>`;
-          html += `<div class="cluster-terms">`;
-          c.hits.forEach(h => {
-            const color = TERM_COLORS[h.termIdx % 8];
-            const verses = getVersesForHit(h.pos, h.skip, h.term.length);
-            const verseStr = verses.length > 0 ? ` [${verses.join(', ')}]` : '';
-            html += `<span class="cluster-term-tag" style="background:${color}20;border-color:${color};color:#333;">
-              "${h.term}" pos:${h.pos.toLocaleString()} skip:${h.skip}${verseStr}
-            </span>`;
-          });
-          html += `</div></div>`;
-        });
+        html += '<div id="clusterListContainer" class="results-scrollable" style="max-height:500px;">';
         html += '</div></div>';
+        // Reset sort state and render cluster list
+        clusterSortMode = 'span';
+        clusterPValues = [];
+        permSpanDistribution = null;
+        setTimeout(() => renderClusterList(), 0);
       } else if (terms.length >= 2) {
         html += `<div style="background:#fff3e0;padding:16px;border-radius:8px;border-right:4px solid #ff9800;margin-bottom:20px;">`;
         html += `<h3 style="color:#e65100;margin-bottom:12px;">Clusters</h3>`;
@@ -2055,6 +2051,73 @@
       html += '</div>';
       document.getElementById('scanResults').innerHTML = html;
     }
+
+    // --- Render cluster list (called initially and on sort change) ---
+    function renderClusterList() {
+      const container = document.getElementById('clusterListContainer');
+      if (!container || scanClusters.length === 0) return;
+
+      // Build sorted index array
+      const indices = scanClusters.map((_, i) => i);
+      if (clusterSortMode === 'pvalue' && clusterPValues.length === scanClusters.length) {
+        indices.sort((a, b) => clusterPValues[a] - clusterPValues[b]);
+      }
+      // else keep original order (by span, smallest first)
+
+      // Update sort button active states
+      const btnSpan = document.getElementById('clusterSortSpan');
+      const btnP = document.getElementById('clusterSortP');
+      if (btnSpan) btnSpan.style.opacity = clusterSortMode === 'span' ? '1' : '0.5';
+      if (btnP) btnP.style.opacity = clusterSortMode === 'pvalue' ? '1' : '0.5';
+
+      let html = '';
+      for (const idx of indices) {
+        const c = scanClusters[idx];
+        html += `<div class="cluster-row" onclick="showClusterMatrix(${idx})">`;
+        html += `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">`;
+        html += `<span class="cluster-span">${c.span.toLocaleString()} chars</span>`;
+        // P-value badge if computed
+        if (clusterPValues.length > idx && permSpanDistribution) {
+          const p = clusterPValues[idx];
+          const pColor = p < 0.01 ? '#1b5e20' : p < 0.05 ? '#2e7d32' : p < 0.1 ? '#f57f17' : '#c62828';
+          const pBg = p < 0.01 ? '#c8e6c9' : p < 0.05 ? '#dcedc8' : p < 0.1 ? '#fff9c4' : '#ffcdd2';
+          const pStr = p === 0 ? '< ' + (1 / permSpanDistribution.length).toFixed(6) : p < 0.001 ? p.toExponential(2) : p.toFixed(4);
+          html += `<span style="font-size:11px;font-weight:bold;color:${pColor};background:${pBg};padding:2px 6px;border-radius:4px;">P=${pStr}</span>`;
+        }
+        html += `</div>`;
+        html += `<div class="cluster-terms">`;
+        c.hits.forEach(h => {
+          const color = TERM_COLORS[h.termIdx % 8];
+          const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+          const verseStr = verses.length > 0 ? ` [${verses.join(', ')}]` : '';
+          html += `<span class="cluster-term-tag" style="background:${color}20;border-color:${color};color:#333;">
+            "${h.term}" pos:${h.pos.toLocaleString()} skip:${h.skip}${verseStr}
+          </span>`;
+        });
+        html += `</div></div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    // --- Compute per-cluster P-values via binary search on sorted permuted spans ---
+    function computeClusterPValues(clusters, permSpans) {
+      return clusters.map(c => {
+        // Binary search: find count of permSpans <= c.span
+        let lo = 0, hi = permSpans.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (permSpans[mid] <= c.span) lo = mid + 1;
+          else hi = mid;
+        }
+        return lo / permSpans.length;
+      });
+    }
+
+    // --- Sort clusters by span or P-value ---
+    window.sortClusters = function(mode) {
+      clusterSortMode = mode;
+      renderClusterList();
+    };
 
     // --- Cluster significance permutation test ---
     window.runClusterPermTest = async function() {
@@ -2168,6 +2231,18 @@
       permSpans.sort((a, b) => a - b);
       const median = permSpans[Math.floor(completed / 2)];
       const mean = permSpans.reduce((s, v) => s + v, 0) / completed;
+
+      // Store sorted distribution and compute per-cluster P-values
+      permSpanDistribution = permSpans;
+      clusterPValues = computeClusterPValues(scanClusters, permSpans);
+
+      // Enable P-value sort button
+      const btnP = document.getElementById('clusterSortP');
+      if (btnP) { btnP.disabled = false; btnP.style.opacity = '0.5'; }
+
+      // Refresh cluster list with P-value badges
+      renderClusterList();
+
       showClusterPermResults({
         pValue, betterCount, numTrials: completed,
         actualSpan: actualBestSpan, median, mean,
@@ -2439,6 +2514,11 @@
         // Categorize: is it a date-related term? (Hebrew months, days, years)
         const isDate = /^(ניסן|אייר|סיון|תמוז|אלול|תשרי|חשון|חשוון|כסלו|טבת|שבט|אדר|יום|חדש|שנה|שנת|נולד|נפטר)$/.test(item.word);
 
+        // Analytical P-value: probability of at least one ELS occurrence within minDistance by chance
+        const L = 304805;
+        const region = 2 * item.minDistance + 1;
+        const pProximity = 1 - Math.pow(1 - Math.min(region, L) / L, item.totalOccurrences);
+
         discovered.push({
           word: item.word,
           english,
@@ -2446,6 +2526,7 @@
           occurrences: item.occurrences.length,
           totalOccurrences: item.totalOccurrences,
           zScore: sig.zScore,
+          pValue: pProximity,
           inDict,
           definition,
           root,
@@ -2506,6 +2587,8 @@
         filtered.sort((a, b) => dir * (a.zScore - b.zScore));
       } else if (col === 'occurrences') {
         filtered.sort((a, b) => dir * (a.totalOccurrences - b.totalOccurrences));
+      } else if (col === 'pvalue') {
+        filtered.sort((a, b) => dir * ((a.pValue || 1) - (b.pValue || 1)));
       } else {
         // default: dict words first, then z-score descending
         filtered.sort((a, b) => {
@@ -2543,7 +2626,8 @@
           <col style="width:42px;">
           <col style="width:46px;">
           <col style="width:34px;">
-          <col style="width:80px;">
+          <col style="width:46px;">
+          <col style="width:70px;">
           <col>
         </colgroup>
         <thead><tr style="background:#d0d0d0;text-align:left;color:#000;font-weight:bold;">
@@ -2555,6 +2639,7 @@
           <th style="${thStyle}" onclick="sortDiscovered('skip')">Skip${arrow('skip')}</th>
           <th style="${thStyle}" onclick="sortDiscovered('zscore')">z${arrow('zscore')}</th>
           <th style="${thStyle}" onclick="sortDiscovered('occurrences')">Occ${arrow('occurrences')}</th>
+          <th style="${thStyle}" onclick="sortDiscovered('pvalue')">P${arrow('pvalue')}</th>
           <th style="padding:5px 3px;">Src</th>
           <th style="padding:5px 3px;">Definition</th>
         </tr></thead><tbody>`;
@@ -2575,6 +2660,7 @@
           <td style="padding:4px 3px;color:#000;font-size:11px;">${d.bestOcc.skip}</td>
           <td style="padding:4px 3px;color:${zColor};font-weight:bold;font-size:11px;">${d.zScore.toFixed(1)}</td>
           <td style="padding:4px 3px;color:#000;font-size:11px;">${d.totalOccurrences}</td>
+          <td style="padding:4px 3px;font-size:10px;font-weight:bold;color:${d.pValue < 0.01 ? '#1b5e20' : d.pValue < 0.05 ? '#2e7d32' : d.pValue < 0.1 ? '#f57f17' : '#c62828'};" title="P = ${d.pValue != null ? d.pValue.toExponential(3) : 'N/A'}">${d.pValue != null ? (d.pValue < 0.001 ? d.pValue.toExponential(1) : d.pValue.toFixed(3)) : ''}</td>
           <td style="padding:4px 3px;font-size:10px;color:#555;overflow:hidden;text-overflow:ellipsis;" title="${d.dictSource || ''}">${d.dictSource || (d.inDict ? '✓' : '')}</td>
           <td style="padding:4px 4px;font-size:12px;color:#000;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;line-height:1.3;">${d.definition || ''}</td>
         </tr>`;
@@ -2605,7 +2691,7 @@
         discSortAsc = !discSortAsc; // toggle direction
       } else {
         discSortCol = col;
-        discSortAsc = col === 'length' || col === 'occurrences' ? false : true; // default desc for length/occ
+        discSortAsc = (col === 'length' || col === 'occurrences') ? false : true; // default asc for pvalue/distance/skip/zscore
       }
       renderDiscoveredResults();
     };
@@ -3266,7 +3352,7 @@
       // Discovered terms
       const discovered = (discoveredResults || []).filter(d => d.inDict).map(d => ({
         word: d.word, english: d.english || '', skip: d.bestOcc.skip, position: d.bestOcc.pos, distance: d.minDistance,
-        zScore: d.zScore, source: d.dictSource, definition: d.definition, root: d.root,
+        zScore: d.zScore, pValue: d.pValue, source: d.dictSource, definition: d.definition, root: d.root,
         isName: d.isName, isDate: d.isDate,
       }));
 

@@ -4,7 +4,7 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.2
+**Version**: 4.3
 **Last Updated**: February 15, 2026
 **Status**: Production (11 active tools, 3 pending)
 
@@ -277,9 +277,11 @@ A WebGL-rendered 3D version of the matrix, built with Three.js (lazy-loaded on f
 Monte Carlo permutation test for evaluating whether an N-term cluster is statistically significant or coincidental.
 
 - **Method**: Pools all ELS hits from all terms, shuffles term-index labels (preserving count-per-term), then runs the sliding-window minimum-span finder on each shuffled arrangement.
-- **P-value**: Fraction of random shuffles producing a minimum span ≤ actual best span.
+- **Per-cluster P-values**: After permutation test, every cluster row displays its own P-value via binary search on the sorted permuted span distribution — O(log N) per cluster.
+- **P-value**: Fraction of random shuffles producing a minimum span ≤ actual best span (global summary for best cluster).
 - **Controls**: Configurable number of trials (default 1,000, up to 100,000).
-- **Output**: P-value (color-coded), significance label, rank, actual vs permuted median/mean, histogram of permuted span distribution.
+- **Sortable clusters**: Sort by span (default) or by P-value after running the significance test. Two sort buttons in cluster header.
+- **Output**: Per-cluster P-value badges (color-coded: green P<0.01, yellow-green P<0.05, orange P<0.1, red otherwise), global significance summary with histogram.
 - **Performance**: O(M) per trial — no new ELS searches needed, runs entirely on existing hit positions.
 
 #### 3.1.8 Discover Terms
@@ -288,9 +290,10 @@ Automatically discovers additional dictionary-validated ELS terms within a matri
 
 - Searches ±radius around the cluster center for all indexed ELS words.
 - Validates against 7 dictionary sources (Wikipedia full-text 718K, unified 82K, names 8.7K, BDB, Strong's, Wiktionary, Tanakh).
-- Shows root, z-score significance, definition, source dictionary, distance, occurrences, and term length.
+- Shows root, z-score significance, definition, source dictionary, distance, occurrences, term length, and **analytical P-value**.
+- **Analytical P-values**: Each discovered term gets a closed-form binomial P-value: `P = 1 - (1 - region/L)^totalOccurrences` where `region = 2 * minDistance + 1` and `L = 304,805`. No permutation needed — instant calculation.
 - **English equivalents**: Discovered names display their English transliteration (e.g., חווה → Eve/Chava, משה → Moshe, רחל → Rachel). 613 Hebrew-to-English name mappings covering biblical, Israeli, Arabic, and international names.
-- **Sortable columns**: Click Term (by length), Distance, Skip, z-Score, or Occurrences headers to sort ascending/descending.
+- **Sortable columns**: Click Term (by length), Distance, Skip, z-Score, Occurrences, or P-value headers to sort ascending/descending.
 - **Filter checkboxes**: Toggle between All / Names / Dates to focus results on names from the names dictionary or date-related Hebrew terms (months, birth/death words).
 - **Multi-select**: Checkboxes on each row with Check All / Clear All / Add Selected buttons. Adding terms auto-triggers re-scan and updates 2D/3D matrix views.
 - Names highlighted in blue with English equivalent, dates in orange, dictionary words in green.
@@ -1277,7 +1280,14 @@ python3 p.py
 
 ## 11. Changelog
 
-### February 15, 2026: WRR Exact Replication, Dictionaries, Cluster Significance
+### February 15, 2026 (v4.3): Per-Cluster P-Values, Discovered Term P-Values, Sortable Clusters
+
+- **Per-Cluster P-Values**: After running the Significance Test, every cluster row now shows its own P-value badge (color-coded green/yellow/orange/red). Computed via binary search on sorted permuted span distribution — O(log N) per cluster.
+- **Sortable Cluster List**: Two sort buttons (Sort: Span / Sort: P-value) in cluster header. P-value sort activates after permutation test completes. Cluster click targets preserved regardless of sort order.
+- **Discovered Term Analytical P-Values**: Each discovered term now has a closed-form binomial P-value column: `P = 1 - (1 - (2d+1)/L)^n`. Sortable, color-coded (green < 0.01, yellow-green < 0.05, orange < 0.1, red otherwise). Included in JSON export.
+- **Filter Checkbox Visibility Fix**: Discover Terms filter checkboxes (All/Names/Dates) changed from dark text (#333) to light text (#ddd) for readability against the dark matrix-view background.
+
+### February 15, 2026 (v4.2): WRR Exact Replication, Dictionaries, Cluster Significance
 
 - **WRR 1994 Exact Replication**: Full implementation of the Witztum-Rips-Rosenberg experiment with c(w,w') perturbation statistic. 125 spatial perturbations (x,y,z shifts), multi-row-length optimization, P₁ (binomial tail) and P₂ (Gamma CDF) combined statistic, permutation test with pre-computed N×N c-matrix. Three worker modes: Quick Run (Δ distance), Full WRR (c(w,w')), and Permutation Test.
 - **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date converter for WRR experiment rabbi dates. Handles month lengths, leap years, and Tishrei-based year boundaries.

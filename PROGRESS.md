@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-15 (WRR c(w,w') Statistic, Alt Spellings, Video Capture Fix)
+**Last Updated**: 2026-02-15 (Per-Cluster P-Values, Discovered Term P-Values, Sortable Clusters)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,33 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-13/15
+## Current Session: 2026-02-15
+
+### Per-Cluster P-Values & Sortable Clusters ✅ COMPLETE
+
+Added statistical depth to the Cluster Significance Test and Discover Terms features.
+
+#### What's New
+
+1. **Per-Cluster P-Values** — After running the permutation test, every cluster row displays its own P-value badge (not just the best cluster). Binary search on sorted permuted spans, O(log N) per cluster.
+
+2. **Sortable Cluster List** — Two sort buttons: "Sort: Span" (default) and "Sort: P-value" (activates after permutation test). Click targets preserved via original index mapping.
+
+3. **Discovered Term Analytical P-Values** — Each discovered term gets a closed-form binomial P-value: `P = 1 - (1 - (2d+1)/L)^n` where d=minDistance, L=304,805, n=totalOccurrences. New sortable "P" column in table, color-coded, included in JSON export.
+
+4. **Filter Checkbox Visibility Fix** — All/Names/Dates checkboxes changed from `color:#333` to `color:#ddd` for readability on dark matrix-view background.
+
+#### State Variables Added
+- `clusterPValues[]` — P-value per cluster
+- `clusterSortMode` — 'span' or 'pvalue'
+- `permSpanDistribution` — sorted permuted spans for re-use
+
+#### Key Functions Added
+- `renderClusterList()` — Extracted cluster row rendering, supports sort modes and P-value badges
+- `computeClusterPValues(clusters, permSpans)` — Binary search for per-cluster P-values
+- `sortClusters(mode)` — Sort handler for cluster list
+
+---
 
 ### WRR 1994 Experiment Replication ✅ COMPLETE
 
