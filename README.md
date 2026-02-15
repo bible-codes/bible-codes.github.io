@@ -287,10 +287,12 @@ Automatically discovers additional dictionary-validated ELS terms within a matri
 
 - Searches ±radius around the cluster center for all indexed ELS words.
 - Validates against 7 dictionary sources (Wikipedia full-text 718K, unified 82K, names 8.7K, BDB, Strong's, Wiktionary, Tanakh).
-- Shows root, z-score significance, definition, source dictionary, and distance from cluster.
+- Shows root, z-score significance, definition, source dictionary, distance, occurrences, and term length.
+- **Sortable columns**: Click Term (by length), Distance, Skip, z-Score, or Occurrences headers to sort ascending/descending.
 - **Filter checkboxes**: Toggle between All / Names / Dates to focus results on names from the names dictionary or date-related Hebrew terms (months, birth/death words).
+- **Multi-select**: Checkboxes on each row with Check All / Clear All / Add Selected buttons. Adding terms auto-triggers re-scan and updates 2D/3D matrix views.
 - Names highlighted in blue, dates in orange, dictionary words in green.
-- Click "+" to add any discovered term to the search and re-scan.
+- **Export**: PNG export includes full matrix, all search terms with verse references, full verse texts, and all discovered terms with definitions. JSON export provides complete structured data for further analysis.
 
 ### 3.2 WRR 1994 Experiment
 
@@ -1247,8 +1249,11 @@ python3 p.py
 - **Wikipedia Full-Text Vocabulary**: 717,915 Hebrew words extracted from 656,504 Hebrew Wikipedia articles (full article text, not just titles). Filtered for quality (freq ≥ 3, pure Hebrew, 2–15 chars). 7 MB compressed.
 - **Hebrew Names Dictionary**: 8,683 given names from Wikipedia biographical articles (7,713), verified Wikipedia name categories (810), and manual transliterations with alt spellings. Includes international names transliterated to Hebrew.
 - **Discover Terms — Source Column**: Results now show which dictionary source(s) contain each word (e.g., "BDB, Wiktionary", "Hebrew Names") instead of just a checkmark.
+- **Discover Terms — Sortable Table**: Click column headers (Term/length, Distance, Skip, z-Score, Occurrences) to sort ascending/descending with arrow indicators.
+- **Discover Terms — Multi-Select**: Per-row checkboxes with Check All / Clear All / Add Selected buttons. Adding terms auto-triggers re-scan and updates 2D/3D matrix views immediately.
 - **Discover Terms — Name/Date Filters**: Checkboxes to filter discovered terms by category: All, Names (from names dictionary), or Dates (Hebrew months, birth/death words). Color-coded rows (blue=names, orange=dates, green=dictionary).
-- **Discover Terms — High Contrast**: Results table now uses black text throughout for readability. Darker header row, bolder root column, larger definition text.
+- **Discover Terms — High Contrast**: Panel explicitly sets dark text colors (was inheriting white from dark matrix-view parent). Increased results panel height.
+- **Comprehensive Matrix Export**: PNG export now includes all search terms with verse references, full verse texts, and all discovered terms with definitions/sources. New JSON export button for structured data.
 - **Alt Spellings Display Fix**: Space-separated alternate spellings on the same line now correctly display all forms in results.
 - **Video Format Options**: 3D matrix video capture supports WebM format selection.
 - **Backward ELS Search**: WRR worker searches reversed terms (equivalent to negative skip) for complete coverage.
