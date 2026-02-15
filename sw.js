@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-codes-v6.0';
+const CACHE_NAME = 'bible-codes-v6.1';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -38,6 +38,8 @@ const urlsToCache = [
   './data/dictionaries/strongs-hebrew.json.gz',
   './data/dictionaries/hebrew-wiktionary.json.gz',
   './data/embeddings/hebrew-roots.json.gz',
+  './data/dictionaries/wikipedia-fulltext.json.gz',
+  './data/dictionaries/names-combined.json.gz',
 
   // ELS Index files (large - loaded on demand)
   './data/els-index/els-index-20-min4.json.gz',

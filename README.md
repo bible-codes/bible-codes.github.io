@@ -286,8 +286,8 @@ Monte Carlo permutation test for evaluating whether an N-term cluster is statist
 Automatically discovers additional dictionary-validated ELS terms within a matrix region.
 
 - Searches ±radius around the cluster center for all indexed ELS words.
-- Validates against the unified Hebrew dictionary (56K+ entries).
-- Shows root, z-score significance, definition, and distance from cluster.
+- Validates against 7 dictionary sources (Wikipedia full-text 718K, unified 82K, names 8.7K, BDB, Strong's, Wiktionary, Tanakh).
+- Shows root, z-score significance, definition, source dictionary, and distance from cluster.
 - Click "+" to add any discovered term to the search and re-scan.
 
 ### 3.2 WRR 1994 Experiment
@@ -779,17 +779,22 @@ The dictionary merges entries from multiple sources into a single searchable col
 
 | Source | Entries | Description |
 |--------|---------|-------------|
+| Wikipedia Full-Text | 717,915 | All Hebrew words from 656K Wikipedia articles (freq ≥ 3) |
 | Tanakh Extracted | 56,118 | All unique word forms from the Hebrew Bible |
 | Hebrew Wiktionary | 27,598 | Modern and Biblical Hebrew, community-sourced |
+| Hebrew Names | 8,683 | Given names from Wikipedia bios, verified categories, transliterations |
 | BDB (Open Scriptures) | 6,893 | Brown-Driver-Briggs, academically verified Biblical Hebrew |
 | Strong's Concordance | 6,243 | Cross-referenced to specific verses |
-| **Unified Total** | **82,151** | Deduplicated superset |
+| Unified (merged) | 82,151 | Deduplicated superset of BDB + Wiktionary + Tanakh |
+| Wikipedia Titles | 198,000 | Hebrew Wikipedia article titles |
 
 **Inflection mapping**: 50,037 inflected forms linked to their base forms (lemmas). This means you can look up a conjugated verb and find its root.
 
 **Era classification**: Each entry is tagged as Biblical (9,340), Modern (19,602), Rabbinic (2,022), or Medieval (39).
 
-**Total PWA size**: ~5.3 MB compressed. Works entirely offline.
+**Discover Terms source tracking**: Each result in Discover Terms now shows which dictionary source(s) contain the word (e.g., "BDB, Wiktionary"), not just a checkmark.
+
+**Total PWA size**: ~12.6 MB compressed (including Wikipedia full-text vocabulary). Works entirely offline.
 
 ### 5.4 IndexedDB Storage
 
@@ -1232,11 +1237,14 @@ python3 p.py
 
 ## 11. Changelog
 
-### February 15, 2026: WRR Exact Replication, Cluster Significance Test, UI Improvements
+### February 15, 2026: WRR Exact Replication, Dictionaries, Cluster Significance
 
 - **WRR 1994 Exact Replication**: Full implementation of the Witztum-Rips-Rosenberg experiment with c(w,w') perturbation statistic. 125 spatial perturbations (x,y,z shifts), multi-row-length optimization, P₁ (binomial tail) and P₂ (Gamma CDF) combined statistic, permutation test with pre-computed N×N c-matrix. Three worker modes: Quick Run (Δ distance), Full WRR (c(w,w')), and Permutation Test.
 - **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date converter for WRR experiment rabbi dates. Handles month lengths, leap years, and Tishrei-based year boundaries.
 - **Cluster Significance Test**: Monte Carlo permutation test for Full Scan clusters. Shuffles term labels across pooled ELS hit positions, computes minimum-span via sliding window, reports P-value with histogram visualization. Answers: "How unlikely is this clustering by chance?"
+- **Wikipedia Full-Text Vocabulary**: 717,915 Hebrew words extracted from 656,504 Hebrew Wikipedia articles (full article text, not just titles). Filtered for quality (freq ≥ 3, pure Hebrew, 2–15 chars). 7 MB compressed.
+- **Hebrew Names Dictionary**: 8,683 given names from Wikipedia biographical articles (7,713), verified Wikipedia name categories (810), and manual transliterations with alt spellings. Includes international names transliterated to Hebrew.
+- **Discover Terms — Source Column**: Results now show which dictionary source(s) contain each word (e.g., "BDB, Wiktionary", "Hebrew Names") instead of just a checkmark.
 - **Discover Terms — High Contrast**: Results table now uses black text throughout for readability. Darker header row, bolder root column, larger definition text.
 - **Alt Spellings Display Fix**: Space-separated alternate spellings on the same line now correctly display all forms in results.
 - **Video Format Options**: 3D matrix video capture supports WebM format selection.

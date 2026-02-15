@@ -23,3 +23,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Wikipedia dump and intermediate data (1GB+, can be regenerated)
+tools/wiki-data/

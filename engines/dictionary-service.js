@@ -66,6 +66,20 @@ export class DictionaryService {
       license: 'CC BY-SA 4.0',
       priority: 4,  // Modern vocabulary supplement
     },
+    'wikipedia-fulltext': {
+      name: 'Wikipedia Full-Text',
+      file: 'data/dictionaries/wikipedia-fulltext.json.gz',
+      description: '718K Hebrew words from full Wikipedia article text (freq >= 3)',
+      license: 'CC BY-SA 4.0',
+      priority: 5,  // Broad modern vocabulary
+    },
+    names: {
+      name: 'Hebrew Names',
+      file: 'data/dictionaries/names-combined.json.gz',
+      description: '8,700+ given names from Wikipedia bios, verified categories, and transliterations',
+      license: 'CC BY-SA 4.0',
+      priority: 3,  // Names have moderate priority
+    },
   };
 
   /**
@@ -224,6 +238,23 @@ export class DictionaryService {
           refs: info.refs || [],
           related: info.related || [],
           source: 'wiktionary',
+        });
+      }
+    } else {
+      // Generic format (wikipedia, wikipedia-fulltext, names, etc.)
+      // Format: { metadata: {...}, entries: { word: { word, definitions, sources, pos, era, ... } } }
+      const dictEntries = data.entries || data;
+      for (const [word, info] of Object.entries(dictEntries)) {
+        if (typeof info !== 'object') continue;
+        entries.set(word, {
+          word,
+          root: info.root || null,
+          pos: info.pos || null,
+          definitions: info.definitions || [],
+          era: info.era || 'modern',
+          frequency: info.frequency || 0,
+          alts: info.alts || [],
+          source,
         });
       }
     }

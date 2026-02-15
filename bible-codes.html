@@ -2342,14 +2342,14 @@
 
       // Load dictionary if not yet loaded
       if (!dictService) {
-        statusSpan.textContent = 'Loading dictionary...';
+        statusSpan.textContent = 'Loading dictionaries...';
         try {
-          await initDictionaries(['unified']);
+          await initDictionaries(['unified', 'bdb', 'strongs', 'wiktionary', 'names', 'wikipedia-fulltext']);
           dictService = getDictionaryService();
         } catch (e) {
-          // Try BDB fallback
+          // Try minimal fallback
           try {
-            await initDictionaries(['bdb']);
+            await initDictionaries(['unified']);
             dictService = getDictionaryService();
           } catch (e2) {
             dictService = null;
@@ -2378,11 +2378,22 @@
         let inDict = false;
         let definition = '';
         let root = '';
+        let dictSource = '';
         if (dictService) {
-          const defs = dictService.getDefinitions(item.word);
-          if (defs && defs.length > 0) {
+          // Check if word exists in any dictionary
+          const lookups = dictService.lookup(item.word);
+          if (lookups && lookups.length > 0) {
             inDict = true;
-            definition = defs[0].definitions?.[0] || '';
+            // Get source names (e.g. "BDB, Wiktionary")
+            const srcNames = [...new Set(lookups.map(l => l.sourceName || l.source || ''))].filter(Boolean);
+            dictSource = srcNames.join(', ');
+            // Get best definition
+            for (const l of lookups) {
+              if (l.definitions && l.definitions.length > 0) {
+                definition = l.definitions[0];
+                break;
+              }
+            }
           }
           const rootInfo = dictService.getRoot(item.word);
           if (rootInfo) root = rootInfo.root;
@@ -2400,6 +2411,7 @@
           inDict,
           definition,
           root,
+          dictSource,
           bestOcc: item.occurrences[0] // closest occurrence
         });
       }
@@ -2427,7 +2439,7 @@
           <th style="padding:5px 6px;">Distance</th>
           <th style="padding:5px 6px;">Skip</th>
           <th style="padding:5px 6px;">z-Score</th>
-          <th style="padding:5px 6px;">Dict</th>
+          <th style="padding:5px 6px;">Source</th>
           <th style="padding:5px 6px;">Definition</th>
           <th style="padding:5px 6px;">Add</th>
         </tr></thead><tbody>`;
@@ -2444,7 +2456,7 @@
           <td style="padding:4px 6px;color:#000;">${d.minDistance}</td>
           <td style="padding:4px 6px;color:#000;">${d.bestOcc.skip}</td>
           <td style="padding:4px 6px;color:${zColor};font-weight:bold;">${d.zScore.toFixed(1)}</td>
-          <td style="padding:4px 6px;color:#000;font-weight:bold;">${d.inDict ? '✓' : ''}</td>
+          <td style="padding:4px 6px;font-size:11px;color:#000;">${d.dictSource || (d.inDict ? '✓' : '')}</td>
           <td style="padding:4px 6px;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000;">${defText}</td>
           <td style="padding:4px 6px;"><button class="btn btn-small" style="padding:2px 8px;font-size:11px;" onclick="addDiscoveredTerm('${d.word}', ${d.bestOcc.pos}, ${d.bestOcc.skip})">+</button></td>
         </tr>`;
