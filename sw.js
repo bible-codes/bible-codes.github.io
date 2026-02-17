@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-codes-v6.8';
+const CACHE_NAME = 'bible-codes-v6.9';
 
 // Assets to cache for offline use
 const urlsToCache = [

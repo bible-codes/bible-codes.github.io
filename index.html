@@ -40,34 +40,52 @@
       --orange: #e65100;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100vh;
+      overflow: hidden;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--gray-light);
       color: #333;
       line-height: 1.5;
+      display: flex;
+      flex-direction: column;
     }
     .header {
       background: var(--blue);
       color: white;
-      padding: 12px 16px;
+      padding: 8px 16px;
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-shrink: 0;
     }
     .header a { color: white; text-decoration: none; }
     .header img { width: 32px; height: 32px; }
     .header h1 { font-size: 18px; font-weight: 600; }
+    main.container {
+      flex: 1;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 8px 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
     .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
 
     /* Mode Tabs */
     .mode-tabs {
       display: flex;
       gap: 0;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
       background: white;
       border-radius: 6px;
       overflow: hidden;
       border: 1px solid var(--border);
+      flex-shrink: 0;
     }
     .mode-tab {
       flex: 1;
@@ -114,7 +132,7 @@
 
     /* Mode content */
     .mode-content { display: none; }
-    .mode-content.active { display: block; }
+    .mode-content.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 
     /* Form elements */
     .input-row {
@@ -721,8 +739,9 @@
       background: linear-gradient(135deg, var(--blue-light) 0%, #f0f4ff 100%);
       border: 1px solid #c8d8f0;
       border-radius: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
       padding: 0;
+      flex-shrink: 0;
     }
     .intro-blurb summary {
       cursor: pointer;
@@ -746,6 +765,7 @@
 
     /* Site footer */
     .site-footer {
+      display: none;
       text-align: center;
       padding: 20px 16px;
       margin-top: 30px;
@@ -764,28 +784,23 @@
     .footer-links a:hover { text-decoration: underline; }
 
     /* === Two-column scan layout === */
-    .scan-layout { padding: 12px; }
-    .scan-grid { display: flex; flex-direction: column; }
+    .scan-layout { padding: 0; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    .scan-grid { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 
     @media (min-width: 1024px) {
-      .container:has(.scan-layout) { max-width: 1600px; }
       .scan-grid {
         display: grid;
         grid-template-columns: 7fr 3fr;
-        gap: 16px;
-        align-items: start;
+        gap: 12px;
         direction: ltr;
       }
       .scan-col-matrix, .scan-col-controls { direction: rtl; }
 
       .scan-col-matrix {
-        position: sticky; top: 8px;
-        max-height: calc(100vh - 16px);
         overflow-y: auto;
         min-width: 0;
       }
       .scan-col-controls {
-        max-height: calc(100vh - 16px);
         overflow-y: auto;
         min-width: 0;
       }
@@ -930,7 +945,7 @@
        <div class="scan-grid">
         <!-- LEFT: Matrix/3D (70% on desktop) -->
         <div class="scan-col-matrix">
-          <div id="scanMatrixPlaceholder" style="background:#2a2a3d;border-radius:8px;min-height:calc(100vh - 160px);overflow-y:auto;direction:rtl;">
+          <div id="scanMatrixPlaceholder" style="background:#2a2a3d;border-radius:8px;height:100%;overflow-y:auto;direction:rtl;">
             <div id="torahTextPreview" style="padding:16px;font-family:'SBL Hebrew','David','Noto Sans Hebrew',serif;font-size:18px;line-height:2;text-align:right;color:#d4d4d4;letter-spacing:0.5px;word-break:break-all;"></div>
           </div>
           <div id="scanMatrixViewAnchor"></div>
