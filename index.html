@@ -822,7 +822,7 @@
     @media (max-width: 767px) {
       .scan-col-controls { order: 1; }
       .scan-col-matrix { order: 2; }
-      .matrix-placeholder { max-height: 200px; }
+      #scanMatrixPlaceholder { max-height: 40vh; }
     }
 
     @media (min-width: 768px) and (max-width: 1023px) {
@@ -930,8 +930,8 @@
        <div class="scan-grid">
         <!-- LEFT: Matrix/3D (70% on desktop) -->
         <div class="scan-col-matrix">
-          <div id="scanMatrixPlaceholder" class="matrix-placeholder" style="padding:0;min-height:0;">
-            <div id="torahTextPreview" style="width:100%;max-height:calc(100vh - 160px);overflow-y:auto;padding:16px;font-family:'SBL Hebrew','David','Noto Sans Hebrew',serif;font-size:18px;line-height:2;direction:rtl;text-align:right;color:#d4d4d4;letter-spacing:0.5px;"></div>
+          <div id="scanMatrixPlaceholder" style="background:#2a2a3d;border-radius:8px;min-height:calc(100vh - 160px);overflow-y:auto;direction:rtl;">
+            <div id="torahTextPreview" style="padding:16px;font-family:'SBL Hebrew','David','Noto Sans Hebrew',serif;font-size:18px;line-height:2;text-align:right;color:#d4d4d4;letter-spacing:0.5px;word-break:break-all;"></div>
           </div>
           <div id="scanMatrixViewAnchor"></div>
         <!-- RIGHT: Controls+Results (30% on desktop) -->
