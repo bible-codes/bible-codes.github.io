@@ -801,14 +801,28 @@
         min-width: 0;
       }
       .scan-col-controls {
-        overflow-y: auto;
         min-width: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
-
-      .scan-col-controls .action-row {
-        position: sticky; top: 0; z-index: 20;
-        background: white; margin: 0; padding: 8px 0;
+      .scan-controls-frozen {
+        flex-shrink: 0;
+        background: white;
+        padding: 6px 0 4px;
         border-bottom: 1px solid var(--border);
+      }
+      .scan-controls-frozen h2 { font-size: 14px; margin-bottom: 2px; }
+      .scan-controls-frozen .action-row { margin: 0; padding: 4px 0; }
+      .scan-controls-frozen .btn { padding: 4px 12px; font-size: 12px; }
+      .scan-controls-frozen .range-row { font-size: 12px; margin: 2px 0; }
+      .scan-controls-frozen .range-row input { width: 60px; padding: 2px 4px; font-size: 12px; }
+      .scan-controls-frozen .save-panel { margin: 2px 0; font-size: 11px; }
+      .scan-controls-frozen .save-panel .btn { padding: 2px 8px; font-size: 11px; }
+      .scan-controls-scroll {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
       }
 
       .scan-col-controls .batch-textarea { height: 80px; min-height: 60px; }
@@ -952,12 +966,33 @@
         <!-- RIGHT: Controls+Results (30% on desktop) -->
         </div>
         <div class="scan-col-controls">
+        <div class="scan-controls-frozen">
         <h2>Real-time ELS Scan</h2>
-        <p>Scans the entire Torah text for any term. Use this for words not in the index.</p>
 
-        <div class="info-text">
-          Text: Koren Edition (Rips et al., 1994) - 304,805 letters
+        <div class="save-panel">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <span id="autoSaveStatus" style="font-size:11px;color:#666;">Not saved yet</span>
+            <button class="btn btn-secondary btn-small" onclick="exportScanResults()">Export JSON</button>
+            <button class="btn btn-secondary btn-small" onclick="clearScanSession()">Clear</button>
+          </div>
         </div>
+
+        <div class="range-row">
+          <label>Skip range: <input type="number" id="minSkip" value="-500"> to <input type="number" id="maxSkip" value="500"></label>
+        </div>
+
+        <div class="action-row">
+          <button class="btn" id="scanBtn" onclick="startScan()">Search</button>
+          <button class="btn btn-danger" id="scanCancelBtn" onclick="cancelScan()" style="display:none;">Cancel</button>
+          <span id="scanStatus" style="font-size: 12px; color: #666;"></span>
+        </div>
+
+        <div class="batch-progress" id="scanProgress" style="display:none;">
+          <div class="batch-progress-bar" id="scanProgressBar" style="width:0%;">0%</div>
+        </div>
+        </div><!-- /scan-controls-frozen -->
+
+        <div class="scan-controls-scroll">
 
         <!-- Search terms input -->
         <div class="batch-panel">
@@ -1059,34 +1094,11 @@
           </div>
         </div>
 
-        <div class="save-panel">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-            <span id="autoSaveStatus" style="font-size:12px;color:#666;">Not saved yet</span>
-            <button class="btn btn-secondary btn-small" onclick="exportScanResults()">Export JSON</button>
-            <button class="btn btn-secondary btn-small" onclick="clearScanSession()">Clear</button>
-          </div>
-          <div id="savedScanSessions"></div>
-        </div>
-
-        <div class="range-row">
-          <label>Skip range: <input type="number" id="minSkip" value="-500"> to <input type="number" id="maxSkip" value="500"></label>
-          <span style="font-size: 12px; color: #666;">Skip 0 excluded, ±1 = open text</span>
-        </div>
-
-        <div class="action-row">
-          <button class="btn" id="scanBtn" onclick="startScan()">Search</button>
-          <button class="btn btn-danger" id="scanCancelBtn" onclick="cancelScan()" style="display:none;">Cancel</button>
-          <span id="scanStatus" style="font-size: 13px; color: #666;"></span>
-        </div>
-
-        <div class="batch-progress" id="scanProgress" style="display:none;">
-          <div class="batch-progress-bar" id="scanProgressBar" style="width:0%;">0%</div>
-        </div>
-
         <div class="scan-results-container">
           <div id="scanResults"></div>
         </div>
 
+        </div><!-- /scan-controls-scroll -->
         </div><!-- /scan-col-controls -->
        </div><!-- /scan-grid -->
 
