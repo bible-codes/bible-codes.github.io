@@ -619,7 +619,6 @@
       border-radius: 6px;
       padding: 10px 14px;
       margin-top: 8px;
-      display: none;
     }
     #videoControlPanel .vid-row {
       display: flex;
@@ -764,6 +763,74 @@
     .footer-links a { color: var(--blue); text-decoration: none; }
     .footer-links a:hover { text-decoration: underline; }
 
+    /* === Two-column scan layout === */
+    .scan-layout { padding: 12px; }
+    .scan-grid { display: flex; flex-direction: column; }
+
+    @media (min-width: 1024px) {
+      .container:has(.scan-layout) { max-width: 1600px; }
+      .scan-grid {
+        display: grid;
+        grid-template-columns: 7fr 3fr;
+        gap: 16px;
+        align-items: start;
+        direction: ltr;
+      }
+      .scan-col-matrix, .scan-col-controls { direction: rtl; }
+
+      .scan-col-matrix {
+        position: sticky; top: 8px;
+        max-height: calc(100vh - 16px);
+        overflow-y: auto;
+        min-width: 0;
+      }
+      .scan-col-controls {
+        max-height: calc(100vh - 16px);
+        overflow-y: auto;
+        min-width: 0;
+      }
+
+      .scan-col-controls .action-row {
+        position: sticky; top: 0; z-index: 20;
+        background: white; margin: 0; padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .scan-col-controls .batch-textarea { height: 80px; min-height: 60px; }
+      .scan-col-controls #clusterListContainer { max-height: 35vh; }
+      .scan-col-controls .scan-results-container { max-height: none; }
+      .scan-col-controls .results-scrollable { max-height: 200px; }
+
+      .matrix-toolbar {
+        position: sticky; top: 0; z-index: 10;
+        background: #2a2a3d; padding: 8px 0;
+      }
+
+      .scan-col-matrix .matrix-container { max-height: calc(100vh - 300px) !important; }
+    }
+
+    .matrix-placeholder {
+      background: #2a2a3d; border-radius: 8px;
+      padding: 60px 20px; text-align: center;
+      color: #8bb8e8; min-height: 300px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .matrix-placeholder h3 { color: #8bb8e8; margin-bottom: 12px; font-size: 18px; }
+    .matrix-placeholder p { color: #999; font-size: 14px; line-height: 1.7; margin: 0; }
+
+    @media (max-width: 767px) {
+      .scan-col-controls { order: 1; }
+      .scan-col-matrix { order: 2; }
+      .matrix-placeholder { display: none; }
+    }
+
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .scan-col-matrix { order: 1; }
+      .scan-col-controls { order: 2; }
+      .scan-col-controls #clusterListContainer { max-height: 300px; }
+    }
+
     @media (max-width: 600px) {
       .mode-tab .mode-desc { display: none; }
       .matrix-cell { width: 22px; height: 22px; font-size: 14px; }
@@ -829,9 +896,7 @@
           <h2>Search Terms</h2>
 
           <div class="save-panel">
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-              <input type="text" id="sessionName" placeholder="Session name..." style="flex: 1; min-width: 150px;">
-              <button class="btn btn-success btn-small" onclick="saveSession()">Save</button>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
               <button class="btn btn-secondary btn-small" onclick="exportResults()">Export</button>
               <button class="btn btn-secondary btn-small" onclick="clearSession()">Clear</button>
             </div>
@@ -861,7 +926,19 @@
 
     <!-- SCAN MODE -->
     <div id="scan-mode" class="mode-content active">
-      <section class="section">
+      <section class="section scan-layout">
+       <div class="scan-grid">
+        <!-- LEFT: Matrix/3D (70% on desktop) -->
+        <div class="scan-col-matrix">
+          <div id="scanMatrixPlaceholder" class="matrix-placeholder">
+            <h3>Matrix View</h3>
+            <p>Run a search and click a cluster or result to display the ELS matrix here.</p>
+            <p style="margin-top:12px;font-size:12px;color:#666;">2D grid + 3D WebGL rendering</p>
+          </div>
+          <div id="scanMatrixViewAnchor"></div>
+        <!-- RIGHT: Controls+Results (30% on desktop) -->
+        </div>
+        <div class="scan-col-controls">
         <h2>Real-time ELS Scan</h2>
         <p>Scans the entire Torah text for any term. Use this for words not in the index.</p>
 
@@ -970,9 +1047,8 @@
         </div>
 
         <div class="save-panel">
-          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-            <input type="text" id="scanSessionName" placeholder="Session name..." style="flex: 1; min-width: 150px;">
-            <button class="btn btn-success btn-small" onclick="saveScanSession()">Save</button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <span id="autoSaveStatus" style="font-size:12px;color:#666;">Not saved yet</span>
             <button class="btn btn-secondary btn-small" onclick="exportScanResults()">Export JSON</button>
             <button class="btn btn-secondary btn-small" onclick="clearScanSession()">Clear</button>
           </div>
@@ -998,7 +1074,10 @@
           <div id="scanResults"></div>
         </div>
 
-        <!-- Inline Matrix View -->
+        </div><!-- /scan-col-controls -->
+       </div><!-- /scan-grid -->
+
+        <!-- Inline Matrix View (inside left column via JS move, or here as fallback) -->
         <div id="scanMatrixView" class="matrix-view" style="display:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <h3 id="scanMatrixTitle">Matrix View</h3>
@@ -1006,9 +1085,10 @@
               <button class="btn btn-small" id="btn3DToggle" onclick="toggle3DView()">3D View</button>
               <button class="btn-3d-ctrl" id="btn3DPause" onclick="toggle3DAutoRotate()" style="display:none;">Pause Rotation</button>
               <button class="btn-3d-ctrl" id="btn3DReset" onclick="reset3DCamera()" style="display:none;">Reset Camera</button>
-              <button class="btn-3d-ctrl" id="btn3DVideo" onclick="vidShowPanel()" style="display:none;background:#c62828;">Video</button>
               <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Export PNG</button>
               <button class="btn btn-small" onclick="exportMatrixJSON()" style="background:#555;">Export JSON</button>
+              <button class="btn btn-small" onclick="downloadReportHTML()" style="background:#1565c0;">Report HTML</button>
+              <button class="btn btn-small" onclick="downloadReportPDF()" style="background:#0d47a1;">Report PDF</button>
               <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover Terms</button>
               <span style="display:inline-flex;gap:8px;align-items:center;font-size:11px;color:#ddd;margin-left:4px;">
                 <label style="cursor:pointer;color:#ddd;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
@@ -1269,6 +1349,16 @@
       });
     });
 
+    // ============= TWO-COLUMN LAYOUT: Move matrix view into left column =============
+    {
+      const anchor = document.getElementById('scanMatrixViewAnchor');
+      const matrixView = document.getElementById('scanMatrixView');
+      if (anchor && matrixView) {
+        anchor.parentNode.insertBefore(matrixView, anchor);
+        anchor.remove();
+      }
+    }
+
     // ============= INIT =============
     async function init() {
       try {
@@ -1286,10 +1376,79 @@
         displayStats(metadata);
         loadSavedSessions();
 
+        // Auto-restore previous session if available
+        await autoRestoreSession();
+
       } catch (error) {
         console.error('Init failed:', error);
         document.getElementById('indexLoading').innerHTML =
           `<div style="color: red;">Error loading index: ${error.message}</div>`;
+      }
+    }
+
+    async function autoRestoreSession() {
+      const raw = localStorage.getItem('elsAutoSession');
+      if (!raw) return;
+      try {
+        const s = JSON.parse(raw);
+        if (!s.terms || s.terms.length === 0) return;
+
+        scanTerms = s.terms;
+        scanClusters = s.clusters || [];
+        clusterPValues = s.clusterPValues || [];
+        permSpanDistribution = s.permSpanDistribution || null;
+        currentSelectedClusterIdx = s.selectedClusterIdx || 0;
+
+        // Restore skip range
+        if (s.skipRange) {
+          const minEl = document.getElementById('minSkip');
+          const maxEl = document.getElementById('maxSkip');
+          if (minEl) minEl.value = s.skipRange[0];
+          if (maxEl) maxEl.value = s.skipRange[1];
+        }
+
+        // Restore textarea and batch terms
+        const ta = document.getElementById('batchTextarea');
+        if (ta) {
+          ta.value = s.terms.join('\n');
+          parseBatchInput();
+        }
+
+        // Load hits from IndexedDB
+        const status = document.getElementById('scanStatus');
+        if (status) status.textContent = 'Restoring session...';
+        try {
+          scanAllResults = await readAllFromScanDB(s.terms);
+        } catch (e) {
+          scanAllResults = {};
+          for (const t of s.terms) scanAllResults[t] = [];
+        }
+
+        await loadCharDB();
+        displayScanResults(scanTerms, scanAllResults, scanClusters);
+
+        // Restore discovered terms
+        if (s.discoveredResults) discoveredResults = s.discoveredResults;
+
+        // Restore selected cluster and matrix
+        if (scanClusters.length > 0) {
+          showClusterMatrix(currentSelectedClusterIdx);
+          if (discoveredResults.length > 0) {
+            const panel = document.getElementById('discoverTermsPanel');
+            if (panel) panel.style.display = 'block';
+            renderDiscoveredResults();
+          }
+        }
+
+        // Update auto-save status indicator
+        const autoEl = document.getElementById('autoSaveStatus');
+        if (autoEl && s.savedAt) {
+          autoEl.textContent = 'Restored from ' + new Date(s.savedAt).toLocaleTimeString();
+        }
+
+        if (status) status.textContent = '';
+      } catch (e) {
+        console.warn('Auto-restore failed:', e);
       }
     }
 
@@ -1483,13 +1642,12 @@
     // ============= INDEX MODE: SESSIONS =============
     window.saveSession = function() {
       if (!currentResults) { alert('No results to save'); return; }
-      const name = document.getElementById('sessionName').value.trim() || `Search ${new Date().toLocaleTimeString()}`;
+      const name = `Search ${new Date().toLocaleTimeString()}`;
       const sessions = JSON.parse(localStorage.getItem('elsSearchSessions') || '[]');
       sessions.unshift({ name, results: currentResults, savedAt: new Date().toISOString() });
       if (sessions.length > 20) sessions.length = 20;
       localStorage.setItem('elsSearchSessions', JSON.stringify(sessions));
       loadSavedSessions();
-      document.getElementById('sessionName').value = '';
     };
 
     window.loadSession = function(idx) {
@@ -1897,6 +2055,7 @@
     let scanAllResults = {};  // { term: [{pos, skip}, ...] }
     let scanTerms = [];
     let scanClusters = [];
+    let currentSelectedClusterIdx = 0;
     let clusterPermRunning = false;
     let clusterPValues = [];         // P-value per cluster
     let clusterSortMode = 'span';    // 'span' or 'pvalue'
@@ -2294,10 +2453,17 @@
         showClusterMatrix(0);
       }
 
+      // Auto-run significance test if 2+ terms and clusters exist
+      if (scanTerms.length >= 2 && scanClusters.length > 0) {
+        setTimeout(() => runClusterPermTest(), 100);
+      }
+
       if (hasBatch) {
         renderBatchTable();
         document.getElementById('batchExportBtn').style.display = '';
       }
+
+      autoSaveSession();
     };
 
     // --- Sliding window cluster finder ---
@@ -2681,6 +2847,8 @@
         actualSpan: actualBestSpan, median, mean,
         distribution: permSpans
       });
+
+      autoSaveSession();
     };
 
     function showClusterPermResults(msg) {
@@ -2777,6 +2945,10 @@
       }
       document.getElementById('scanMatrixLegend').innerHTML = legendHtml;
 
+      // Hide placeholder when matrix is shown
+      const ph = document.getElementById('scanMatrixPlaceholder');
+      if (ph) ph.style.display = 'none';
+
       current3DHits = cluster.hits;
       renderScanMatrix(cluster.hits);
 
@@ -2785,7 +2957,11 @@
         render3DMatrix(current3DHits, W, H);
       }
 
-      view.scrollIntoView({ behavior: 'smooth' });
+      // Only scroll into view on mobile (desktop has sticky side-by-side)
+      if (window.innerWidth < 1024) view.scrollIntoView({ behavior: 'smooth' });
+
+      currentSelectedClusterIdx = idx;
+      autoSaveSession();
     };
 
     // --- Show single term matrix ---
@@ -2820,6 +2996,10 @@
         <div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${actualForm}${verseStr}</span></div>
       `;
 
+      // Hide placeholder when matrix is shown
+      const ph = document.getElementById('scanMatrixPlaceholder');
+      if (ph) ph.style.display = 'none';
+
       current3DHits = [hit];
       renderScanMatrix([hit]);
 
@@ -2828,7 +3008,8 @@
         render3DMatrix(current3DHits, W, H);
       }
 
-      view.scrollIntoView({ behavior: 'smooth' });
+      // Only scroll into view on mobile (desktop has sticky side-by-side)
+      if (window.innerWidth < 1024) view.scrollIntoView({ behavior: 'smooth' });
     };
 
     // --- Discover dictionary-validated ELS terms within current matrix region ---
@@ -2985,12 +3166,14 @@
 
       // Render initial results immediately
       renderDiscoveredResults();
-      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (window.innerWidth < 1024) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
       // Enrich undefined terms with Wikipedia (async, re-renders when done)
       enrichDiscoveredWithWiki(discovered).then(changed => {
         if (changed) renderDiscoveredResults();
       });
+
+      autoSaveSession();
     };
 
     // --- Render discovered results with active filter and sorting ---
@@ -3466,10 +3649,43 @@
       renderBatchTable();
     };
 
+    // ============= SCAN MODE: AUTO-SAVE =============
+    function autoSaveSession() {
+      if (scanTerms.length === 0) return;
+      const hitCounts = {};
+      for (const t of scanTerms) hitCounts[t] = (scanAllResults[t] || []).length;
+      const session = {
+        terms: scanTerms,
+        hitCounts,
+        clusters: scanClusters,
+        clusterPValues,
+        permSpanDistribution: permSpanDistribution ? permSpanDistribution.slice(0, 2000) : null,
+        discoveredResults: discoveredResults.length > 0 ? discoveredResults : null,
+        selectedClusterIdx: currentSelectedClusterIdx,
+        is3DActive,
+        savedAt: new Date().toISOString(),
+        source: 'indexeddb',
+        skipRange: [
+          parseInt(document.getElementById('minSkip')?.value) || -500,
+          parseInt(document.getElementById('maxSkip')?.value) || 500
+        ]
+      };
+      try {
+        localStorage.setItem('elsAutoSession', JSON.stringify(session));
+      } catch (e) {
+        session.clusters = session.clusters.slice(0, 50);
+        session.permSpanDistribution = null;
+        session.discoveredResults = null;
+        try { localStorage.setItem('elsAutoSession', JSON.stringify(session)); } catch (_) {}
+      }
+      const el = document.getElementById('autoSaveStatus');
+      if (el) el.textContent = 'Auto-saved ' + new Date().toLocaleTimeString();
+    }
+
     // ============= SCAN MODE: SAVE/LOAD SESSIONS =============
     window.saveScanSession = function() {
       if (scanTerms.length === 0) { alert('No scan results to save'); return; }
-      const name = document.getElementById('scanSessionName').value.trim() || `Scan ${new Date().toLocaleTimeString()}`;
+      const name = `Scan ${new Date().toLocaleTimeString()}`;
       const sessions = JSON.parse(localStorage.getItem('elsScanSessions') || '[]');
 
       // Save metadata + clusters to localStorage (small).
@@ -3498,7 +3714,6 @@
         }
       }
       loadSavedScanSessions();
-      document.getElementById('scanSessionName').value = '';
     };
 
     window.loadScanSession = async function(idx) {
@@ -3531,6 +3746,11 @@
 
       await loadCharDB();
       displayScanResults(scanTerms, scanAllResults, scanClusters);
+      // Auto-select first cluster and run significance test on session load
+      if (scanClusters.length > 0) {
+        showClusterMatrix(0);
+        if (scanTerms.length >= 2) setTimeout(() => runClusterPermTest(), 100);
+      }
     };
 
     window.deleteScanSession = function(idx) {
@@ -3582,6 +3802,9 @@
       document.getElementById('batchParseStatus').textContent = '';
       document.getElementById('scanResults').innerHTML = '';
       document.getElementById('scanMatrixView').style.display = 'none';
+      // Restore placeholder
+      const ph = document.getElementById('scanMatrixPlaceholder');
+      if (ph) ph.style.display = '';
       scanTerms = [];
       scanAllResults = {};
       scanClusters = [];
@@ -3595,6 +3818,13 @@
       document.getElementById('scanMatrix3D').style.display = 'none';
       document.getElementById('btn3DPause').style.display = 'none';
       document.getElementById('btn3DReset').style.display = 'none';
+      clusterPValues = [];
+      permSpanDistribution = null;
+      discoveredResults = [];
+      currentSelectedClusterIdx = 0;
+      localStorage.removeItem('elsAutoSession');
+      const autoEl = document.getElementById('autoSaveStatus');
+      if (autoEl) autoEl.textContent = 'Not saved yet';
     };
 
     // Load saved scan sessions on init
@@ -3791,6 +4021,254 @@
       link.download = `els-matrix-${title.replace(/[^a-zA-Z0-9א-ת]/g, '-')}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
+    };
+
+    // --- Reusable: get matrix PNG as data URL ---
+    function getMatrixPNGDataURL() {
+      const grid = document.getElementById('scanMatrixGrid');
+      const cells = grid ? grid.querySelectorAll('.matrix-cell') : [];
+      if (cells.length === 0) return null;
+
+      const title = document.getElementById('scanMatrixTitle')?.textContent || 'ELS Matrix';
+      const cols = parseInt(grid.style.gridTemplateColumns.match(/repeat\((\d+)/)?.[1] || '30');
+      const rows = Math.ceil(cells.length / cols);
+      const cellSize = 22;
+      const padding = 30;
+      const headerHeight = 40;
+      const matrixW = cols * cellSize;
+      const canvasW = Math.max(matrixW + padding * 2, 400);
+      const canvasH = headerHeight + rows * cellSize + padding;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#1a1a28';
+      ctx.fillRect(0, 0, canvasW, canvasH);
+
+      ctx.fillStyle = '#8bb8e8';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, canvasW / 2, 25);
+
+      const colorMap = {
+        'term-color-0': '#ffc107', 'term-color-1': '#00bcd4', 'term-color-2': '#ff5722',
+        'term-color-3': '#4caf50', 'term-color-4': '#e91e63', 'term-color-5': '#3f51b5',
+        'term-color-6': '#795548', 'term-color-7': '#607d8b', 'multi-term': '#9c27b0'
+      };
+
+      ctx.font = '14px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const matrixX = Math.floor((canvasW - matrixW) / 2);
+
+      cells.forEach((cell, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = matrixX + col * cellSize;
+        const y = headerHeight + row * cellSize;
+        let bg = '#2d2d44', fg = '#e0e0e0';
+        for (const [cls, color] of Object.entries(colorMap)) {
+          if (cell.classList.contains(cls)) {
+            bg = color;
+            fg = cls === 'term-color-0' || cls === 'term-color-1' ? '#000' : '#fff';
+            break;
+          }
+        }
+        ctx.fillStyle = bg;
+        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+        ctx.fillStyle = fg;
+        ctx.fillText(cell.textContent, x + cellSize / 2, y + cellSize / 2);
+      });
+
+      return canvas.toDataURL('image/png');
+    }
+
+    // --- Build standalone HTML report ---
+    function buildReportHTML() {
+      const title = document.getElementById('scanMatrixTitle')?.textContent || 'ELS Matrix';
+      const minSkip = document.getElementById('minSkip')?.value || '-500';
+      const maxSkip = document.getElementById('maxSkip')?.value || '500';
+      const now = new Date().toLocaleString('he-IL');
+      const matrixPNG = getMatrixPNGDataURL();
+
+      // Gather search terms info
+      let termsHTML = '';
+      if (current3DHits && current3DHits.length > 0) {
+        termsHTML = '<table style="width:100%;border-collapse:collapse;margin:12px 0;"><thead><tr>' +
+          '<th style="border:1px solid #ccc;padding:8px;background:#1e5aa8;color:#fff;text-align:right;">Term</th>' +
+          '<th style="border:1px solid #ccc;padding:8px;background:#1e5aa8;color:#fff;text-align:right;">Position</th>' +
+          '<th style="border:1px solid #ccc;padding:8px;background:#1e5aa8;color:#fff;text-align:right;">Skip</th>' +
+          '<th style="border:1px solid #ccc;padding:8px;background:#1e5aa8;color:#fff;text-align:right;">Verses</th>' +
+          '</tr></thead><tbody>';
+        for (const h of current3DHits) {
+          const color = TERM_COLORS[h.termIdx % 8];
+          const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+          termsHTML += `<tr>
+            <td style="border:1px solid #ccc;padding:8px;font-weight:bold;color:${color};font-size:16px;">${h.term}</td>
+            <td style="border:1px solid #ccc;padding:8px;">${h.pos.toLocaleString()}</td>
+            <td style="border:1px solid #ccc;padding:8px;">${h.skip}</td>
+            <td style="border:1px solid #ccc;padding:8px;">${verses.join(', ')}</td>
+          </tr>`;
+        }
+        termsHTML += '</tbody></table>';
+      }
+
+      // Cluster statistics
+      let clusterHTML = '';
+      if (scanClusters.length > 0 && current3DHits && current3DHits.length > 1) {
+        // Find matching cluster
+        const hitPositions = new Set(current3DHits.map(h => `${h.pos}:${h.skip}`));
+        let matchCluster = null;
+        let matchIdx = -1;
+        for (let i = 0; i < scanClusters.length; i++) {
+          const c = scanClusters[i];
+          if (c.hits.every(h => hitPositions.has(`${h.pos}:${h.skip}`))) {
+            matchCluster = c;
+            matchIdx = i;
+            break;
+          }
+        }
+        if (matchCluster) {
+          let pStr = '';
+          if (clusterPValues.length > matchIdx && permSpanDistribution) {
+            const p = clusterPValues[matchIdx];
+            pStr = p === 0 ? '< ' + (1 / permSpanDistribution.length).toFixed(6) : p < 0.001 ? p.toExponential(2) : p.toFixed(4);
+            const sigLabel = p < 0.01 ? 'Highly Significant' : p < 0.05 ? 'Significant' : p < 0.1 ? 'Marginal' : 'Not Significant';
+            clusterHTML = `<p><strong>Span:</strong> ${matchCluster.span.toLocaleString()} characters &nbsp;|&nbsp; <strong>P-value:</strong> ${pStr} &nbsp;|&nbsp; <strong>Significance:</strong> ${sigLabel}</p>`;
+          } else {
+            clusterHTML = `<p><strong>Span:</strong> ${matchCluster.span.toLocaleString()} characters</p>`;
+          }
+        }
+      }
+
+      // Verse texts
+      let versesHTML = '';
+      if (current3DHits && charDatabase) {
+        const seenVerses = new Set();
+        const verseList = [];
+        for (const h of current3DHits) {
+          for (let i = 0; i < h.term.length; i++) {
+            const p = h.pos + i * h.skip;
+            const vk = getVerseKey(p);
+            if (vk && !seenVerses.has(vk)) {
+              seenVerses.add(vk);
+              const verseLabel = getVerseForPosition(p);
+              const verseText = getVerseTextByKey(vk);
+              if (verseLabel && verseText) verseList.push({ label: verseLabel, text: verseText });
+            }
+          }
+        }
+        if (verseList.length > 0) {
+          versesHTML = '<div style="margin:12px 0;">';
+          for (const v of verseList) {
+            versesHTML += `<div style="padding:6px 10px;margin:4px 0;background:#f5f5f5;border-radius:4px;border-right:3px solid #1e5aa8;">
+              <strong style="color:#1e5aa8;">${v.label}</strong>: <span style="font-family:serif;font-size:16px;">${v.text}</span>
+            </div>`;
+          }
+          versesHTML += '</div>';
+        }
+      }
+
+      // Discovered terms
+      let discHTML = '';
+      if (discoveredResults && discoveredResults.length > 0) {
+        const allDisc = discoveredResults.filter(d => d.inDict);
+        if (allDisc.length > 0) {
+          discHTML = '<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;"><thead><tr>' +
+            '<th style="border:1px solid #ccc;padding:6px;background:#2e7d32;color:#fff;text-align:right;">Term</th>' +
+            '<th style="border:1px solid #ccc;padding:6px;background:#2e7d32;color:#fff;text-align:right;">Definition</th>' +
+            '<th style="border:1px solid #ccc;padding:6px;background:#2e7d32;color:#fff;text-align:right;">Root</th>' +
+            '<th style="border:1px solid #ccc;padding:6px;background:#2e7d32;color:#fff;text-align:right;">Distance</th>' +
+            '<th style="border:1px solid #ccc;padding:6px;background:#2e7d32;color:#fff;text-align:right;">Skip</th>' +
+            '<th style="border:1px solid #ccc;padding:6px;background:#2e7d32;color:#fff;text-align:right;">z-score</th>' +
+            '<th style="border:1px solid #ccc;padding:6px;background:#2e7d32;color:#fff;text-align:right;">Source</th>' +
+            '</tr></thead><tbody>';
+          for (const d of allDisc) {
+            const def = d.definition ? d.definition.substring(0, 80) : (d.english || '');
+            discHTML += `<tr>
+              <td style="border:1px solid #ccc;padding:6px;font-weight:bold;font-size:15px;">${d.word}</td>
+              <td style="border:1px solid #ccc;padding:6px;">${def}</td>
+              <td style="border:1px solid #ccc;padding:6px;">${d.root || ''}</td>
+              <td style="border:1px solid #ccc;padding:6px;">${d.minDistance}</td>
+              <td style="border:1px solid #ccc;padding:6px;">${d.bestOcc ? d.bestOcc.skip : ''}</td>
+              <td style="border:1px solid #ccc;padding:6px;">${d.zScore.toFixed(1)}</td>
+              <td style="border:1px solid #ccc;padding:6px;">${d.dictSource || ''}</td>
+            </tr>`;
+          }
+          discHTML += '</tbody></table>';
+        }
+      }
+
+      return `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELS Report — ${title}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; color: #333; direction: rtl; }
+  h1 { color: #1e5aa8; border-bottom: 2px solid #1e5aa8; padding-bottom: 8px; }
+  h2 { color: #333; margin-top: 24px; border-bottom: 1px solid #ccc; padding-bottom: 6px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 20px; }
+  img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+  table { direction: rtl; }
+  @media print {
+    body { margin: 0; padding: 10px; }
+    .no-print { display: none; }
+    img { max-height: 400px; object-fit: contain; }
+  }
+</style>
+</head>
+<body>
+<h1>${title}</h1>
+<div class="meta">Generated: ${now} &nbsp;|&nbsp; Skip range: ${minSkip} to ${maxSkip} &nbsp;|&nbsp; bible-codes.github.io</div>
+
+<h2>Matrix</h2>
+${matrixPNG ? `<img src="${matrixPNG}" alt="ELS Matrix">` : '<p>Matrix image not available</p>'}
+
+<h2>Search Terms</h2>
+${termsHTML || '<p>No terms</p>'}
+
+${clusterHTML ? '<h2>Cluster Statistics</h2>' + clusterHTML : ''}
+
+<h2>Verse Texts</h2>
+${versesHTML || '<p>No verse data available</p>'}
+
+${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
+
+<hr style="margin-top:30px;border:none;border-top:1px solid #ccc;">
+<div style="text-align:center;font-size:12px;color:#999;margin-top:10px;">
+  Generated by <a href="https://bible-codes.github.io" style="color:#1e5aa8;">bible-codes.github.io</a> — ELS Search Tool
+</div>
+</body>
+</html>`;
+    }
+
+    // --- Download report as HTML file ---
+    window.downloadReportHTML = function() {
+      if (!current3DHits || current3DHits.length === 0) { alert('No matrix displayed'); return; }
+      const html = buildReportHTML();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const link = document.createElement('a');
+      const title = document.getElementById('scanMatrixTitle')?.textContent || 'ELS';
+      link.download = `els-report-${title.replace(/[^a-zA-Z0-9א-ת]/g, '-')}-${new Date().toISOString().slice(0,10)}.html`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+    };
+
+    // --- Download report as PDF (via browser print dialog) ---
+    window.downloadReportPDF = function() {
+      if (!current3DHits || current3DHits.length === 0) { alert('No matrix displayed'); return; }
+      const html = buildReportHTML();
+      const win = window.open('', '_blank');
+      if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 500);
     };
 
     // --- Export matrix data as JSON ---
@@ -5564,7 +6042,6 @@
       const d3 = document.getElementById('scanMatrix3D');
       const pauseBtn = document.getElementById('btn3DPause');
       const resetBtn = document.getElementById('btn3DReset');
-      const videoBtn = document.getElementById('btn3DVideo');
 
       if (is3DActive) {
         // Stop any active recording
@@ -5577,8 +6054,6 @@
         d3.style.display = 'none';
         pauseBtn.style.display = 'none';
         resetBtn.style.display = 'none';
-        videoBtn.style.display = 'none';
-        document.getElementById('videoControlPanel').style.display = 'none';
         destroy3DScene();
         return;
       }
@@ -5603,7 +6078,6 @@
       d3.style.display = '';
       pauseBtn.style.display = '';
       resetBtn.style.display = '';
-      videoBtn.style.display = '';
 
       const container = document.getElementById('matrix3DCanvas');
       // Remove old canvas if any
@@ -5673,14 +6147,15 @@
     }
     window.addEventListener('resize', onResize3D);
 
-    // ============= 3D VIDEO CAPTURE =============
+    // ResizeObserver for 3D canvas container (handles column layout changes)
+    {
+      const canvas3D = document.getElementById('matrix3DCanvas');
+      if (canvas3D && typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(() => onResize3D()).observe(canvas3D);
+      }
+    }
 
-    window.vidShowPanel = function() {
-      const panel = document.getElementById('videoControlPanel');
-      // Use getComputedStyle to detect CSS-hidden panels (not just inline style)
-      const isHidden = getComputedStyle(panel).display === 'none';
-      panel.style.display = isHidden ? 'block' : 'none';
-    };
+    // ============= 3D VIDEO CAPTURE =============
 
     function vidUpdateStatus(text) {
       document.getElementById('vidStatus').innerHTML = text;
