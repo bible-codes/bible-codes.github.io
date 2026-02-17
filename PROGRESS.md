@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-15 (WRR2 Nations Experiment B3)
+**Last Updated**: 2026-02-17 (Auto-Save, VCR 3D Controls, Full-Viewport Layout)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,79 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-15
+## Current Session: 2026-02-17
+
+### Auto-Save Sessions ✅ COMPLETE
+
+Automatic session persistence — no manual save required. Sessions are checkpointed on every significant event and restored on page load.
+
+#### What's New
+
+1. **Auto-save on every significant event** — Sessions save to `localStorage['elsAutoSession']` after: scan completes, significance test completes, cluster selection, and term discovery. Saves terms, clusters, clusterPValues, permSpanDistribution, discoveredResults, selected cluster index, 3D state, and skip range.
+
+2. **Auto-restore on page load** — `autoRestoreSession()` runs after init, restores full state including textarea, batch terms, scan results from IndexedDB, cluster display, matrix, and discovered terms panel. Isolated from init try/catch so failures don't break page load.
+
+3. **Save buttons removed** — Removed name input and Save button from both Index mode and Scan mode. Sessions are auto-generated timestamps. Export JSON and Clear buttons remain.
+
+4. **Auto-save indicator** — Small status text showing "Auto-saved [time]" or "Restored from [time]" replaces the old save panel.
+
+5. **Clear resets everything** — `clearScanSession()` now also clears `elsAutoSession`, `clusterPValues`, `permSpanDistribution`, `discoveredResults`, and `currentSelectedClusterIdx`.
+
+#### State Variables Added
+- `currentSelectedClusterIdx` — Tracks which cluster is selected for auto-restore
+
+#### Key Functions Added
+- `autoSaveSession()` — Serializes session state to localStorage with size fallback
+- `autoRestoreSession()` — Async restore from localStorage + IndexedDB on page load
+
+### VCR-Style 3D Video Controls ✅ COMPLETE
+
+Video capture controls now always visible when 3D mode is active — no extra button click needed.
+
+#### What's New
+
+1. **Removed Video button** — `#btn3DVideo` removed from toolbar HTML
+2. **Controls always visible in 3D** — Removed `display: none` from `#videoControlPanel` CSS. Panel is inside `#scanMatrix3D` which is hidden when 2D is active, so controls are naturally hidden/shown with the 3D view.
+3. **Cleaned up toggle3DView()** — Removed all `videoBtn` references and manual `videoControlPanel.style.display` toggling
+4. **Removed `vidShowPanel()`** — No longer needed
+
+### Full-Viewport Layout ✅ COMPLETE
+
+Page fills exactly 100vh with no main-frame scrollbar. Both columns scroll internally.
+
+#### What's New
+
+1. **`html, body` constrained to 100vh** — `overflow: hidden` on body, flex column layout
+2. **Header fixed** — `flex-shrink: 0`, compact 8px padding
+3. **Main container fills remaining space** — `flex: 1; overflow: hidden; display: flex`
+4. **Mode content fills available height** — `.mode-content.active` uses `display: flex; flex: 1; overflow: hidden`
+5. **Scan layout fills height** — `.scan-layout` and `.scan-grid` both `flex: 1; overflow: hidden`
+6. **Columns scroll internally** — Both `.scan-col-matrix` and `.scan-col-controls` have `overflow-y: auto`
+7. **Footer hidden** — `.site-footer { display: none }` to reclaim space
+8. **Mode tabs and intro blurb** — `flex-shrink: 0` prevents them from being squeezed
+
+### Torah Text Preview ✅ COMPLETE
+
+Left column shows scrollable Torah text before any search is run, replacing the static placeholder.
+
+#### What's New
+
+1. **Torah text displayed on load** — After `torahNoSpaces.txt` loads, text is rendered in the left column with a space every 5 characters for readability
+2. **Hebrew font stack** — SBL Hebrew, David, Noto Sans Hebrew with 18px, line-height 2
+3. **Replaces placeholder** — Old static "Run a search..." message replaced with live text
+4. **Hidden on search** — Torah preview hidden when matrix view activates, restored on Clear
+5. **Mobile responsive** — Capped at 40vh on small screens
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `index.html` | Auto-save system (+30 lines), VCR controls cleanup (-15 lines), full-viewport CSS (+25 lines), Torah text preview (+10 lines), removed Save buttons and name inputs |
+| `sw.js` | Bumped cache from v6.4 → v6.9 |
+
+---
+
+## Previous Session: 2026-02-15
 
 ### Web Worker Scan + IndexedDB Streaming ✅ COMPLETE
 
@@ -242,9 +314,9 @@ Final-form letters (sofiot) normalized to regular forms for search matching:
 
 Toggle via ⌨ button, inserts Hebrew letters at cursor position in batch textarea.
 
-### 3D Video Capture Fix ✅
+### 3D Video Capture ✅
 
-Fixed `vidShowPanel()` toggle: was checking inline `style.display` but the initial `display: none` came from CSS. Now uses `getComputedStyle()` to correctly detect hidden state.
+Video button and `vidShowPanel()` removed (2026-02-17). Controls now always visible when 3D is active — panel visibility controlled by parent `#scanMatrix3D`.
 
 ---
 

@@ -910,7 +910,7 @@ This schema is **future-proof**:
 
 ---
 
-*Last Updated: 2026-02-08 - 3D Matrix, Batch Loader, Verse Hover, Unified Search, WRR Demo planned*
+*Last Updated: 2026-02-17 - Auto-Save, VCR 3D Controls, Full-Viewport Layout, Torah Text Preview*
 *Phase Status: 1-4 Complete (100%), Phase 5 (90%), Phase 5.5 Complete (100%)*
 *Active Tools: 10 user-facing tools operational*
-*Key Additions: 3D Three.js matrix, batch term loader, verse hover tooltips, unified search, WRR 1994 experiment replication (next)*
+*Key Additions: Auto-save sessions, VCR-style 3D controls, full-viewport no-scroll layout, Torah text preview in left column*
