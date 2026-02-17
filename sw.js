@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-codes-v7.0';
+const CACHE_NAME = 'bible-codes-v7.1';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -162,9 +162,9 @@ self.addEventListener('fetch', (event) => {
   const isLocal = url.origin === self.location.origin;
 
   if (isHTML) {
-    // Network-first for HTML pages: always get latest version, fall back to cache
+    // Network-first for HTML pages: bypass HTTP cache to always get latest from server
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-cache' })
         .then((response) => {
           if (response && response.status === 200) {
             const responseToCache = response.clone();
@@ -174,8 +174,21 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => caches.match(event.request).then(r => r || caches.match('./index.html')))
     );
+  } else if (isLocal && url.pathname.endsWith('.js')) {
+    // JS files: network-first (module imports must be fresh), fall back to cache
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
   } else {
-    // Cache-first for assets: fast offline, update cache in background
+    // Cache-first for other assets (images, data, fonts): fast offline
     event.respondWith(
       caches.match(event.request)
         .then((cached) => {
