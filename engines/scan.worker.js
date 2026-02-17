@@ -72,10 +72,10 @@ function flushBatch(db, buffer) {
 
 // --- ELS search ---
 
-function findELS(normText, term, skip) {
+function findELS(normText, term, skip, ch0Pos) {
   const results = [];
   const len = normText.length;
-  const termLen = term.length;
+  const k = term.length;
 
   if (skip === 1) {
     let idx = 0;
@@ -83,17 +83,28 @@ function findELS(normText, term, skip) {
       results.push(idx);
       idx++;
     }
-  } else {
-    for (let start = 0; start < len; start++) {
+  } else if (skip > 0) {
+    const maxStart = len - (k - 1) * skip;
+    for (const s of ch0Pos) {
+      if (s >= maxStart) break;
       let match = true;
-      for (let i = 0; i < termLen; i++) {
-        const pos = start + i * skip;
-        if (pos < 0 || pos >= len || normText[pos] !== term[i]) {
-          match = false;
-          break;
-        }
+      for (let i = 1; i < k; i++) {
+        if (normText[s + i * skip] !== term[i]) { match = false; break; }
       }
-      if (match) results.push(start);
+      if (match) results.push(s);
+    }
+  } else {
+    // Negative skip: start must be high enough that s + (k-1)*skip >= 0
+    const minStart = (k - 1) * (-skip);
+    const maxEnd = len - 1;
+    for (const s of ch0Pos) {
+      if (s < minStart) continue;
+      let match = true;
+      for (let i = 1; i < k; i++) {
+        const pos = s + i * skip;
+        if (pos < 0 || pos >= len || normText[pos] !== term[i]) { match = false; break; }
+      }
+      if (match) results.push(s);
     }
   }
   return results;
@@ -123,12 +134,19 @@ async function runScan({ torahText, terms, termAlts, minSkip, maxSkip }) {
     for (const form of alts) {
       if (cancelled) { db.close(); self.postMessage({ type: 'cancelled' }); return; }
 
+      // Pre-compute positions of first character for ~22x speedup
+      const ch0 = form[0];
+      const ch0Pos = [];
+      for (let i = 0; i < torahText.length; i++) {
+        if (torahText[i] === ch0) ch0Pos.push(i);
+      }
+
       let skipsDoneInForm = 0;
       for (let skip = minSkip; skip <= maxSkip; skip++) {
         if (cancelled) { db.close(); self.postMessage({ type: 'cancelled' }); return; }
         if (skip === 0) continue;
 
-        const found = findELS(torahText, form, skip);
+        const found = findELS(torahText, form, skip, ch0Pos);
         for (const pos of found) {
           buffer.push({ term: primary, pos, skip, form });
           hitCount++;

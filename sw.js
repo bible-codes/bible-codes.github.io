@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-codes-v6.3';
+const CACHE_NAME = 'bible-codes-v6.4';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -6,6 +6,7 @@ const urlsToCache = [
   './',
   './index.html',
   './bible-codes.html',
+  './dashboard.html',
   './text-search.html',
   './gematria.html',
   './acronym.html',
@@ -171,7 +172,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(event.request).then(r => r || caches.match('./bible-codes.html')))
+        .catch(() => caches.match(event.request).then(r => r || caches.match('./index.html')))
     );
   } else {
     // Cache-first for assets: fast offline, update cache in background

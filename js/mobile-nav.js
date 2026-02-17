@@ -75,7 +75,7 @@ export function createMobileNav() {
             </a>
           </li>
           <li class="mobile-nav-item">
-            <a href="bible-codes.html" class="mobile-nav-link">
+            <a href="index.html" class="mobile-nav-link">
               <span class="nav-icon">🔍</span>
               <span>קודי תורה (ELS)</span>
             </a>

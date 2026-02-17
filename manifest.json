@@ -40,7 +40,7 @@
     {
       "name": "ELS Bible Codes",
       "short_name": "ELS",
-      "url": "./bible-codes.html",
+      "url": "./index.html",
       "icons": [{"src": "icons/icon-192x192.png", "sizes": "192x192"}]
     },
     {
