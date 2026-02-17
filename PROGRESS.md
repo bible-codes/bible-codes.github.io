@@ -226,7 +226,7 @@ ELS search now supports alternate spellings on the same line.
 - ALL alternates are searched (ELS scan finds hits for each form)
 - Results are merged under one "term slot"
 - In clusters/matrix, the combined results represent one logical term
-- Example: `גוטרי גות'רי` → two spellings of Guthrie, treated as one term
+- Example: `דוד דויד` → two spellings of David, treated as one term
 
 **Modified functions**: `parseBatchInput()`, `startScan()`
 

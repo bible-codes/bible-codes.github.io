@@ -927,7 +927,7 @@
             <strong>Alternate spellings:</strong> put variants on the <em>same line</em> separated by spaces.<br>
             <span style="font-size:12px;color:#999;">
               All alternates are searched but only the best-matching one is used per cluster/matrix.<br>
-              Example: <code style="background:#f0f0f0;padding:1px 4px;border-radius:2px;direction:rtl;">גוטרי גות'רי</code> &larr; two spellings of Guthrie
+              Example: <code style="background:#f0f0f0;padding:1px 4px;border-radius:2px;direction:rtl;">דוד דויד</code> &larr; two spellings of David
             </span>
           </div>
           <textarea id="batchTextarea" class="batch-textarea" placeholder="Enter terms, one per line...&#10;Alternate spellings: same line, space-separated&#10;e.g.&#10;משה&#10;אברהם אבראהם&#10;ירושלים"></textarea>
@@ -1014,6 +1014,7 @@
                 <label style="cursor:pointer;color:#ddd;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
                 <label style="cursor:pointer;color:#ddd;" title="Show only names"><input type="checkbox" id="discFilterNames" onchange="applyDiscoverFilter()"> Names</label>
                 <label style="cursor:pointer;color:#ddd;" title="Show only dates/numbers"><input type="checkbox" id="discFilterDates" onchange="applyDiscoverFilter()"> Dates</label>
+                <label style="cursor:pointer;color:#ddd;" title="Show only terms with definitions"><input type="checkbox" id="discFilterDefined" onchange="applyDiscoverFilter()"> Defined</label>
               </span>
             </div>
           </div>
@@ -1916,6 +1917,123 @@
     let discSortAsc = true;      // sort direction
     let namesEnglishMap = null;  // Hebrew → English name lookup
 
+    // --- Wikipedia definition cache (IndexedDB + session) ---
+    const WIKI_DEF_DB = 'WikiDefinitions';
+    const WIKI_DEF_VER = 1;
+    let wikiDefCache = {};  // word -> definition (session cache)
+
+    function openWikiDefDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(WIKI_DEF_DB, WIKI_DEF_VER);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('defs')) {
+            db.createObjectStore('defs', { keyPath: 'word' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function getWikiDefsFromIDB(words) {
+      try {
+        const db = await openWikiDefDB();
+        const tx = db.transaction('defs', 'readonly');
+        const store = tx.objectStore('defs');
+        const results = {};
+        await Promise.all(words.map(w => new Promise((resolve) => {
+          const req = store.get(w);
+          req.onsuccess = () => { if (req.result) results[w] = req.result.definition; resolve(); };
+          req.onerror = () => resolve();
+        })));
+        db.close();
+        return results;
+      } catch { return {}; }
+    }
+
+    async function saveWikiDefsToIDB(defs) {
+      try {
+        const db = await openWikiDefDB();
+        const tx = db.transaction('defs', 'readwrite');
+        const store = tx.objectStore('defs');
+        for (const [word, definition] of Object.entries(defs)) {
+          store.put({ word, definition, fetchedAt: Date.now() });
+        }
+        await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
+        db.close();
+      } catch {}
+    }
+
+    async function fetchWikiDef(term) {
+      const url = `https://he.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`;
+      try {
+        const resp = await fetch(url, {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (!resp.ok) return '';
+        const data = await resp.json();
+        const extract = data.extract || '';
+        if (!extract) return '';
+        // First sentence
+        for (const sep of ['. ', '? ', '! ']) {
+          const idx = extract.indexOf(sep);
+          if (idx !== -1 && idx < 300) return extract.substring(0, idx + 1);
+        }
+        return extract.length > 200 ? extract.substring(0, 200).replace(/\s+\S*$/, '...') : extract;
+      } catch { return ''; }
+    }
+
+    async function enrichDiscoveredWithWiki(discovered) {
+      // Collect terms needing definitions (in-dict but no def), max 30
+      const needDef = discovered
+        .filter(d => d.inDict && !d.hasDef && !(d.word in wikiDefCache))
+        .sort((a, b) => a.pValue - b.pValue) // most significant first
+        .slice(0, 30);
+      if (needDef.length === 0) return false;
+
+      // Check IndexedDB first
+      const words = needDef.map(d => d.word);
+      const cached = await getWikiDefsFromIDB(words);
+      const toFetch = [];
+      for (const d of needDef) {
+        if (d.word in cached) {
+          wikiDefCache[d.word] = cached[d.word];
+          if (cached[d.word]) {
+            d.definition = cached[d.word];
+            d.hasDef = true;
+          }
+        } else {
+          toFetch.push(d);
+        }
+      }
+
+      // Fetch remaining from Wikipedia API
+      if (toFetch.length > 0) {
+        const newDefs = {};
+        for (const d of toFetch) {
+          const def = await fetchWikiDef(d.word);
+          await new Promise(r => setTimeout(r, 50)); // rate limit
+          if (def) {
+            wikiDefCache[d.word] = def;
+            newDefs[d.word] = def;
+            d.definition = def;
+            d.hasDef = true;
+          } else {
+            // Cache empty result to avoid re-fetching
+            wikiDefCache[d.word] = '';
+            newDefs[d.word] = '';
+          }
+        }
+        // Persist to IndexedDB
+        if (Object.keys(newDefs).length > 0) {
+          await saveWikiDefsToIDB(newDefs);
+        }
+      }
+
+      return true; // at least attempted enrichment
+    }
+
     window.cancelScan = function() {
       scanAbort = true;
       batchAbort = true;
@@ -2792,42 +2910,48 @@
         maxResults: 500
       });
 
-      // Filter: exclude the search terms themselves, validate against dictionary
+      // Filter: exclude the search terms themselves, ELS-only (|skip| >= 2), validate against dictionary
       const discovered = [];
       for (const item of nearby) {
         // Skip the original search terms
         if (searchTermSet.has(item.word)) continue;
 
-        // Check dictionary
-        let inDict = false;
+        // Keep only true ELS occurrences (|skip| >= 2), sorted by distance
+        item.occurrences = item.occurrences.filter(o => Math.abs(o.skip) >= 2);
+        if (item.occurrences.length === 0) continue;
+        item.occurrences.sort((a, b) => a.distance - b.distance);
+        item.minDistance = item.occurrences[0].distance;
+
+        // Must be in dictionary — skip non-dictionary words entirely
         let definition = '';
         let root = '';
         let dictSource = '';
-        if (dictService) {
-          // Check if word exists in any dictionary
-          const lookups = dictService.lookup(item.word);
-          if (lookups && lookups.length > 0) {
-            inDict = true;
-            // Get source names — use short abbreviations
-            const SHORT_SRC = {'Unified Hebrew Dictionary':'Unified','Brown-Driver-Briggs':'BDB',
-              "Strong's Hebrew Concordance":"Strong's",'Hebrew Wiktionary':'Wikt','Tanakh Extracted':'Tanakh',
-              'Hebrew Wikipedia':'Wiki','Wikipedia Full-Text':'Wiki-FT','Hebrew Names':'Names'};
-            const srcNames = [...new Set(lookups.map(l => {
-              const name = l.sourceName || l.source || '';
-              return SHORT_SRC[name] || name;
-            }))].filter(Boolean);
-            dictSource = srcNames.join(', ');
-            // Get best definition
-            for (const l of lookups) {
-              if (l.definitions && l.definitions.length > 0) {
-                definition = l.definitions[0];
-                break;
-              }
-            }
+        if (!dictService) continue;
+        const lookups = dictService.lookup(item.word);
+        if (!lookups || lookups.length === 0) continue;
+
+        // Get source names — use short abbreviations
+        const SHORT_SRC = {'Unified Hebrew Dictionary':'Unified','Brown-Driver-Briggs':'BDB',
+          "Strong's Hebrew Concordance":"Strong's",'Hebrew Wiktionary':'Wikt','Tanakh Extracted':'Tanakh',
+          'Hebrew Wikipedia':'Wiki','Wikipedia Full-Text':'Wiki-FT','Hebrew Names':'Names'};
+        const srcNames = [...new Set(lookups.map(l => {
+          const name = l.sourceName || l.source || '';
+          return SHORT_SRC[name] || name;
+        }))].filter(Boolean);
+        dictSource = srcNames.join(', ');
+        // Get best definition
+        for (const l of lookups) {
+          if (l.definitions && l.definitions.length > 0) {
+            definition = l.definitions[0];
+            break;
           }
-          const rootInfo = dictService.getRoot(item.word);
-          if (rootInfo) root = rootInfo.root;
         }
+        // Fall back to session-cached Wikipedia definition
+        if (!definition && wikiDefCache[item.word]) {
+          definition = wikiDefCache[item.word];
+        }
+        const rootInfo = dictService.getRoot(item.word);
+        if (rootInfo) root = rootInfo.root;
 
         // Get significance
         const sig = elsService.significanceScore(item.word);
@@ -2853,8 +2977,9 @@
           totalOccurrences: item.totalOccurrences,
           zScore: sig.zScore,
           pValue: pProximity,
-          inDict,
+          inDict: true,
           definition,
+          hasDef: definition !== '',
           root,
           dictSource,
           isName,
@@ -2863,18 +2988,20 @@
         });
       }
 
-      // Sort: dictionary words first, then by z-score descending
-      discovered.sort((a, b) => {
-        if (a.inDict !== b.inDict) return a.inDict ? -1 : 1;
-        return b.zScore - a.zScore;
-      });
+      // Sort by z-score descending (all are dictionary-validated)
+      discovered.sort((a, b) => b.zScore - a.zScore);
 
       // Store for filter toggling
       discoveredResults = discovered;
 
-      // Render with current filter
+      // Render initial results immediately
       renderDiscoveredResults();
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // Enrich undefined terms with Wikipedia (async, re-renders when done)
+      enrichDiscoveredWithWiki(discovered).then(changed => {
+        if (changed) renderDiscoveredResults();
+      });
     };
 
     // --- Render discovered results with active filter and sorting ---
@@ -2890,6 +3017,7 @@
       const fAll = document.getElementById('discFilterAll');
       const fNames = document.getElementById('discFilterNames');
       const fDates = document.getElementById('discFilterDates');
+      const fDefined = document.getElementById('discFilterDefined');
       let filtered = discoveredResults.slice(); // copy for sorting
       let filterLabel = '';
       if (fNames && fNames.checked) {
@@ -2898,6 +3026,11 @@
       } else if (fDates && fDates.checked) {
         filtered = filtered.filter(d => d.isDate);
         filterLabel = ' (Dates only)';
+      }
+      // "Defined" is an additive filter — layers on top of category
+      if (fDefined && fDefined.checked) {
+        filtered = filtered.filter(d => d.hasDef);
+        filterLabel += ' + Defined';
       }
 
       // Apply sort
@@ -2916,19 +3049,15 @@
       } else if (col === 'pvalue') {
         filtered.sort((a, b) => dir * ((a.pValue || 1) - (b.pValue || 1)));
       } else {
-        // default: dict words first, then z-score descending
-        filtered.sort((a, b) => {
-          if (a.inDict !== b.inDict) return a.inDict ? -1 : 1;
-          return b.zScore - a.zScore;
-        });
+        // default: z-score descending (all are dictionary-validated)
+        filtered.sort((a, b) => b.zScore - a.zScore);
       }
 
-      const dictCount = filtered.filter(d => d.inDict).length;
       const totalAll = discoveredResults.length;
-      statusSpan.textContent = `${dictCount} dict / ${filtered.length} shown / ${totalAll} total${filterLabel}`;
+      statusSpan.textContent = `${filtered.length} shown / ${totalAll} total (ELS + dict)${filterLabel}`;
 
       if (filtered.length === 0) {
-        resultsDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#333;">No ${fNames && fNames.checked ? 'names' : 'date terms'} found. Try "All" filter.</div>`;
+        resultsDiv.innerHTML = `<div style="text-align:center;padding:20px;color:#333;">No matching terms found. Try adjusting filters.</div>`;
         return;
       }
 
@@ -3001,12 +3130,14 @@
       const fAll = document.getElementById('discFilterAll');
       const fNames = document.getElementById('discFilterNames');
       const fDates = document.getElementById('discFilterDates');
-      // Radio-style: uncheck others when one is checked
+      const fDefined = document.getElementById('discFilterDefined');
+      // Radio-style: uncheck others when one is checked (except Defined which layers on top)
       const clicked = event && event.target;
       if (clicked === fAll && fAll.checked) { fNames.checked = false; fDates.checked = false; }
       else if (clicked === fNames && fNames.checked) { fAll.checked = false; fDates.checked = false; }
       else if (clicked === fDates && fDates.checked) { fAll.checked = false; fNames.checked = false; }
-      // If nothing checked, default to All
+      // Defined is independent — can combine with All/Names/Dates
+      // If no category checked, default to All
       if (!fAll.checked && !fNames.checked && !fDates.checked) fAll.checked = true;
       if (discoveredResults.length > 0) renderDiscoveredResults();
     };
