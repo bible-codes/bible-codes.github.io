@@ -1376,13 +1376,18 @@
         displayStats(metadata);
         loadSavedSessions();
 
-        // Auto-restore previous session if available
-        await autoRestoreSession();
-
       } catch (error) {
         console.error('Init failed:', error);
         document.getElementById('indexLoading').innerHTML =
           `<div style="color: red;">Error loading index: ${error.message}</div>`;
+        return;
+      }
+
+      // Auto-restore previous session (outside try/catch so init errors don't mask it)
+      try {
+        await autoRestoreSession();
+      } catch (e) {
+        console.warn('Auto-restore failed:', e);
       }
     }
 
