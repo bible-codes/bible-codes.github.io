@@ -1155,7 +1155,8 @@
                 <option value="30" selected>30</option>
                 <option value="60">60</option>
               </select>
-              <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download</button>
+              <button class="vid-btn vid-btn-dl" id="vidConvertBtn" onclick="vidConvertToMp4()" style="display:none;margin-left:auto;background:#1565c0;">Convert to MP4</button>
+              <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="display:none;">Download</button>
             </div>
             <div class="vid-row">
               <span class="vid-label">Timeline:</span>
@@ -3096,6 +3097,8 @@
       resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching...</div>';
       statusSpan.textContent = '';
 
+      try {
+
       // Compute the bounding region of the current matrix hits
       const allPositions = [];
       const searchTermSet = new Set();
@@ -3120,16 +3123,23 @@
 
       // Load dictionary if not yet loaded
       if (!dictService) {
+        if (typeof initDictionaries !== 'function') {
+          statusSpan.textContent = 'Dictionary module unavailable — try reloading the page.';
+          resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#c00;font-weight:600;">Dictionary module failed to load. Clear cache and reload.</div>';
+          return;
+        }
         statusSpan.textContent = 'Loading dictionaries...';
         try {
           await initDictionaries(['unified', 'bdb', 'strongs', 'wiktionary', 'names', 'wikipedia-fulltext']);
           dictService = getDictionaryService();
         } catch (e) {
+          console.warn('Full dictionary load failed, trying minimal:', e);
           // Try minimal fallback
           try {
             await initDictionaries(['unified']);
             dictService = getDictionaryService();
           } catch (e2) {
+            console.error('Dictionary fallback also failed:', e2);
             dictService = null;
           }
         }
@@ -3240,6 +3250,14 @@
       });
 
       autoSaveSession();
+
+      } catch (err) {
+        console.error('Discover Terms error:', err);
+        const rd = document.getElementById('discoverTermsResults');
+        const ss = document.getElementById('discoverTermsStatus');
+        if (rd) rd.innerHTML = `<div style="text-align:center;padding:20px;color:#c00;font-weight:600;">Error: ${err.message}</div>`;
+        if (ss) ss.textContent = 'Discovery failed';
+      }
     };
 
     // --- Render discovered results with active filter and sorting ---
@@ -5824,6 +5842,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     let vidGifInterval = null;
     let vidCurrentFormat = { label: 'MP4', ext: 'mp4' };
     let vidFormatsDetected = false;
+    let vidFFmpeg = null; // lazy-loaded ffmpeg.wasm instance
 
     // Detect supported video formats and populate the format dropdown
     function vidDetectFormats() {
@@ -6413,6 +6432,17 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         const dlBtn = document.getElementById('vidDownloadBtn');
         dlBtn.textContent = `Download ${vidCurrentFormat.label}`;
         dlBtn.style.display = '';
+        // Show "Convert to MP4" button if recording is WebM (not already MP4)
+        const convBtn = document.getElementById('vidConvertBtn');
+        if (convBtn) {
+          if (vidCurrentFormat.ext === 'webm') {
+            convBtn.style.display = '';
+            convBtn.disabled = false;
+            convBtn.textContent = 'Convert to MP4';
+          } else {
+            convBtn.style.display = 'none';
+          }
+        }
         document.getElementById('vidTimeline').disabled = false;
         document.getElementById('vidTimeline').max = 100;
         document.getElementById('vidTimeline').value = 100;
@@ -6431,6 +6461,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       recBtn.textContent = 'Stop';
       recBtn.classList.add('recording');
       document.getElementById('vidDownloadBtn').style.display = 'none';
+      document.getElementById('vidConvertBtn').style.display = 'none';
       document.getElementById('vidTimeline').disabled = true;
       vidUpdateStatus(`<span class="rec-dot">&#9679;</span> Recording ${formatLabel}...`);
 
@@ -6479,6 +6510,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       recBtn.textContent = 'Stop';
       recBtn.classList.add('recording');
       document.getElementById('vidDownloadBtn').style.display = 'none';
+      document.getElementById('vidConvertBtn').style.display = 'none';
       document.getElementById('vidTimeline').disabled = true;
       vidUpdateStatus('<span class="rec-dot">&#9679;</span> Recording GIF...');
       vidTimerInterval = setInterval(vidUpdateTime, 250);
@@ -6800,6 +6832,78 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       a.download = `els-matrix-3d-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.${ext}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+
+    // Convert WebM to MP4 in-browser using ffmpeg.wasm
+    window.vidConvertToMp4 = async function() {
+      if (!vidBlob) { alert('No recording to convert'); return; }
+      const convBtn = document.getElementById('vidConvertBtn');
+      const dlBtn = document.getElementById('vidDownloadBtn');
+      convBtn.disabled = true;
+      convBtn.textContent = 'Loading FFmpeg...';
+      vidUpdateStatus('Loading FFmpeg (~32 MB one-time download)...');
+
+      try {
+        // Lazy-load ffmpeg.wasm (single-threaded build — no COOP/COEP needed)
+        if (!vidFFmpeg) {
+          const baseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd';
+          const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+          // Load the FFmpeg UMD bundle
+          if (!window.FFmpegWASM) {
+            await new Promise((resolve, reject) => {
+              const s = document.createElement('script');
+              s.src = baseURL + '/ffmpeg.js';
+              s.onload = resolve;
+              s.onerror = () => reject(new Error('Failed to load FFmpeg script'));
+              document.head.appendChild(s);
+            });
+          }
+
+          const { FFmpeg } = window.FFmpegWASM || FFmpegWASM;
+          vidFFmpeg = new FFmpeg();
+          vidFFmpeg.on('progress', ({ progress }) => {
+            const pct = Math.round(progress * 100);
+            convBtn.textContent = `Converting ${pct}%`;
+            vidUpdateStatus(`Converting to MP4... ${pct}%`);
+          });
+
+          await vidFFmpeg.load({
+            coreURL: coreURL + '/ffmpeg-core.js',
+            wasmURL: coreURL + '/ffmpeg-core.wasm',
+          });
+        }
+
+        convBtn.textContent = 'Converting...';
+        vidUpdateStatus('Converting to MP4...');
+
+        // Write WebM blob to ffmpeg virtual filesystem
+        const inputData = new Uint8Array(await vidBlob.arrayBuffer());
+        await vidFFmpeg.writeFile('input.webm', inputData);
+
+        // Convert: fast copy if possible, otherwise re-encode
+        await vidFFmpeg.exec(['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'output.mp4']);
+
+        // Read the output MP4
+        const outputData = await vidFFmpeg.readFile('output.mp4');
+        vidBlob = new Blob([outputData], { type: 'video/mp4' });
+        vidCurrentFormat = { label: 'MP4', ext: 'mp4' };
+
+        // Clean up virtual filesystem
+        await vidFFmpeg.deleteFile('input.webm');
+        await vidFFmpeg.deleteFile('output.mp4');
+
+        // Update UI
+        convBtn.style.display = 'none';
+        dlBtn.textContent = 'Download MP4';
+        vidUpdateStatus(`MP4 ready (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
+
+      } catch (e) {
+        console.error('FFmpeg conversion failed:', e);
+        vidUpdateStatus('Conversion failed: ' + e.message);
+        convBtn.textContent = 'Convert to MP4';
+        convBtn.disabled = false;
+      }
     };
 
     // Cleanup video state on 3D scene destroy
