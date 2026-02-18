@@ -644,13 +644,17 @@
       direction: rtl;
     }
 
-    /* 3D Video Capture Controls */
+    /* 3D Video Capture Controls — VCR overlay at bottom of 3D canvas */
     #videoControlPanel {
-      background: #1e1e30;
-      border: 1px solid #444;
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-top: 8px;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(20, 20, 40, 0.88);
+      border-top: 1px solid #555;
+      border-radius: 0 0 8px 8px;
+      padding: 8px 14px;
+      z-index: 10;
     }
     #videoControlPanel .vid-row {
       display: flex;
@@ -1146,9 +1150,7 @@
           <div id="scanMatrix3D" style="display:none;">
             <div class="matrix-3d-container" id="matrix3DCanvas">
               <div id="matrix3DTooltip"></div>
-            </div>
-            <div id="matrix3DInfo" style="display:none;"></div>
-            <div id="videoControlPanel">
+              <div id="videoControlPanel">
               <div class="vid-row">
                 <button class="vid-btn vid-btn-rec" id="vidRecBtn" onclick="vidToggleRecord()">Record</button>
                 <button class="vid-btn vid-btn-frame" onclick="vidCaptureFrame()" title="Capture single frame">+ Frame</button>
@@ -1179,8 +1181,10 @@
                 <span class="vid-label" style="font-size:.7em;color:#888" id="vidFormatNote">Select before recording</span>
                 <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download Video</button>
               </div>
-            </div>
-          </div>
+            </div><!-- /videoControlPanel -->
+            </div><!-- /matrix3DCanvas -->
+            <div id="matrix3DInfo" style="display:none;"></div>
+          </div><!-- /scanMatrix3D -->
           <div class="matrix-legend" id="scanMatrixLegend"></div>
           <div id="discoverTermsPanel" style="display:none;margin-top:12px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#f9f9f9;color:#000;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
