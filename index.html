@@ -1148,9 +1148,6 @@
               <span id="vidStatus">Ready</span>
               <span class="vid-label" style="margin-left:8px;">Format:</span>
               <select id="vidFormatSelect" title="Select format BEFORE recording" style="font-size:11px;">
-                <option value="mp4">MP4</option>
-                <option value="webm">WebM</option>
-                <option value="gif">GIF</option>
               </select>
               <span class="vid-label" style="margin-left:4px;">FPS:</span>
               <select id="vidFPSSelect" style="font-size:11px;">
@@ -5826,6 +5823,41 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     let vidGifFrames = [];   // for GIF capture mode
     let vidGifInterval = null;
     let vidCurrentFormat = { label: 'MP4', ext: 'mp4' };
+    let vidFormatsDetected = false;
+
+    // Detect supported video formats and populate the format dropdown
+    function vidDetectFormats() {
+      if (vidFormatsDetected) return;
+      vidFormatsDetected = true;
+      const sel = document.getElementById('vidFormatSelect');
+      if (!sel || typeof MediaRecorder === 'undefined') return;
+      sel.innerHTML = '';
+
+      const formats = [
+        { value: 'mp4', label: 'MP4', mimes: ['video/mp4;codecs=avc1', 'video/mp4;codecs=avc1.42E01E', 'video/mp4'] },
+        { value: 'webm', label: 'WebM', mimes: ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'] },
+        { value: 'gif', label: 'GIF', mimes: [] }  // GIF uses canvas frames, always supported
+      ];
+
+      let firstSupported = null;
+      for (const f of formats) {
+        const supported = f.mimes.length === 0 || f.mimes.some(m => MediaRecorder.isTypeSupported(m));
+        if (supported) {
+          const opt = document.createElement('option');
+          opt.value = f.value;
+          opt.textContent = f.label;
+          sel.appendChild(opt);
+          if (!firstSupported) firstSupported = f.value;
+        }
+      }
+
+      // Select best default
+      if (sel.querySelector('option[value="mp4"]')) {
+        sel.value = 'mp4';
+      } else if (sel.querySelector('option[value="webm"]')) {
+        sel.value = 'webm';
+      }
+    }
 
     // Lazy-load Three.js from CDN
     async function load3DDeps() {
@@ -6150,7 +6182,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       d3.style.display = '';
       pauseBtn.style.display = '';
       resetBtn.style.display = '';
-      if (vidPanel) vidPanel.style.display = '';
+      if (vidPanel) { vidPanel.style.display = ''; vidDetectFormats(); }
 
       const container = document.getElementById('matrix3DCanvas');
       // Remove old canvas if any
