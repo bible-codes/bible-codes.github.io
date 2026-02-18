@@ -27,27 +27,8 @@
         });
       });
     }
-    // Detect module load failure — if startScan isn't defined after 20s, warn user
+    // Detect module load failure
     window._moduleLoaded = false;
-    setTimeout(() => {
-      if (!window._moduleLoaded) {
-        // Module failed to load — likely stale cache
-        console.error('Module script failed to load. Clearing caches...');
-        if ('caches' in window) {
-          caches.keys().then(names => names.forEach(n => caches.delete(n)));
-        }
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
-        }
-        const p = document.getElementById('torahTextPreview');
-        if (p && !p.textContent) {
-          p.innerHTML = '<div style="color:#ff6; font-size:14px; padding:20px; text-align:center;">' +
-            'Page scripts failed to load. Clearing cache and reloading...' +
-            '</div>';
-        }
-        setTimeout(() => location.reload(), 2000);
-      }
-    }, 20000);
     // Load Torah text preview independently (non-module, doesn't depend on imports)
     document.addEventListener('DOMContentLoaded', () => {
       fetch('data/torahNoSpaces.txt').then(r => r.text()).then(txt => {
@@ -1389,9 +1370,23 @@
   <div id="verseTooltip"></div>
 
   <script type="module">
+    // Dynamic imports — if these fail, the rest of the module still executes
+    let getElsIndexService, initElsIndex, getDictionaryService, initDictionaries;
+    try {
+      const m1 = await import('./engines/els-index.js');
+      getElsIndexService = m1.getElsIndexService;
+      initElsIndex = m1.initElsIndex;
+    } catch (e) {
+      console.error('Failed to import els-index.js:', e);
+    }
+    try {
+      const m2 = await import('./engines/dictionary-service.js');
+      getDictionaryService = m2.getDictionaryService;
+      initDictionaries = m2.initDictionaries;
+    } catch (e) {
+      console.error('Failed to import dictionary-service.js:', e);
+    }
     window._moduleLoaded = true;
-    import { getElsIndexService, initElsIndex } from './engines/els-index.js';
-    import { getDictionaryService, initDictionaries } from './engines/dictionary-service.js';
 
     let elsService = null;
     let dictService = null;
@@ -1437,6 +1432,7 @@
         }
 
         document.getElementById('loadProgress').textContent = 'Loading ELS index (32MB)...';
+        if (!initElsIndex) throw new Error('ELS index module not available — try reloading the page');
         const metadata = await initElsIndex('data/els-index/els-index-50-min4.json.gz');
         elsService = getElsIndexService();
 
