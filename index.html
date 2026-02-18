@@ -645,17 +645,13 @@
       direction: rtl;
     }
 
-    /* 3D Video Capture Controls — VCR overlay at bottom of 3D canvas */
+    /* 3D Video Capture Controls — shown when 3D mode is active */
     #videoControlPanel {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(20, 20, 40, 0.88);
-      border-top: 1px solid #555;
-      border-radius: 0 0 8px 8px;
-      padding: 8px 14px;
-      z-index: 10;
+      background: #1a1a2e;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 6px 12px;
+      margin-bottom: 6px;
     }
     #videoControlPanel .vid-row {
       display: flex;
@@ -1143,6 +1139,36 @@
             </div>
           </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
+          <div id="videoControlPanel" style="display:none;">
+            <div class="vid-row">
+              <button class="vid-btn vid-btn-rec" id="vidRecBtn" onclick="vidToggleRecord()">Record</button>
+              <button class="vid-btn vid-btn-frame" onclick="vidCaptureFrame()" title="Capture single frame">+ Frame</button>
+              <button class="vid-btn vid-btn-frame" onclick="vidStepRotation(-1)" title="Step back 5 degrees">&#9664; Step</button>
+              <button class="vid-btn vid-btn-frame" onclick="vidStepRotation(1)" title="Step forward 5 degrees">Step &#9654;</button>
+              <span id="vidStatus">Ready</span>
+              <span class="vid-label" style="margin-left:8px;">Format:</span>
+              <select id="vidFormatSelect" title="Select format BEFORE recording" style="font-size:11px;">
+                <option value="mp4">MP4</option>
+                <option value="webm">WebM</option>
+                <option value="gif">GIF</option>
+              </select>
+              <span class="vid-label" style="margin-left:4px;">FPS:</span>
+              <select id="vidFPSSelect" style="font-size:11px;">
+                <option value="24">24</option>
+                <option value="30" selected>30</option>
+                <option value="60">60</option>
+              </select>
+              <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download</button>
+            </div>
+            <div class="vid-row">
+              <span class="vid-label">Timeline:</span>
+              <input type="range" id="vidTimeline" min="0" max="100" value="0" step="1" oninput="vidSeekTimeline(this.value)" disabled>
+              <span class="vid-label" id="vidTimeDisplay">0:00 / 0:00</span>
+              <span class="vid-label" style="margin-left:8px;">Speed:</span>
+              <input type="range" id="vidSpeedSlider" min="0" max="5" value="1" step="0.1" oninput="vidSetSpeed(this.value)" style="width:80px;">
+              <span class="vid-label" id="vidSpeedLabel">1.0x</span>
+            </div>
+          </div>
           <div id="scanMatrix2D">
             <div class="matrix-container" style="max-height:calc(100vh - 250px);">
               <div class="matrix-grid" id="scanMatrixGrid"></div>
@@ -1151,39 +1177,7 @@
           <div id="scanMatrix3D" style="display:none;">
             <div class="matrix-3d-container" id="matrix3DCanvas">
               <div id="matrix3DTooltip"></div>
-              <div id="videoControlPanel">
-              <div class="vid-row">
-                <button class="vid-btn vid-btn-rec" id="vidRecBtn" onclick="vidToggleRecord()">Record</button>
-                <button class="vid-btn vid-btn-frame" onclick="vidCaptureFrame()" title="Capture single frame">+ Frame</button>
-                <button class="vid-btn vid-btn-frame" onclick="vidStepRotation(-1)" title="Step back 5 degrees">&#9664; Step</button>
-                <button class="vid-btn vid-btn-frame" onclick="vidStepRotation(1)" title="Step forward 5 degrees">Step &#9654;</button>
-                <span id="vidStatus">Ready</span>
-              </div>
-              <div class="vid-row">
-                <span class="vid-label">Timeline:</span>
-                <input type="range" id="vidTimeline" min="0" max="100" value="0" step="1" oninput="vidSeekTimeline(this.value)" disabled>
-                <span class="vid-label" id="vidTimeDisplay">0:00 / 0:00</span>
-              </div>
-              <div class="vid-row">
-                <span class="vid-label">Rotation speed:</span>
-                <input type="range" id="vidSpeedSlider" min="0" max="5" value="1" step="0.1" oninput="vidSetSpeed(this.value)">
-                <span class="vid-label" id="vidSpeedLabel">1.0x</span>
-                <span class="vid-label" style="margin-left:12px;">FPS:</span>
-                <select id="vidFPSSelect">
-                  <option value="24">24</option>
-                  <option value="30" selected>30</option>
-                  <option value="60">60</option>
-                </select>
-                <span class="vid-label" style="margin-left:12px;">Format:</span>
-                <select id="vidFormatSelect" title="Select format BEFORE recording">
-                  <option value="webm">WebM (default)</option>
-                  <option value="gif">GIF (universal)</option>
-                </select>
-                <span class="vid-label" style="font-size:.7em;color:#888" id="vidFormatNote">Select before recording</span>
-                <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="margin-left:auto;display:none;">Download Video</button>
-              </div>
-            </div><!-- /videoControlPanel -->
-            </div><!-- /matrix3DCanvas -->
+            </div>
             <div id="matrix3DInfo" style="display:none;"></div>
           </div><!-- /scanMatrix3D -->
           <div class="matrix-legend" id="scanMatrixLegend"></div>
@@ -2631,8 +2625,7 @@
         html += `<div style="background:#fff3e0;padding:16px;border-radius:8px;border-right:4px solid #ff9800;margin-bottom:20px;">`;
         html += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">`;
         html += `<h3 style="color:#e65100;margin:0;">Clusters (${clusters.length}) — sorted by smallest region</h3>`;
-        html += `<button onclick="runClusterPermTest()" id="clusterPermBtn" style="background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Significance Test</button>`;
-        html += `<label style="font-size:12px;color:#666;">N=<input id="clusterPermN" type="number" value="1000" min="100" max="100000" step="100" style="width:70px;margin-left:4px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;font-size:12px;"></label>`;
+        html += `<input id="clusterPermN" type="hidden" value="1000">`;
         html += `<button id="clusterSortSpan" onclick="sortClusters('span')" style="background:#e65100;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:1;">Sort: Span</button>`;
         html += `<button id="clusterSortP" onclick="sortClusters('pvalue')" disabled style="background:#7b1fa2;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:0.4;">Sort: P-value</button>`;
         html += `</div>`;
@@ -5832,6 +5825,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     let vidFrameBlobs = [];  // for frame-by-frame mode
     let vidGifFrames = [];   // for GIF capture mode
     let vidGifInterval = null;
+    let vidCurrentFormat = { label: 'MP4', ext: 'mp4' };
 
     // Lazy-load Three.js from CDN
     async function load3DDeps() {
@@ -6119,6 +6113,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       const pauseBtn = document.getElementById('btn3DPause');
       const resetBtn = document.getElementById('btn3DReset');
 
+      const vidPanel = document.getElementById('videoControlPanel');
       if (is3DActive) {
         // Stop any active recording
         if (vidRecorder && vidRecorder.state === 'recording') vidStopRecord();
@@ -6130,6 +6125,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         d3.style.display = 'none';
         pauseBtn.style.display = 'none';
         resetBtn.style.display = 'none';
+        if (vidPanel) vidPanel.style.display = 'none';
         destroy3DScene();
         return;
       }
@@ -6154,6 +6150,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       d3.style.display = '';
       pauseBtn.style.display = '';
       resetBtn.style.display = '';
+      if (vidPanel) vidPanel.style.display = '';
 
       const container = document.getElementById('matrix3DCanvas');
       // Remove old canvas if any
@@ -6280,7 +6277,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         return;
       }
 
-      // Video mode (WebM): use MediaRecorder
+      // Video mode (MP4/WebM): use MediaRecorder
       if (typeof canvas.captureStream !== 'function') {
         alert('captureStream() not supported. Use Chrome or Firefox.');
         return;
@@ -6306,21 +6303,50 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       vidBlob = null;
       vidFrameCount = 0;
 
-      // Choose best WebM codec
+      // Choose codec based on selected format
       let mimeType = '';
-      const webmTypes = [
-        'video/webm;codecs=vp9',
-        'video/webm;codecs=vp8',
-        'video/webm'
-      ];
-      for (const mt of webmTypes) {
-        if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+      let formatLabel = '';
+      let fileExt = '';
+      if (format === 'mp4') {
+        // Try MP4 codecs (Chrome 130+, Safari)
+        const mp4Types = [
+          'video/mp4;codecs=avc1',
+          'video/mp4;codecs=avc1.42E01E',
+          'video/mp4'
+        ];
+        for (const mt of mp4Types) {
+          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+        }
+        if (mimeType) {
+          formatLabel = 'MP4';
+          fileExt = 'mp4';
+        } else {
+          // Fall back to WebM if MP4 not supported
+          formatLabel = 'WebM';
+          fileExt = 'webm';
+        }
+      }
+      if (!mimeType) {
+        // WebM fallback or explicit WebM selection
+        const webmTypes = [
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm'
+        ];
+        for (const mt of webmTypes) {
+          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+        }
+        formatLabel = formatLabel || 'WebM';
+        fileExt = fileExt || 'webm';
       }
 
       if (!mimeType) {
         alert('No supported video codec. Try Chrome or Firefox.');
         return;
       }
+
+      // Store format info for download
+      vidCurrentFormat = { label: formatLabel, ext: fileExt };
 
       try {
         vidRecorder = new MediaRecorder(vidStream, {
@@ -6347,13 +6373,13 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         const elapsed = (performance.now() - vidStartTime) / 1000;
         const mm = Math.floor(elapsed / 60);
         const ss = Math.floor(elapsed % 60).toString().padStart(2, '0');
-        vidUpdateStatus(`WebM recorded: ${mm}:${ss} (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
+        vidUpdateStatus(`${vidCurrentFormat.label} recorded: ${mm}:${ss} (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
 
         const recBtn = document.getElementById('vidRecBtn');
         recBtn.textContent = 'Record';
         recBtn.classList.remove('recording');
         const dlBtn = document.getElementById('vidDownloadBtn');
-        dlBtn.textContent = 'Download WebM';
+        dlBtn.textContent = `Download ${vidCurrentFormat.label}`;
         dlBtn.style.display = '';
         document.getElementById('vidTimeline').disabled = false;
         document.getElementById('vidTimeline').max = 100;
@@ -6374,7 +6400,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       recBtn.classList.add('recording');
       document.getElementById('vidDownloadBtn').style.display = 'none';
       document.getElementById('vidTimeline').disabled = true;
-      vidUpdateStatus('<span class="rec-dot">&#9679;</span> Recording WebM...');
+      vidUpdateStatus(`<span class="rec-dot">&#9679;</span> Recording ${formatLabel}...`);
 
       vidTimerInterval = setInterval(vidUpdateTime, 250);
     }
@@ -6736,7 +6762,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
 
     window.vidDownload = function() {
       if (!vidBlob) { alert('No recording to download'); return; }
-      const ext = vidBlob.type.includes('gif') ? 'gif' : 'webm';
+      const ext = vidBlob.type.includes('gif') ? 'gif' : vidCurrentFormat.ext;
       const a = document.createElement('a');
       a.href = URL.createObjectURL(vidBlob);
       a.download = `els-matrix-3d-${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.${ext}`;
