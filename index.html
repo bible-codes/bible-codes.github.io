@@ -69,21 +69,21 @@
     .header {
       background: var(--blue);
       color: white;
-      padding: 8px 16px;
+      padding: 4px 16px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-shrink: 0;
     }
     .header a { color: white; text-decoration: none; }
-    .header img { width: 32px; height: 32px; }
-    .header h1 { font-size: 18px; font-weight: 600; }
+    .header img { width: 24px; height: 24px; }
+    .header h1 { font-size: 15px; font-weight: 600; }
     main.container {
       flex: 1;
       max-width: 1600px;
       width: 100%;
       margin: 0 auto;
-      padding: 8px 16px;
+      padding: 2px 10px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -94,20 +94,20 @@
     .mode-tabs {
       display: flex;
       gap: 0;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       background: white;
-      border-radius: 6px;
+      border-radius: 4px;
       overflow: hidden;
       border: 1px solid var(--border);
       flex-shrink: 0;
     }
     .mode-tab {
       flex: 1;
-      padding: 14px 20px;
+      padding: 6px 12px;
       border: none;
       background: white;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--gray);
       transition: all 0.2s;
@@ -120,11 +120,10 @@
       color: white;
     }
     .mode-tab .mode-desc {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: normal;
-      opacity: 0.8;
-      display: block;
-      margin-top: 2px;
+      opacity: 0.7;
+      display: none;
     }
 
     /* Sections */
@@ -609,7 +608,9 @@
 
     /* 3D Matrix View */
     .matrix-3d-container {
-      height: 450px;
+      height: calc(100vh - 200px);
+      min-height: 300px;
+      max-height: 800px;
       background: #1a1a2e;
       border-radius: 8px;
       position: relative;
@@ -756,17 +757,17 @@
     .intro-blurb {
       background: linear-gradient(135deg, var(--blue-light) 0%, #f0f4ff 100%);
       border: 1px solid #c8d8f0;
-      border-radius: 8px;
-      margin-bottom: 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
       padding: 0;
       flex-shrink: 0;
     }
     .intro-blurb summary {
       cursor: pointer;
-      padding: 12px 16px;
+      padding: 4px 12px;
       font-weight: 600;
       color: var(--blue-dark);
-      font-size: 15px;
+      font-size: 12px;
       list-style: none;
     }
     .intro-blurb summary::-webkit-details-marker { display: none; }
@@ -802,7 +803,7 @@
     .footer-links a:hover { text-decoration: underline; }
 
     /* === Two-column scan layout === */
-    .scan-layout { padding: 0; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    .scan-layout { padding: 0 !important; margin-bottom: 0 !important; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
     .scan-grid { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 
     @media (min-width: 1024px) {
@@ -853,7 +854,7 @@
         background: #2a2a3d; padding: 8px 0;
       }
 
-      .scan-col-matrix .matrix-container { max-height: calc(100vh - 300px) !important; }
+      .scan-col-matrix .matrix-container { max-height: calc(100vh - 160px) !important; }
     }
 
     .matrix-placeholder {
@@ -892,7 +893,7 @@
   </header>
 
   <main class="container">
-    <details class="intro-blurb" id="introBlurb" open>
+    <details class="intro-blurb" id="introBlurb">
       <summary>About Bible Codes</summary>
       <div class="blurb-content">
         <p>Search for equidistant letter sequences (ELS) in the Torah.
@@ -1143,7 +1144,7 @@
           </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
           <div id="scanMatrix2D">
-            <div class="matrix-container" style="max-height:400px;">
+            <div class="matrix-container" style="max-height:calc(100vh - 250px);">
               <div class="matrix-grid" id="scanMatrixGrid"></div>
             </div>
           </div>
