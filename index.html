@@ -152,6 +152,7 @@
     /* Mode content */
     .mode-content { display: none; }
     .mode-content.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    #wrr-mode.active, #index-mode.active, #dict-mode.active { overflow-y: auto; }
     @media (max-width: 767px) {
       .mode-content.active { overflow: visible; flex: none; }
     }
@@ -4605,39 +4606,42 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     // Appellations converted from WRR's original MC transliteration (WRR2.txt, McKay ANU archive).
     // Each appellation is a single consonantal Hebrew word (no spaces) — searched as ELS.
     // Rabbis 4 and 8 have no recorded death dates — excluded from analysis.
+    // WRR List 2: 32 rabbis — EXACT appellations from WRR 1994 Table 3
+    // Source: McKay/Bar-Natan "ELSs in War and Peace" comparative table (MC transliteration)
+    // Truncated forms (backtick in MC = drop final nun): רביאהר, מולי, עמדי, הריעמדי, הריעמד, המזל
     const WRR_RABBIS = [
-      { id:1, en:"Abraham ben David (RABaD)", names:["רביאברהמ","הראבי","הרבאבד","הראבד","האשכול","בעלהאשכול","ראבי","הרבאבביתדינ","ראבד"], dates:["כ חשונ","כ בחשונ","בכ חשונ"] },
-      { id:2, en:"Abraham Yitzhaki", names:["רביאברהמ","יצחקי","זרעאברהמ","בעלזרעאברהמ","אברהמיצחקי"], dates:["יג סיונ","יג בסיונ","ביג סיונ"] },
-      { id:3, en:"Abraham HaMalakh", names:["רביאברהמ","המלאכ","חסדלאברהמ","בעלחסדלאברהמ"], dates:["יב תשרי","יב בתשרי","ביב תשרי"] },
-      { id:4, en:"Abraham Saba", names:["רביאברהמ","אברהמסבע","צרורהמר","בעלצרורהמר"], dates:[] },
-      { id:5, en:"Aaron HaGadol of Karlin", names:["רביאהרנ","אהרנהגדולמקרלינ"], dates:["יט ניסנ","יט בניסנ","ביט ניסנ"] },
-      { id:6, en:"Eliezer Ashkenazi", names:["מעשיהשמ","מעשייהוה","בעלמעשיהשמ","בעלמעשייהוה","אליעזראשכנזי","רביאליעזר"], dates:["כב כסלו","כב בכסלו","בכב כסלו"] },
-      { id:7, en:"David Oppenheim", names:["רבידוד","אופנהימ","הרדא","מהרדאופנהימ","דודאופנהימ"], dates:["ז תשרי","ז בתשרי","בז תשרי"] },
+      { id:1, en:"Abraham ben David (RABaD)", names:["רביאברהמ","הראבי","הרבאבד","הראבד","האשכול"], dates:["כ חשונ","כ בחשונ","בכ חשונ"] },
+      { id:2, en:"Abraham Yitzhaki", names:["רביאברהמ","יצחקי","זרעאברהמ"], dates:["יג סיונ","יג בסיונ","ביג סיונ"] },
+      { id:3, en:"Abraham HaMalakh", names:["רביאברהמ","המלאכ"], dates:["יב תשרי","יב בתשרי","ביב תשרי"] },
+      { id:4, en:"Abraham Saba", names:["רביאברהמ","אברהמסבע","צרורהמר"], dates:[] },
+      { id:5, en:"Aaron HaGadol of Karlin", names:["רביאהר"], dates:["יט ניסנ","יט בניסנ","ביט ניסנ"] },
+      { id:6, en:"Eliezer Ashkenazi", names:["מעשיהשמ","מעשייהוה"], dates:["כב כסלו","כב בכסלו","בכב כסלו"] },
+      { id:7, en:"David Oppenheim", names:["רבידוד","אופנהימ"], dates:["ז תשרי","ז בתשרי","בז תשרי"] },
       { id:8, en:"David HaNagid", names:["רבידוד","דודהנגיד"], dates:[] },
-      { id:9, en:"David Nieto", names:["רבידוד","דודניטו","הכוזריהשני","בעלהכוזריהשני","ניטו"], dates:["כח טבת","כח בטבת","בכח טבת"] },
-      { id:10, en:"Hayyim Abulafia", names:["רביחיימ","חיימאבואלעפיה","אבואלעפיה"], dates:["ו ניסנ","ו בניסנ","בו ניסנ"] },
-      { id:11, en:"Hayyim Benveniste", names:["רביחיימ","בנבנשת","כנסתהגדולה","בעלכנסתהגדולה","חיימבנבנשת"], dates:["יט אלול","יט באלול","ביט אלול"] },
-      { id:12, en:"Hayyim Capusi", names:["רביחיימ","כפוסי","בעלנס","בעלהנס","חיימכפוסי"], dates:["יב שבט","יב בשבט","ביב שבט"] },
+      { id:9, en:"David Nieto", names:["רבידוד","דודניטו"], dates:["כח טבת","כח בטבת","בכח טבת"] },
+      { id:10, en:"Hayyim Abulafia", names:["רביחיימ"], dates:["ו ניסנ","ו בניסנ","בו ניסנ"] },
+      { id:11, en:"Hayyim Benveniste", names:["רביחיימ","בנבנשת"], dates:["יט אלול","יט באלול","ביט אלול"] },
+      { id:12, en:"Hayyim Capusi", names:["רביחיימ","כפוסי","בעלנס","בעלהנס"], dates:["יב שבט","יב בשבט","ביב שבט"] },
       { id:13, en:"Hayyim Shabetai", names:["רביחיימ","חיימשבתי","מהרחש","המהרחש"], dates:["יג ניסנ","יג בניסנ","ביג ניסנ"] },
-      { id:14, en:"Yair Hayyim Bacharach", names:["חותיאיר","בעלחותיאיר","יאירחיימבכרכ","בכרכ","רבייאירחיימ"], dates:["א טבת","א בטבת","בא טבת"] },
-      { id:15, en:"Yehuda HeHasid", names:["רבייהודה","יהודהחסיד","יהודההחסיד"], dates:["ה חשונ","ה בחשונ","בה חשונ"] },
-      { id:16, en:"Yehuda Ayash", names:["רבייהודה","מהריעיאש","יהודהעיאש","עיאש"], dates:["א תשרי","א בתשרי","בא תשרי"] },
+      { id:14, en:"Yair Hayyim Bacharach", names:["חותיאיר"], dates:["א טבת","א בטבת","בא טבת"] },
+      { id:15, en:"Yehuda HeHasid", names:["רבייהודה"], dates:["ה חשונ","ה בחשונ","בה חשונ"] },
+      { id:16, en:"Yehuda Ayash", names:["רבייהודה","מהריעיאש"], dates:["א תשרי","א בתשרי","בא תשרי"] },
       { id:17, en:"Yehosef HaNagid", names:["רבייהוספ"], dates:["ט טבת","ט בטבת","בט טבת"] },
       { id:18, en:"Yehoshua (Maginei Shlomo)", names:["רבייהושע","מגנישלמה"], dates:["כז אב","כז באב","בכז אב"] },
-      { id:19, en:"Yosef di Trani (MaHaRiT)", names:["רבייוספ","מטרני","יוספטרני","טראני","מטראני","מהרימט","המהרימט","מהריט","המהריט","יוספמטרני","יוספטראני","יוספמטראני","טרני"], dates:["יד תמוז","יד בתמוז","ביד תמוז"] },
-      { id:20, en:"Yosef Te'omim", names:["רבייוספ","תאומימ","פרימגדימ","בעלפרימגדימ","יוספתאומימ"], dates:["ד איר","ד באיר","בד איר"] },
-      { id:21, en:"Ya'akov BeRav", names:["רבייעקב","יעקבבירב","מהריבירב","הריבר","בירב"], dates:["ל ניסנ","ל בניסנ","בל ניסנ"] },
-      { id:22, en:"Yisrael Ya'akov Hagiz", names:["חאגיז","בעלהלקט","הלקט","ישראליעקב","רביישראליעקב"], dates:["כו שבט","כו בשבט","בכו שבט"] },
-      { id:23, en:"Ya'akov Moelin (MaHaRIL)", names:["רבייעקב","מולינ","יעקבסגל","יעקבהלוי","מהריסגל","מהריהלוי","מהריל","המהריל","יעקבמולינ"], dates:["כב אלול","כב באלול","בכב אלול"] },
-      { id:24, en:"Ya'akov Emden (Ya'avetz)", names:["היעבצ","הריעבצ","עמדינ","הריעמדנ","הריעמדינ","יעקבישראלעמדנ","יעקבישראלעמדינ","עמדנ","רבייעקבישראל"], dates:["ל ניסנ","ל בניסנ","בל ניסנ"] },
-      { id:25, en:"Yitzhak HaLevi Horowitz", names:["רבייצחק","הורוויצ","יצחקהלוי","רביאיצקלהמבורגר","יצחקהלויאישהורוויצ"], dates:["ו איר","ו באיר","בו איר"] },
-      { id:26, en:"Menachem Mendel Krochmal", names:["רבימנחמ","קרוכמל","רבימענדל","צמחצדק","בעלצמחצדק","מנחממענדל"], dates:["ב שבט","ב בשבט","בב שבט"] },
-      { id:27, en:"Moshe Zacuto", names:["רבימשה","זכותא","זכותו","משהזכות","משהזכותא","משהזכותו","מהרמזכות","מהרמז","המהרמז","המזלנ","קולהרמז","מזלנ","בעלקולהרמז","זכות"], dates:["טז תשרי","טז בתשרי","בטז תשרי","יו תשרי","יו בתשרי","ביו תשרי"] },
-      { id:28, en:"Moshe Margalit", names:["רבימשה","מרגלית","פנימשה","בעלפנימשה","משהמרגלית"], dates:["יב טבת","יב בטבת","ביב טבת"] },
-      { id:29, en:"Azariah Figo", names:["רביעזריה","עזריהפיגו"], dates:["א אדרא","א באדרא","בא אדרא"] },
-      { id:30, en:"Immanuel Hai Ricchi", names:["אחהער","ישרלבב","משנתחסידימ","בעלמשנתחסידימ","בעלישרלבב","עמנואלחירפאלריקי","ריקי","רביעמנואלחירפאל"], dates:["א אדר","א באדר","בא אדר"] },
-      { id:31, en:"Shalom Sharabi (RaShaSh)", names:["רבישלומ","מזרחי","שרעבי","שרשלומ","מהרשש","המהרשש","שמש","השמש","שלוממזרחי"], dates:["י שבט","י בשבט","בי שבט"] },
-      { id:32, en:"Shlomo HaMa'almi", names:["רבישלמה","מרכבתהמשנה","בעלמרכבתהמשנה","שלמהמחלמא","שלמהמחעלמא"], dates:["כא תמוז","כא בתמוז","בכא תמוז"] }
+      { id:19, en:"Yosef di Trani (MaHaRiT)", names:["רבייוספ","מטרני","יוספטרני","טראני","מטראני","מהרימט","המהרימט","מהריט","המהריט"], dates:["יד תמוז","יד בתמוז","ביד תמוז"] },
+      { id:20, en:"Yosef Te'omim", names:["רבייוספ","תאומימ","פרימגדימ"], dates:["ד איר","ד באיר","בד איר"] },
+      { id:21, en:"Ya'akov BeRav", names:["רבייעקב","יעקבבירב","מהריבירב","הריבר"], dates:["ל ניסנ","ל בניסנ","בל ניסנ"] },
+      { id:22, en:"Yisrael Ya'akov Hagiz", names:["חאגיז","בעלהלקט"], dates:["כו שבט","כו בשבט","בכו שבט"] },
+      { id:23, en:"Ya'akov Moelin (MaHaRIL)", names:["רבייעקב","מולי","יעקבסגל","יעקבהלוי","מהריסגל","מהריהלוי","מהריל","המהריל"], dates:["כב אלול","כב באלול","בכב אלול"] },
+      { id:24, en:"Ya'akov Emden (Ya'avetz)", names:["היעבצ","הריעבצ","עמדי","הריעמד","הריעמדי"], dates:["ל ניסנ","ל בניסנ","בל ניסנ"] },
+      { id:25, en:"Yitzhak HaLevi Horowitz", names:["רבייצחק","הורוויצ","יצחקהלוי"], dates:["ו איר","ו באיר","בו איר"] },
+      { id:26, en:"Menachem Mendel Krochmal", names:["רבימנחמ","קרוכמל","רבימענדל","צמחצדק"], dates:["ב שבט","ב בשבט","בב שבט"] },
+      { id:27, en:"Moshe Zacuto", names:["רבימשה","זכותא","זכותו","משהזכות","משהזכותא","משהזכותו","מהרמזכות","מהרמז","המהרמז","המזל","קולהרמז"], dates:["טז תשרי","טז בתשרי","בטז תשרי","יו תשרי","יו בתשרי","ביו תשרי"] },
+      { id:28, en:"Moshe Margalit", names:["רבימשה","מרגלית","פנימשה"], dates:["יב טבת","יב בטבת","ביב טבת"] },
+      { id:29, en:"Azariah Figo", names:["רביעזריה"], dates:["א אדרא","א באדרא","בא אדרא"] },
+      { id:30, en:"Immanuel Hai Ricchi", names:["אחהער","ישרלבב"], dates:["א אדר","א באדר","בא אדר"] },
+      { id:31, en:"Shalom Sharabi (RaShaSh)", names:["רבישלומ","מזרחי","שרעבי","שרשלומ","מהרשש","המהרשש"], dates:["י שבט","י בשבט","בי שבט"] },
+      { id:32, en:"Shlomo HaMa'almi", names:["רבישלמה"], dates:["כא תמוז","כא בתמוז","בכא תמוז"] }
     ];
 
     // WRR List 1: 34 rabbis (major figures). Converted from WRR1.txt (McKay ANU archive).
