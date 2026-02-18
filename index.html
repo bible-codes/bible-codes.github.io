@@ -55,7 +55,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
     }
     body {
@@ -65,6 +65,9 @@
       line-height: 1.5;
       display: flex;
       flex-direction: column;
+    }
+    @media (max-width: 767px) {
+      html, body { height: auto; overflow: auto; }
     }
     .header {
       background: var(--blue);
@@ -87,6 +90,9 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+    @media (max-width: 767px) {
+      main.container { overflow: visible; flex: none; }
     }
     .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
 
@@ -146,6 +152,9 @@
     /* Mode content */
     .mode-content { display: none; }
     .mode-content.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    @media (max-width: 767px) {
+      .mode-content.active { overflow: visible; flex: none; }
+    }
 
     /* Form elements */
     .input-row {
@@ -379,7 +388,7 @@
       padding: 20px;
       overflow: auto;
       max-width: 100vw;
-      max-height: calc(100vh - 150px);
+      max-height: calc(100dvh - 150px);
     }
     .matrix-grid {
       display: grid;
@@ -608,8 +617,8 @@
 
     /* 3D Matrix View */
     .matrix-3d-container {
-      height: calc(100vh - 200px);
-      min-height: 300px;
+      height: calc(100dvh - 200px);
+      min-height: 250px;
       max-height: 800px;
       background: #1a1a2e;
       border-radius: 8px;
@@ -662,13 +671,14 @@
     }
     #videoControlPanel .vid-row:last-child { margin-bottom: 0; }
     .vid-btn {
-      padding: 5px 12px;
+      padding: 6px 12px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       border: none;
       border-radius: 4px;
       color: #fff;
+      min-height: 32px;
     }
     .vid-btn-rec { background: #c62828; }
     .vid-btn-rec:hover { background: #e53935; }
@@ -801,6 +811,10 @@
     /* === Two-column scan layout === */
     .scan-layout { padding: 0 !important; margin-bottom: 0 !important; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
     .scan-grid { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    @media (max-width: 767px) {
+      .scan-layout { overflow: visible; flex: none; }
+      .scan-grid { overflow: visible; flex: none; }
+    }
 
     @media (min-width: 1024px) {
       .scan-grid {
@@ -850,7 +864,7 @@
         background: #2a2a3d; padding: 8px 0;
       }
 
-      .scan-col-matrix .matrix-container { max-height: calc(100vh - 160px) !important; }
+      .scan-col-matrix .matrix-container { max-height: calc(100dvh - 160px) !important; }
     }
 
     .matrix-placeholder {
@@ -867,6 +881,18 @@
       .scan-col-controls { order: 1; }
       .scan-col-matrix { order: 2; }
       #scanMatrixPlaceholder { max-height: 40vh; }
+      .header { padding: 6px 10px; }
+      .header h1 { font-size: 14px; }
+      main.container { padding: 2px 6px; }
+      .section { padding: 12px 10px; }
+      .mode-tab { padding: 8px 6px; font-size: 12px; }
+      .btn { padding: 10px 14px; font-size: 14px; }
+      .btn-small { padding: 6px 8px; font-size: 12px; }
+      .batch-textarea { height: 80px; }
+      .matrix-container { max-height: none !important; }
+      .intro-blurb { margin-bottom: 6px; }
+      .intro-blurb summary { padding: 6px 10px; font-size: 13px; }
+      #verseTooltip { max-width: 90vw; font-size: 14px; }
     }
 
     @media (min-width: 768px) and (max-width: 1023px) {
@@ -877,8 +903,35 @@
 
     @media (max-width: 600px) {
       .mode-tab .mode-desc { display: none; }
-      .matrix-cell { width: 22px; height: 22px; font-size: 14px; }
-      .matrix-3d-container { height: 300px; }
+      .matrix-cell { width: 20px; height: 20px; font-size: 13px; }
+      .matrix-3d-container { height: min(60vh, 350px); min-height: 200px; }
+      input[type="text"], input[type="number"] { min-width: 80px; font-size: 15px; padding: 8px; }
+      .range-row input[type="number"] { width: 65px; }
+    }
+
+    @media (max-width: 420px) {
+      .matrix-cell { width: 18px; height: 18px; font-size: 12px; }
+      .mode-tab { padding: 8px 4px; font-size: 11px; }
+      .header h1 { font-size: 13px; }
+      .section { padding: 10px 8px; }
+      .btn { padding: 8px 10px; font-size: 13px; }
+    }
+
+    /* Mobile: video controls & toolbar */
+    @media (max-width: 767px) {
+      #videoControlPanel { padding: 6px 8px; }
+      #videoControlPanel .vid-row { gap: 6px; }
+      .vid-btn { padding: 8px 10px; font-size: 11px; min-height: 36px; }
+      .vid-label { font-size: 11px; }
+      #vidTimeline { min-width: 80px; }
+      #matrixToolbar { gap: 4px; }
+      #matrixToolbar .btn-small { padding: 6px 8px; font-size: 11px; }
+      .heb-kb-key { min-width: 28px; height: 34px; font-size: 17px; }
+      .heb-kb-key.wide { min-width: 44px; font-size: 11px; }
+    }
+    @media (max-width: 420px) {
+      #videoControlPanel .vid-label { display: none; }
+      #vidSpeedSlider { width: 60px; }
     }
   </style>
 </head>
@@ -1121,20 +1174,18 @@
         <div id="scanMatrixView" class="matrix-view" style="display:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <h3 id="scanMatrixTitle">Matrix View</h3>
-            <div style="display:flex;gap:6px;align-items:center;">
+            <div id="matrixToolbar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
               <button class="btn btn-small" id="btn3DToggle" onclick="toggle3DView()">3D View</button>
               <button class="btn-3d-ctrl" id="btn3DPause" onclick="toggle3DAutoRotate()" style="display:none;">Pause Rotation</button>
               <button class="btn-3d-ctrl" id="btn3DReset" onclick="reset3DCamera()" style="display:none;">Reset Camera</button>
-              <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">Export PNG</button>
-              <button class="btn btn-small" onclick="exportMatrixJSON()" style="background:#555;">Export JSON</button>
-              <button class="btn btn-small" onclick="downloadReportHTML()" style="background:#1565c0;">Report HTML</button>
-              <button class="btn btn-small" onclick="downloadReportPDF()" style="background:#0d47a1;">Report PDF</button>
-              <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover Terms</button>
-              <span style="display:inline-flex;gap:8px;align-items:center;font-size:11px;color:#ddd;margin-left:4px;">
+              <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">PNG</button>
+              <button class="btn btn-small" onclick="exportMatrixJSON()" style="background:#555;">JSON</button>
+              <button class="btn btn-small" onclick="downloadReportHTML()" style="background:#1565c0;">Report</button>
+              <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover</button>
+              <span style="display:inline-flex;gap:6px;align-items:center;font-size:11px;color:#ddd;">
                 <label style="cursor:pointer;color:#ddd;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
                 <label style="cursor:pointer;color:#ddd;" title="Show only names"><input type="checkbox" id="discFilterNames" onchange="applyDiscoverFilter()"> Names</label>
                 <label style="cursor:pointer;color:#ddd;" title="Show only dates/numbers"><input type="checkbox" id="discFilterDates" onchange="applyDiscoverFilter()"> Dates</label>
-                <label style="cursor:pointer;color:#ddd;" title="Show only terms with definitions"><input type="checkbox" id="discFilterDefined" onchange="applyDiscoverFilter()"> Defined</label>
               </span>
             </div>
           </div>
@@ -1147,10 +1198,10 @@
               <button class="vid-btn vid-btn-frame" onclick="vidStepRotation(1)" title="Step forward 5 degrees">Step &#9654;</button>
               <span id="vidStatus">Ready</span>
               <span class="vid-label" style="margin-left:8px;">Format:</span>
-              <select id="vidFormatSelect" title="Select format BEFORE recording" style="font-size:11px;">
+              <select id="vidFormatSelect" title="Select format BEFORE recording" style="font-size:13px;">
               </select>
               <span class="vid-label" style="margin-left:4px;">FPS:</span>
-              <select id="vidFPSSelect" style="font-size:11px;">
+              <select id="vidFPSSelect" style="font-size:13px;">
                 <option value="24">24</option>
                 <option value="30" selected>30</option>
                 <option value="60">60</option>
@@ -1168,7 +1219,7 @@
             </div>
           </div>
           <div id="scanMatrix2D">
-            <div class="matrix-container" style="max-height:calc(100vh - 250px);">
+            <div class="matrix-container" id="scanMatrixContainer" style="max-height:calc(100dvh - 250px);">
               <div class="matrix-grid" id="scanMatrixGrid"></div>
             </div>
           </div>
@@ -2623,7 +2674,8 @@
         html += `<div style="background:#fff3e0;padding:16px;border-radius:8px;border-right:4px solid #ff9800;margin-bottom:20px;">`;
         html += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">`;
         html += `<h3 style="color:#e65100;margin:0;">Clusters (${clusters.length}) — sorted by smallest region</h3>`;
-        html += `<input id="clusterPermN" type="hidden" value="1000">`;
+        html += `<button onclick="runClusterPermTest()" id="clusterPermBtn" style="background:linear-gradient(135deg,#7b1fa2,#9c27b0);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Significance Test</button>`;
+        html += `<label style="font-size:12px;color:#666;">N=<input id="clusterPermN" type="number" value="1000" min="100" max="100000" step="100" style="width:70px;margin-left:4px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;font-size:12px;"></label>`;
         html += `<button id="clusterSortSpan" onclick="sortClusters('span')" style="background:#e65100;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:1;">Sort: Span</button>`;
         html += `<button id="clusterSortP" onclick="sortClusters('pvalue')" disabled style="background:#7b1fa2;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:0.4;">Sort: P-value</button>`;
         html += `</div>`;
