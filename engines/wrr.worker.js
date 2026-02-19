@@ -19,6 +19,8 @@ function normalizeSofiot(s) {
 }
 
 // ---- Dynamic skip range D(w) ----
+// D(w) = smallest D such that expected ELS count >= 10
+// Expected = P(w) * (D-1)(2L - (k-1)(D+2))  [WRR formula, forward+backward]
 function wrrMaxSkip(termNorm, L, letterFreqs, cap) {
   const k = termNorm.length;
   let logP = 0;
@@ -32,7 +34,7 @@ function wrrMaxSkip(termNorm, L, letterFreqs, cap) {
   for (let d = 2; d <= cap; d++) {
     const validStarts = L - (k - 1) * d;
     if (validStarts <= 0) return Math.max(d - 1, 2);
-    cumExpected += validStarts * pMatch;
+    cumExpected += 2 * validStarts * pMatch;  // ×2 for forward+backward ELS
     if (cumExpected >= 10) return d;
   }
   return cap;

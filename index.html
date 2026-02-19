@@ -77,10 +77,20 @@
       align-items: center;
       gap: 10px;
       flex-shrink: 0;
+      flex-wrap: wrap;
     }
     .header a { color: white; text-decoration: none; }
     .header img { width: 24px; height: 24px; }
-    .header h1 { font-size: 15px; font-weight: 600; }
+    .header h1 { font-size: 15px; font-weight: 600; margin-right: auto; }
+    .header-nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .header-nav a { font-size: 12px; opacity: 0.85; padding: 2px 5px; border-radius: 3px; white-space: nowrap; }
+    .header-nav a:hover { opacity: 1; background: rgba(255,255,255,0.15); }
+    .header-menu-btn { display: none; }
+    @media (max-width: 767px) {
+      .header-nav { display: none; }
+      .header-menu-btn { display: inline-block; background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 2px 6px; }
+      .header-nav.open { display: flex; width: 100%; order: 3; padding: 4px 0; }
+    }
     main.container {
       flex: 1;
       max-width: 1600px;
@@ -940,6 +950,16 @@
   <header class="header">
     <a href="./"><img src="img/favicon.png" alt=""></a>
     <h1>Bible Codes</h1>
+    <button class="header-menu-btn" onclick="document.querySelector('.header-nav').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+    <nav class="header-nav">
+      <a href="text-search.html">Text Search</a>
+      <a href="gematria.html">Gematria</a>
+      <a href="acronym.html">Acronyms</a>
+      <a href="tsirufim.html">Tsirufim</a>
+      <a href="matrix-view.html">Matrix</a>
+      <a href="book-view.html">Book View</a>
+      <a href="dashboard.html">All Tools</a>
+    </nav>
   </header>
 
   <main class="container">
@@ -1469,16 +1489,18 @@
         const resp = await fetch('data/torahNoSpaces.txt');
         torahText = await resp.text();
 
-        // Show Torah text in left column while loading continues
+        // Show Torah text preview (placeholder until charDB loads with real word spaces)
         const preview = document.getElementById('torahTextPreview');
-        if (preview && torahText) {
-          // Insert a space every 5 characters for readability
+        if (preview && torahText && !preview.dataset.wordsLoaded) {
           let display = '';
           for (let i = 0; i < torahText.length; i += 5) {
             display += torahText.slice(i, i + 5) + ' ';
           }
           preview.textContent = display;
         }
+
+        // Load character database in background for word-spaced preview
+        loadCharDB().catch(() => {});
 
         document.getElementById('loadProgress').textContent = 'Loading ELS index (32MB)...';
         if (!initElsIndex) throw new Error('ELS index module not available — try reloading the page');
@@ -1911,10 +1933,39 @@
           const text = await new Response(blob.stream().pipeThrough(ds)).text();
           allChars.push(...JSON.parse(text));
         }
-        if (allChars.length > 0) charDatabase = allChars;
+        if (allChars.length > 0) {
+          charDatabase = allChars;
+          // Rebuild Torah preview with real word boundaries
+          updateTorahPreviewWithWords();
+        }
       } catch (e) {
         console.log('Character database not available:', e.message);
       }
+    }
+
+    function updateTorahPreviewWithWords() {
+      const preview = document.getElementById('torahTextPreview');
+      if (!preview || !charDatabase || !torahText) return;
+      let display = '';
+      let lastWordIdx = -1;
+      let lastBook = -1, lastChap = -1, lastVerse = -1;
+      for (let i = 0; i < charDatabase.length && i < torahText.length; i++) {
+        const ch = charDatabase[i];
+        // Verse boundary: newline + reset word tracking
+        if (ch.book !== lastBook || ch.chapter !== lastChap || ch.verse !== lastVerse) {
+          if (lastBook !== -1) display += '\n';
+          lastBook = ch.book; lastChap = ch.chapter; lastVerse = ch.verse;
+          lastWordIdx = -1;
+        }
+        // Insert space on word boundary (within same verse)
+        if (ch.word_index !== undefined && ch.word_index !== lastWordIdx && lastWordIdx !== -1) {
+          display += ' ';
+        }
+        display += ch.base_char || torahText[i];
+        if (ch.word_index !== undefined) lastWordIdx = ch.word_index;
+      }
+      preview.textContent = display;
+      preview.dataset.wordsLoaded = '1';
     }
 
     function getVerseForPosition(pos) {
@@ -4825,8 +4876,8 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     const wrrLoadGenesis = wrrLoadText;
 
     // ---- Dynamic skip range D(w) ----
-    // D(w) = smallest D such that sum_{d=2}^{D} E(w,d) >= 10
-    // where E(w,d) = (L - (k-1)*d) * prod(freq[letter_i] / L)
+    // D(w) = smallest D such that expected ELS count >= 10
+    // Expected = P(w) * (D-1)(2L - (k-1)(D+2))  [WRR formula, forward+backward]
     function wrrMaxSkip(termNorm, cap) {
       const k = termNorm.length;
       const L = WRR_GENESIS_LEN;
@@ -4842,7 +4893,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       for (let d = 2; d <= cap; d++) {
         const validStarts = L - (k - 1) * d;
         if (validStarts <= 0) return Math.max(d - 1, 2);
-        cumExpected += validStarts * pMatch;
+        cumExpected += 2 * validStarts * pMatch;  // ×2 for forward+backward ELS
         if (cumExpected >= 10) return d;
       }
       return cap; // rare word: search full range
