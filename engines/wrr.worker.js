@@ -402,19 +402,6 @@ function computeP2(cValues) {
 }
 
 // ---- P₃: binomial tail P(Bin(N, 0.1) ≥ k₃) where k₃ = #{c < 0.1} ----
-function computeP3(cValues) {
-  const N = cValues.length;
-  if (N === 0) return 1.0;
-  const k = cValues.filter(c => c < 0.1).length;
-  return binomialTail(N, 0.1, k);
-}
-
-// ---- P₄: Gamma tail on truncated c values (c' = min(c, 0.5)) ----
-function computeP4(cValues) {
-  const truncated = cValues.map(c => Math.min(c, 0.5));
-  return gammaTail(truncated);
-}
-
 // ---- Main message handler ----
 self.onmessage = function(e) {
   const { action } = e.data;

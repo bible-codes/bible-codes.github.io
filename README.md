@@ -4,8 +4,8 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.5
-**Last Updated**: February 15, 2026
+**Version**: 4.6
+**Last Updated**: February 19, 2026
 **Status**: Production (11 active tools, 3 pending)
 
 ---
@@ -30,7 +30,8 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
      - 3.1.6 [3D Matrix View](#316-3d-matrix-view)
      - 3.1.7 [Cluster Significance Test](#317-cluster-significance-test)
      - 3.1.8 [Discover Terms](#318-discover-terms)
-     - 3.1.9 [URL API](#319-url-api)
+     - 3.1.9 [Verse Semantic Context](#319-verse-semantic-context)
+     - 3.1.10 [URL API](#3110-url-api)
    - 3.2 [WRR 1994 Experiment](#32-wrr-1994-experiment)
    - 3.3 [Text Search](#33-text-search)
    - 3.4 [Gematria Calculator](#34-gematria-calculator)
@@ -48,7 +49,8 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
      - 4.1.4 [Pattern Matching: KMP and Boyer-Moore](#414-pattern-matching-kmp-and-boyer-moore)
      - 4.1.5 [N-Term Cluster Discovery](#415-n-term-cluster-discovery)
      - 4.1.6 [Verse Attribution](#416-verse-attribution)
-     - 4.1.7 [Performance](#417-performance)
+     - 4.1.7 [Verse Semantic Context](#417-verse-semantic-context)
+     - 4.1.8 [Performance](#418-performance)
    - 4.2 [ELS Index — Precomputed Lookups](#42-els-index--precomputed-lookups)
      - 4.2.1 [How the Index Is Built](#421-how-the-index-is-built)
      - 4.2.2 [Query Operations](#422-query-operations)
@@ -300,7 +302,33 @@ Automatically discovers additional dictionary-validated ELS terms within a matri
 - **Export**: PNG export includes full matrix, all search terms with verse references, full verse texts, and all discovered terms with definitions. JSON export provides complete structured data for further analysis.
 - **URL API**: Search via URL parameters for sharing, bookmarking, or automation. See [3.1.9 URL API](#319-url-api).
 
-#### 3.1.9 URL API
+#### 3.1.9 Verse Semantic Context
+
+Pre-computed semantic summaries for every Torah verse, displayed alongside ELS results to provide narrative context.
+
+**What it provides**: When an ELS sequence is found, each letter physically resides in a specific verse. The Verse Context system shows *what those verses are about* — who is described, the emotional tone, and thematic tags.
+
+**Data fields per verse**:
+| Field | Description | Example |
+|-------|-------------|---------|
+| `summary` | 3-10 word thematic label | "Priestly garment preparation instructions" |
+| `subjects` | Who is described | ["Moses", "Aaron"] |
+| `sentiment` | Emotional tone / feelings | "reverence, obedience" |
+| `themes` | Categorical tags | ["ritual law", "priesthood"] |
+
+**Integration points** — summaries appear in 6 places:
+1. **Verse hover tooltip**: Summary + sentiment line between verse reference and Hebrew text
+2. **Matrix legend**: Per-verse italic summary lines below each term's verse list
+3. **Scan result items**: Inline parenthetical summary after verse references
+4. **Matrix cell tooltips**: Extended native tooltip: `"term — Genesis 1:5 — Naming of day and night"`
+5. **3D tooltip**: Same summary in the Three.js raycasting tooltip
+6. **Exports**: JSON/HTML reports include summary, sentiment, subjects, and themes per verse
+
+**Verse Context Panel**: A collapsible panel below the matrix legend consolidates all verses in a cluster into a "spiritual fingerprint" — showing subjects, sentiment, and themes for each verse.
+
+**Data**: Pre-computed `data/verse-summaries.json.gz` (~300-500 KB). Built via `tools/build-verse-summaries.py` using Claude API, or can be regenerated with custom summaries. Graceful degradation — the app works normally without this file.
+
+#### 3.1.10 URL API
 
 Run searches via URL parameters — useful for sharing links, bookmarking searches, or external automation.
 
@@ -565,7 +593,23 @@ Every position in the Torah text maps to a specific book, chapter, and verse. Th
 
 This data is loaded lazily on first scan and covers all five Torah books (Genesis through Deuteronomy, ~304,805 entries).
 
-#### 4.1.7 Performance
+#### 4.1.7 Verse Semantic Context
+
+The Verse Semantic Context system adds a pre-computed narrative layer on top of positional ELS data. It transforms raw "position → verse reference" mappings into meaningful descriptions of what each verse is about.
+
+**Data pipeline**:
+1. All 39 `data/*-verses.json.gz` files provide the raw verse data (consonantal text, book/chapter/verse numbers)
+2. `tools/build-verse-summaries.py` sends chapter-sized batches to Claude API (Haiku for cost: ~$4 for all 23,206 Tanakh verses)
+3. Each verse gets a structured summary: `{s: "summary", who: ["subjects"], feel: "sentiment", t: ["themes"]}`
+4. Output compressed to `data/verse-summaries.json.gz` (~300-500 KB)
+
+**Runtime loading**: The summary database is lazy-loaded alongside the character database when a scan starts. Both are fetched and decompressed in parallel using `DecompressionStream('gzip')`. If the summary file is unavailable, all UI components gracefully degrade — they simply omit the summary lines.
+
+**Lookup**: O(1) via hash map keyed by `"book:chapter:verse"` string. The `getVerseSummary(verseKey)` function returns null if no summary exists.
+
+**Verse Context Panel algorithm**: When a matrix is displayed, the panel iterates over all hits, extracts unique verse keys from every letter position (O(k) per term where k = term length), and renders a consolidated narrative view showing subjects, sentiment, and themes for each verse.
+
+#### 4.1.8 Performance
 
 | Operation | Typical Time |
 |-----------|-------------|
@@ -1299,6 +1343,14 @@ python3 p.py
 ---
 
 ## 11. Changelog
+
+### February 19, 2026 (v4.6): Verse Semantic Context Database
+
+- **Verse Semantic Context**: Pre-computed semantic summaries for every Torah verse, showing what each verse is about when ELS sequences are found. Summary, subjects (who), sentiment (emotional tone), and thematic tags per verse.
+- **6 UI Integration Points**: Summaries appear in verse hover tooltips, matrix legend (italic per-verse lines), scan result items (inline parenthetical), matrix cell tooltips, 3D raycasting tooltips, and all exports (JSON/HTML).
+- **Verse Context Panel**: Collapsible panel below matrix legend consolidates all verses in a cluster into a narrative view with subjects, sentiment, and themes — a "spiritual fingerprint" of the ELS finding.
+- **Build Script**: `tools/build-verse-summaries.py` generates summaries for all 23,206 Tanakh verses via Claude API (~$4 with Haiku). Supports resume from checkpoint, per-book filtering, and dry-run cost estimation.
+- **Graceful Degradation**: App works normally without the summary file. All summary features silently omit when data is unavailable.
 
 ### February 15, 2026 (v4.5): Web Worker Scan + IndexedDB Streaming
 

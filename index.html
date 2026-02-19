@@ -596,6 +596,7 @@
       z-index: 2;
       position: relative;
     }
+    #verseContextPanel.collapsed #verseContextBody { display: none; }
     .verse-ref-hover {
       cursor: pointer;
       text-decoration: underline;
@@ -944,6 +945,42 @@
       #videoControlPanel .vid-label { display: none; }
       #vidSpeedSlider { width: 60px; }
     }
+
+    /* ===== DATE MAP HEATMAP ===== */
+    #datemap-mode { padding: 12px; overflow-y: auto; }
+    .dm-section { margin-bottom: 20px; }
+    .dm-section h3 { margin: 0 0 10px; font-size: 15px; color: var(--white); }
+    .dm-heatmap-wrap { overflow-x: auto; }
+    .dm-heatmap { border-collapse: collapse; font-size: 11px; direction: rtl; }
+    .dm-heatmap th { padding: 3px 6px; font-weight: normal; color: var(--gray); white-space: nowrap; position: sticky; top: 0; background: var(--bg); }
+    .dm-heatmap td { padding: 0; text-align: center; cursor: pointer; position: relative; }
+    .dm-heatmap td.dm-cell { width: 28px; height: 24px; border: 1px solid #333; transition: transform .1s; }
+    .dm-heatmap td.dm-cell:hover { transform: scale(1.4); z-index: 2; border-color: #fff; }
+    .dm-heatmap td.dm-cell.selected { outline: 2px solid #fff; outline-offset: -1px; z-index: 3; }
+    .dm-heatmap .dm-month-label { font-weight: bold; color: var(--white); padding-right: 8px; text-align: left; white-space: nowrap; }
+    .dm-year-grid { display: flex; flex-wrap: wrap; gap: 4px; direction: rtl; }
+    .dm-year-cell { width: 48px; height: 32px; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; border-radius: 4px; cursor: pointer; border: 1px solid #333; transition: transform .1s; }
+    .dm-year-cell:hover { transform: scale(1.15); z-index: 2; border-color: #fff; }
+    .dm-year-cell.selected { outline: 2px solid #fff; outline-offset: -1px; }
+    .dm-month-bar { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+    .dm-month-pill { padding: 4px 10px; border-radius: 12px; font-size: 12px; cursor: pointer; border: 1px solid #555; }
+    .dm-month-pill:hover { border-color: #fff; }
+    .dm-month-pill.selected { outline: 2px solid #fff; }
+    #dmDetail { background: var(--card); border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
+    #dmDetail h4 { margin: 0 0 8px; color: var(--white); }
+    #dmDetail .dm-hits-list { max-height: 200px; overflow-y: auto; font-size: 12px; font-family: monospace; }
+    #dmDetail .dm-hit-row { padding: 2px 0; color: var(--gray); }
+    #dmDetail .dm-hit-row:hover { color: var(--white); }
+    .dm-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--gray); margin-bottom: 8px; }
+    .dm-legend-bar { width: 120px; height: 10px; border-radius: 3px; }
+    .dm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .dm-stat-card { background: linear-gradient(135deg,#667eea22,#764ba222); padding: 12px; border-radius: 8px; text-align: center; }
+    .dm-stat-val { font-size: 22px; font-weight: bold; color: var(--blue); }
+    .dm-stat-label { font-size: 11px; color: var(--gray); }
+    .dm-nodata { text-align: center; padding: 40px; color: var(--gray); }
+    .dm-nodata code { background: #333; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+    .dm-compute-btn { margin-top: 12px; }
   </style>
 </head>
 <body>
@@ -991,6 +1028,10 @@
       <button class="mode-tab" data-mode="wrr">
         WRR 1994
         <span class="mode-desc">Famous experiment</span>
+      </button>
+      <button class="mode-tab" data-mode="datemap">
+        Date Map
+        <span class="mode-desc">Hebrew date ELS density</span>
       </button>
     </div>
 
@@ -1251,6 +1292,13 @@
             <div id="matrix3DInfo" style="display:none;"></div>
           </div><!-- /scanMatrix3D -->
           <div class="matrix-legend" id="scanMatrixLegend"></div>
+          <div id="verseContextPanel" style="display:none;margin-top:8px;border:1px solid #37474f;border-radius:8px;padding:10px;background:#1a2332;color:#cfd8dc;font-size:13px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="this.parentElement.classList.toggle('collapsed');this.querySelector('.vc-arrow').textContent=this.parentElement.classList.contains('collapsed')?'\u25B6':'\u25BC';">
+              <span style="font-weight:bold;color:#90caf9;font-size:13px;">Verse Context Analysis</span>
+              <span class="vc-arrow" style="color:#90caf9;font-size:11px;">\u25BC</span>
+            </div>
+            <div id="verseContextBody" style="margin-top:6px;border-top:1px solid #37474f;padding-top:6px;"></div>
+          </div>
           <div id="discoverTermsPanel" style="display:none;margin-top:12px;border:1px solid #ddd;border-radius:8px;padding:12px;background:#f9f9f9;color:#000;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <h4 style="margin:0;font-size:14px;color:#000;">Discovered ELS Terms in Matrix Region</h4>
@@ -1432,6 +1480,100 @@
             excluded&mdash;no recorded death dates.</p>
           </div>
         </details>
+      </section>
+    </div>
+
+    <!-- DATE MAP MODE -->
+    <div id="datemap-mode" class="mode-content">
+      <section class="section" style="padding:4px;">
+        <h2 style="display:flex;align-items:center;gap:10px;">
+          Hebrew Date ELS Density Map
+          <span style="font-size:12px;padding:3px 8px;background:linear-gradient(135deg,#f093fb,#f5576c);color:white;border-radius:12px;">Pre-computed</span>
+        </h2>
+        <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">
+          ELS density heatmap for all Hebrew calendar dates and years across the Koren Edition Torah (304,805 letters).
+          Each cell aggregates equidistant letter sequences encoding that date across all skip values.
+        </p>
+        <div style="font-size:11px;color:var(--gray);margin-bottom:10px;line-height:1.5;">
+          <span style="cursor:help;text-decoration:underline dotted;" title="Generated by tools/build-date-els-index.py. Searches ~652 Hebrew date terms across all skip distances in the 304,805-letter Koren Torah text (same text used by Witztum, Rips & Rosenberg, 1994). Sofiot (final letters) normalized to regular forms for matching.">&#x2139; How it works</span>
+          &nbsp;|&nbsp;
+          <span style="cursor:help;text-decoration:underline dotted;" title="14 months searched: 12 standard (Tishrei–Elul) + Adar I (אדרא, leap-year first Adar) + Adar II (אדרב, leap-year second Adar). Variant spellings also searched: חשוון for Cheshvan, אדרראשון for Adar I, אדרשני for Adar II.">&#x1F4C5; 14 Months</span>
+          &nbsp;|&nbsp;
+          <span style="cursor:help;text-decoration:underline dotted;" title="Days 15 and 16 are searched in BOTH forms: Standard (טו/טז — avoids spelling the divine name) and Mathematical (יה/יו — pure gematria values). ELS sequences follow letter values, not typographic convention, so both forms are valid.">&#x1F522; Dual 15/16 forms</span>
+          &nbsp;|&nbsp;
+          <span style="cursor:help;text-decoration:underline dotted;" title="Year values 5700–5799 (~1940–2039 CE). Hebrew year encoding drops the millennia digit (5): e.g., 5786 → תשפו (400+300+80+6). Uses standard convention where 15→טו, 16→טז.">&#x1F4C6; Years 5700–5799</span>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="dm-stats" id="dmStats" style="display:none;">
+          <div class="dm-stat-card">
+            <div class="dm-stat-val" id="dmStatTerms">—</div>
+            <div class="dm-stat-label">Date Terms</div>
+          </div>
+          <div class="dm-stat-card">
+            <div class="dm-stat-val" id="dmStatHits">—</div>
+            <div class="dm-stat-label">Total ELS Hits</div>
+          </div>
+          <div class="dm-stat-card">
+            <div class="dm-stat-val" id="dmStatSkip">—</div>
+            <div class="dm-stat-label">Skip Range</div>
+          </div>
+        </div>
+
+        <!-- No-data message (shown when index not loaded) -->
+        <div id="dmNoData" class="dm-nodata">
+          <p>Date ELS index not loaded yet.</p>
+          <p>Generate it with: <code>python3 tools/build-date-els-index.py</code></p>
+          <p style="margin-top:8px;font-size:12px;">Or compute in-browser (slower):</p>
+          <button class="btn btn-secondary dm-compute-btn" onclick="dmComputeInBrowser()">
+            Compute Date Map Now
+          </button>
+          <div id="dmComputeProgress" style="display:none;margin-top:8px;font-size:12px;color:var(--gray);"></div>
+        </div>
+
+        <!-- Day × Month Heatmap -->
+        <div class="dm-section" id="dmHeatmapSection" style="display:none;">
+          <h3>Day × Month Heatmap <span style="cursor:help;font-size:11px;font-weight:normal;text-decoration:underline dotted;color:var(--gray);" title="14 rows (months) × 30 columns (days). Each cell's color intensity = log-scaled ELS hit count. Days 15/16 aggregate both standard (טו/טז) and mathematical (יה/יו) forms. Adar appears 3 times: non-leap Adar, leap Adar I, leap Adar II. Click any cell for details.">?</span></h3>
+          <div class="dm-legend">
+            <span>Fewer ELS</span>
+            <div class="dm-legend-bar" style="background:linear-gradient(to right,#1a1a2e,#16213e,#0f3460,#533483,#e94560,#ff6b6b);"></div>
+            <span>More ELS</span>
+          </div>
+          <div class="dm-heatmap-wrap">
+            <table class="dm-heatmap" id="dmHeatmapTable"></table>
+          </div>
+        </div>
+
+        <!-- Month Summary -->
+        <div class="dm-section" id="dmMonthSection" style="display:none;">
+          <h3>Month Summary <span style="cursor:help;font-size:11px;font-weight:normal;text-decoration:underline dotted;color:var(--gray);" title="ELS hits for standalone month names. Includes variant spellings (e.g., חשוון for Cheshvan). Hit count reflects how many times the month name itself appears as an equidistant letter sequence in the Torah.">?</span></h3>
+          <div class="dm-month-bar" id="dmMonthBar"></div>
+        </div>
+
+        <!-- Year Timeline -->
+        <div class="dm-section" id="dmYearSection" style="display:none;">
+          <h3>Year Timeline (5700–5799) <span style="cursor:help;font-size:11px;font-weight:normal;text-decoration:underline dotted;color:var(--gray);" title="Hebrew years 5700–5799 (~1940–2039 CE). Each year encoded as Hebrew letters: drop the 5000, encode remainder. E.g., 5786 → תשפו (ת=400, ש=300, פ=80, ו=6). Color = ELS density. Click for details.">?</span></h3>
+          <div class="dm-legend">
+            <span>Fewer ELS</span>
+            <div class="dm-legend-bar" style="background:linear-gradient(to right,#1a1a2e,#16213e,#0f3460,#533483,#e94560,#ff6b6b);"></div>
+            <span>More ELS</span>
+          </div>
+          <div class="dm-year-grid" id="dmYearGrid"></div>
+        </div>
+
+        <!-- Detail panel -->
+        <div id="dmDetail">
+          <h4 id="dmDetailTitle">—</h4>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <span id="dmDetailCount" style="font-size:13px;color:var(--gray);"></span>
+            <span id="dmDetailMinSkip" style="font-size:13px;color:var(--gray);"></span>
+          </div>
+          <div class="dm-hits-list" id="dmDetailHits"></div>
+          <div style="margin-top:8px;">
+            <button class="btn btn-secondary btn-small" id="dmSearchInScan" onclick="dmTransferToScan()">Search in Full Scan</button>
+            <button class="btn btn-secondary btn-small" style="margin-left:6px;" onclick="dmExportCSV()">Export CSV</button>
+          </div>
+        </div>
       </section>
     </div>
   </main>
@@ -1988,6 +2130,97 @@
       return verses;
     }
 
+    // --- Verse semantic summaries (pre-computed context) ---
+    let verseSummaries = null;
+
+    async function loadVerseSummaries() {
+      if (verseSummaries) return;
+      try {
+        const resp = await fetch('data/verse-summaries.json.gz');
+        if (!resp.ok) return;
+        const blob = await resp.blob();
+        const ds = new DecompressionStream('gzip');
+        const text = await new Response(blob.stream().pipeThrough(ds)).text();
+        verseSummaries = JSON.parse(text);
+      } catch (e) {
+        console.log('Verse summaries not available:', e.message);
+      }
+    }
+
+    function getVerseSummary(verseKey) {
+      if (!verseSummaries) return null;
+      return verseSummaries[verseKey] || null;
+    }
+
+    function formatSummaryLine(verseKey, verseLabel) {
+      const sum = getVerseSummary(verseKey);
+      if (!sum) return '';
+      const parts = [sum.s];
+      if (sum.feel) parts.push('— ' + sum.feel);
+      return parts.join(' ');
+    }
+
+    function formatSummaryHTML(verseKey) {
+      const sum = getVerseSummary(verseKey);
+      if (!sum) return '';
+      let html = `<div style="font-size:12px;color:#b0bec5;margin-top:2px;font-style:italic;">`;
+      html += sum.s;
+      if (sum.feel) html += ` — <span style="color:#90caf9;">${sum.feel}</span>`;
+      if (sum.who && sum.who.length) html += ` <span style="color:#a5d6a7;">[${sum.who.join(', ')}]</span>`;
+      html += `</div>`;
+      return html;
+    }
+
+    function updateVerseContextPanel(hits) {
+      const panel = document.getElementById('verseContextPanel');
+      const body = document.getElementById('verseContextBody');
+      if (!panel || !body) return;
+
+      if (!verseSummaries || !charDatabase || !hits || hits.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      // Collect unique verses from all hits
+      const seenVk = new Set();
+      const entries = [];
+      for (const h of hits) {
+        for (let i = 0; i < h.term.length; i++) {
+          const p = h.pos + i * h.skip;
+          const vk = getVerseKey(p);
+          if (vk && !seenVk.has(vk)) {
+            seenVk.add(vk);
+            const sum = getVerseSummary(vk);
+            if (sum) {
+              const label = getVerseForPosition(p) || vk;
+              entries.push({ label, sum });
+            }
+          }
+        }
+      }
+
+      if (entries.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      let html = '';
+      for (const e of entries) {
+        html += `<div style="padding:3px 0;border-bottom:1px solid #263238;">`;
+        html += `<strong style="color:#e3f2fd;">${e.label}</strong> — ${e.sum.s}`;
+        const meta = [];
+        if (e.sum.who && e.sum.who.length) meta.push(`<span style="color:#a5d6a7;">Subjects: ${e.sum.who.join(', ')}</span>`);
+        if (e.sum.feel) meta.push(`<span style="color:#ffcc80;">Sentiment: ${e.sum.feel}</span>`);
+        if (e.sum.t && e.sum.t.length) meta.push(`<span style="color:#ce93d8;">Themes: ${e.sum.t.join(', ')}</span>`);
+        if (meta.length) html += `<div style="font-size:11px;margin-top:1px;">${meta.join(' | ')}</div>`;
+        html += `</div>`;
+      }
+
+      body.innerHTML = html;
+      panel.style.display = 'block';
+      panel.classList.remove('collapsed');
+    }
+
     // --- Verse hover: text reconstruction + matrix highlight ---
     let verseTextCache = new Map();
 
@@ -2051,7 +2284,9 @@
       const tooltip = document.getElementById('verseTooltip');
       const text = getVerseTextByKey(verseKey);
       if (text) {
-        tooltip.innerHTML = `<div class="verse-tooltip-ref">${verseLabel}</div>${text}`;
+        const summaryLine = formatSummaryLine(verseKey, verseLabel);
+        const summaryDiv = summaryLine ? `<div style="color:#90caf9;font-size:12px;font-style:italic;margin:2px 0;">${summaryLine}</div>` : '';
+        tooltip.innerHTML = `<div class="verse-tooltip-ref">${verseLabel}</div>${summaryDiv}${text}`;
         tooltip.style.display = 'block';
         // Position near cursor — use requestAnimationFrame so offsetHeight is computed
         const x = event.clientX, y = event.clientY;
@@ -2405,9 +2640,9 @@
       progressBar.textContent = '0%';
       scanAbort = false;
 
-      // Load character database for verse attribution
+      // Load character database for verse attribution + semantic summaries
       status.textContent = 'Loading verse database...';
-      await loadCharDB();
+      await Promise.all([loadCharDB(), loadVerseSummaries()]);
 
       // --- Memory cleanup before new scan ---
       scanAllResults = {};
@@ -2764,9 +2999,18 @@
             const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
             const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
             const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${actualForm}]</span> ` : '';
+            // Inline verse summary (first verse only, for brevity)
+            let summaryStr = '';
+            if (verseSummaries && charDatabase) {
+              const vk = getVerseKey(r.pos);
+              if (vk) {
+                const sum = getVerseSummary(vk);
+                if (sum) summaryStr = `<span style="color:#78909c;font-size:11px;font-style:italic;"> (${sum.s})</span>`;
+              }
+            }
             html += `<div class="result-item" onclick="showSingleTermMatrix(${tIdx}, ${i})">
               <span class="term" style="color:${color};">${formNote}${actualForm}</span>
-              <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}</span>
+              <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}${summaryStr}</span>
             </div>`;
           }
           if (capped) {
@@ -2807,9 +3051,14 @@
         const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
         const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
         const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${actualForm}]</span> ` : '';
+        let summaryStr2 = '';
+        if (verseSummaries && charDatabase) {
+          const vk2 = getVerseKey(r.pos);
+          if (vk2) { const sm = getVerseSummary(vk2); if (sm) summaryStr2 = `<span style="color:#78909c;font-size:11px;font-style:italic;"> (${sm.s})</span>`; }
+        }
         html += `<div class="result-item" onclick="showSingleTermMatrix(${tIdx}, ${i})">
           <span class="term" style="color:${color};">${formNote}${actualForm}</span>
-          <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}</span>
+          <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}${summaryStr2}</span>
         </div>`;
       }
       if (end < results.length) {
@@ -3101,7 +3350,7 @@
       });
       document.getElementById('scanMatrixStats').innerHTML = statsHtml;
 
-      // Legend with hoverable verse references
+      // Legend with hoverable verse references + semantic summaries
       buildHitVerseMap(cluster.hits);
       let legendHtml = '';
       cluster.hits.forEach(h => {
@@ -3110,11 +3359,29 @@
         const verseSpans = makeVerseSpans(verses);
         const verseStr = verseSpans ? ` (${verseSpans})` : '';
         legendHtml += `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${h.term}${verseStr}</span></div>`;
+        // Per-verse semantic summaries
+        if (verseSummaries && charDatabase) {
+          const seen = new Set();
+          for (let i = 0; i < h.term.length; i++) {
+            const p = h.pos + i * h.skip;
+            const vk = getVerseKey(p);
+            if (vk && !seen.has(vk)) {
+              seen.add(vk);
+              const sum = getVerseSummary(vk);
+              if (sum) {
+                const vLabel = getVerseForPosition(p) || vk;
+                legendHtml += `<div style="margin-right:26px;font-size:11px;color:#b0bec5;font-style:italic;padding:1px 0;">${vLabel}: ${sum.s}${sum.feel ? ' — ' + sum.feel : ''}</div>`;
+              }
+            }
+          }
+        }
       });
       if (cluster.hits.length > 1) {
         legendHtml += `<div class="legend-item"><div class="legend-color" style="background:#9c27b0;"></div><span>Overlap</span></div>`;
       }
       document.getElementById('scanMatrixLegend').innerHTML = legendHtml;
+      // Update verse context panel
+      updateVerseContextPanel(cluster.hits);
 
       // Hide placeholder when matrix is shown
       const ph = document.getElementById('scanMatrixPlaceholder');
@@ -3159,13 +3426,30 @@
         <div class="matrix-stat"><div class="value">${r.skip}</div><div class="label">Skip</div></div>
       `;
 
-      // Legend with hoverable verse references
+      // Legend with hoverable verse references + summaries
       buildHitVerseMap([hit]);
       const verseSpans = makeVerseSpans(verses);
       const verseStr = verseSpans ? ` — ${verseSpans}` : '';
-      document.getElementById('scanMatrixLegend').innerHTML = `
-        <div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${actualForm}${verseStr}</span></div>
-      `;
+      let singleLegend = `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${actualForm}${verseStr}</span></div>`;
+      // Per-verse semantic summaries
+      if (verseSummaries && charDatabase) {
+        const seen = new Set();
+        for (let i = 0; i < actualForm.length; i++) {
+          const p = r.pos + i * r.skip;
+          const vk = getVerseKey(p);
+          if (vk && !seen.has(vk)) {
+            seen.add(vk);
+            const sum = getVerseSummary(vk);
+            if (sum) {
+              const vLabel = getVerseForPosition(p) || vk;
+              singleLegend += `<div style="margin-right:26px;font-size:11px;color:#b0bec5;font-style:italic;padding:1px 0;">${vLabel}: ${sum.s}${sum.feel ? ' — ' + sum.feel : ''}</div>`;
+            }
+          }
+        }
+      }
+      document.getElementById('scanMatrixLegend').innerHTML = singleLegend;
+      // Update verse context panel
+      updateVerseContextPanel([hit]);
 
       // Hide placeholder when matrix is shown
       const ph = document.getElementById('scanMatrixPlaceholder');
@@ -3624,10 +3908,13 @@
               const idx = termSet.values().next().value;
               cls += ` term-color-${idx % 8}`;
             }
-            // Tooltip with verse reference
+            // Tooltip with verse reference + summary
             const verse = getVerseForPosition(pos);
             const termNames = [...termSet].map(t => scanTerms[t]).join(', ');
-            tooltip = verse ? `${termNames} — ${verse}` : termNames;
+            const vk = getVerseKey(pos);
+            const cellSum = vk ? getVerseSummary(vk) : null;
+            const cellSumStr = cellSum ? ` — ${cellSum.s}` : '';
+            tooltip = verse ? `${termNames} — ${verse}${cellSumStr}` : termNames;
           }
 
           html += `<div class="${cls}" data-pos="${pos}"${tooltip ? ` title="${tooltip}"` : ''}>${ch}</div>`;
@@ -4344,15 +4631,19 @@
               seenVerses.add(vk);
               const verseLabel = getVerseForPosition(p);
               const verseText = getVerseTextByKey(vk);
-              if (verseLabel && verseText) verseList.push({ label: verseLabel, text: verseText });
+              if (verseLabel && verseText) {
+                const sum = getVerseSummary(vk);
+                verseList.push({ label: verseLabel, text: verseText, key: vk, summary: sum });
+              }
             }
           }
         }
         if (verseList.length > 0) {
           versesHTML = '<div style="margin:12px 0;">';
           for (const v of verseList) {
+            const sumLine = v.summary ? `<div style="font-size:13px;color:#555;font-style:italic;margin-top:2px;">${v.summary.s}${v.summary.feel ? ' — ' + v.summary.feel : ''}${v.summary.who ? ' [' + v.summary.who.join(', ') + ']' : ''}</div>` : '';
             versesHTML += `<div style="padding:6px 10px;margin:4px 0;background:#f5f5f5;border-radius:4px;border-right:3px solid #1e5aa8;">
-              <strong style="color:#1e5aa8;">${v.label}</strong>: <span style="font-family:serif;font-size:16px;">${v.text}</span>
+              <strong style="color:#1e5aa8;">${v.label}</strong>: <span style="font-family:serif;font-size:16px;">${v.text}</span>${sumLine}
             </div>`;
           }
           versesHTML += '</div>';
@@ -4475,7 +4766,12 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
             if (vk && !seen.has(vk)) {
               seen.add(vk);
               const txt = getVerseTextByKey(vk);
-              if (txt) verseTexts.push({ ref: getVerseForPosition(h.pos + i * h.skip), text: txt });
+              if (txt) {
+                const entry = { ref: getVerseForPosition(h.pos + i * h.skip), text: txt };
+                const sum = getVerseSummary(vk);
+                if (sum) { entry.summary = sum.s; entry.sentiment = sum.feel; entry.subjects = sum.who; entry.themes = sum.t; }
+                verseTexts.push(entry);
+              }
             }
           }
         }
@@ -5925,6 +6221,465 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     // Initialize WRR table
     populateWRRTable();
 
+    // ============= HEBREW DATE ELS MAP =============
+
+    let dmData = null;         // loaded date index
+    let dmSelected = null;     // { type:'date'|'month'|'year', key:string }
+
+    // 14 months: 12 standard + Adar I (leap-year) + Adar II (leap-year)
+    // Variant spellings (alts) searched separately in data but aggregated in display
+    const DM_MONTHS = [
+      { heb:'תשרי',  eng:'Tishrei',  days:30 },
+      { heb:'חשון',  eng:'Cheshvan', days:29, alts:['חשוון'] },
+      { heb:'כסלו',  eng:'Kislev',   days:30 },
+      { heb:'טבת',   eng:'Tevet',    days:29 },
+      { heb:'שבט',   eng:'Shevat',   days:30 },
+      { heb:'אדר',   eng:'Adar',     days:29 },       // Non-leap year
+      { heb:'אדרא',  eng:'Adar I',   days:30, alts:['אדרראשון'] },  // Leap year first Adar
+      { heb:'אדרב',  eng:'Adar II',  days:29, alts:['אדרשני'] },    // Leap year second Adar
+      { heb:'ניסן',  eng:'Nisan',    days:30 },
+      { heb:'אייר',  eng:'Iyar',     days:29 },
+      { heb:'סיון',  eng:'Sivan',    days:30 },
+      { heb:'תמוז',  eng:'Tammuz',   days:29 },
+      { heb:'אב',    eng:'Av',       days:30 },
+      { heb:'אלול',  eng:'Elul',     days:29 },
+    ];
+
+    // Returns the standard Hebrew numeral form of a day number
+    function dmDayHeb(n) {
+      const u = {1:'א',2:'ב',3:'ג',4:'ד',5:'ה',6:'ו',7:'ז',8:'ח',9:'ט'};
+      if (n <= 9) return u[n];
+      if (n === 10) return 'י';
+      if (n === 15) return 'טו';
+      if (n === 16) return 'טז';
+      if (n === 20) return 'כ';
+      if (n === 30) return 'ל';
+      if (n < 20) return 'י' + u[n-10];
+      if (n < 30) return 'כ' + u[n-20];
+      return 'ל';
+    }
+
+    // Returns ALL Hebrew numeral forms for a day (days 15/16 have dual forms)
+    // Standard: 15=טו, 16=טז (avoids divine name)
+    // Mathematical: 15=יה, 16=יו (pure gematria — valid for ELS since letters follow values)
+    function dmDayHebForms(n) {
+      if (n === 15) return ['טו', 'יה'];
+      if (n === 16) return ['טז', 'יו'];
+      return [dmDayHeb(n)];
+    }
+
+    function dmYearHeb(n) {
+      let r = '';
+      while (n >= 400) { r += 'ת'; n -= 400; }
+      if (n >= 300) { r += 'ש'; n -= 300; }
+      else if (n >= 200) { r += 'ר'; n -= 200; }
+      else if (n >= 100) { r += 'ק'; n -= 100; }
+      if (n === 15) return r + 'טו';
+      if (n === 16) return r + 'טז';
+      const tm = {10:'י',20:'כ',30:'ל',40:'מ',50:'נ',60:'ס',70:'ע',80:'פ',90:'צ'};
+      const t = Math.floor(n/10)*10;
+      if (t > 0) { r += tm[t]; n -= t; }
+      const um = {1:'א',2:'ב',3:'ג',4:'ד',5:'ה',6:'ו',7:'ז',8:'ח',9:'ט'};
+      if (n > 0) r += um[n];
+      return r;
+    }
+
+    // Color scale: count → CSS color
+    function dmColor(count, maxCount) {
+      if (count === 0) return '#1a1a2e';
+      const t = Math.log(count + 1) / Math.log(maxCount + 1);
+      // Gradient: dark blue → purple → red → orange
+      if (t < 0.33) {
+        const s = t / 0.33;
+        return `rgb(${Math.round(15+68*s)},${Math.round(26+26*s)},${Math.round(46+50*s)})`;
+      } else if (t < 0.66) {
+        const s = (t - 0.33) / 0.33;
+        return `rgb(${Math.round(83+150*s)},${Math.round(52-7*s)},${Math.round(96+35*s)})`;
+      } else {
+        const s = (t - 0.66) / 0.34;
+        return `rgb(${Math.round(233+22*s)},${Math.round(69+38*s)},${Math.round(96+11*s)})`;
+      }
+    }
+
+    async function loadDateMapData() {
+      if (dmData) return true;
+      try {
+        const resp = await fetch('data/els-dates-index.json.gz');
+        if (!resp.ok) return false;
+        const blob = await resp.blob();
+        const ds = new DecompressionStream('gzip');
+        const text = await new Response(blob.stream().pipeThrough(ds)).text();
+        dmData = JSON.parse(text);
+        return true;
+      } catch (e) {
+        console.log('Date map index not available:', e.message);
+        return false;
+      }
+    }
+
+    async function initDateMap() {
+      const loaded = await loadDateMapData();
+      if (!loaded) {
+        document.getElementById('dmNoData').style.display = 'block';
+        document.getElementById('dmHeatmapSection').style.display = 'none';
+        document.getElementById('dmMonthSection').style.display = 'none';
+        document.getElementById('dmYearSection').style.display = 'none';
+        document.getElementById('dmStats').style.display = 'none';
+        return;
+      }
+      document.getElementById('dmNoData').style.display = 'none';
+      document.getElementById('dmHeatmapSection').style.display = 'block';
+      document.getElementById('dmMonthSection').style.display = 'block';
+      document.getElementById('dmYearSection').style.display = 'block';
+      document.getElementById('dmStats').style.display = 'grid';
+
+      // Stats
+      const meta = dmData.meta;
+      document.getElementById('dmStatTerms').textContent = meta.termCount;
+      document.getElementById('dmStatHits').textContent = (meta.totalHits || 0).toLocaleString();
+      document.getElementById('dmStatSkip').textContent = `±${meta.skipRange[1]}`;
+
+      renderDateHeatmap();
+      renderMonthBar();
+      renderYearGrid();
+    }
+
+    // Aggregate hit count across all term keys for a given day+month
+    // (accounts for dual day forms 15/16 and variant month spellings)
+    function dmAggregateCount(dates, day, month) {
+      const dayForms = dmDayHebForms(day);
+      const monthForms = [month.heb, ...(month.alts || [])];
+      let total = 0;
+      const keys = [];
+      for (const df of dayForms) {
+        for (const mf of monthForms) {
+          const key = normalizeSofiot(df + mf);
+          const entry = dates[key];
+          if (entry && entry.n) { total += entry.n; keys.push(key); }
+        }
+      }
+      return { total, keys };
+    }
+
+    function renderDateHeatmap() {
+      const tbl = document.getElementById('dmHeatmapTable');
+      const dates = dmData.dates;
+
+      // Find max aggregated count for color scaling
+      let maxCount = 1;
+      for (const m of DM_MONTHS) {
+        for (let d = 1; d <= m.days; d++) {
+          const { total } = dmAggregateCount(dates, d, m);
+          if (total > maxCount) maxCount = total;
+        }
+      }
+
+      // Header row: day numbers
+      let html = '<thead><tr><th></th>';
+      for (let d = 1; d <= 30; d++) html += `<th>${dmDayHeb(d)}</th>`;
+      html += '</tr></thead><tbody>';
+
+      // One row per month (14 months including Adar I/II)
+      for (const m of DM_MONTHS) {
+        html += `<tr><td class="dm-month-label">${m.heb}</td>`;
+        for (let d = 1; d <= 30; d++) {
+          if (d > m.days) {
+            html += '<td></td>';
+            continue;
+          }
+          const { total, keys } = dmAggregateCount(dates, d, m);
+          const bg = dmColor(total, maxCount);
+          const primaryKey = normalizeSofiot(dmDayHeb(d) + m.heb);
+          const formsNote = (d === 15 || d === 16)
+            ? ` [${dmDayHebForms(d).join('+')} forms]` : '';
+          const tip = `${dmDayHeb(d)} ${m.heb} (${d} ${m.eng}): ${total} ELS hits${formsNote}`;
+          html += `<td class="dm-cell" style="background:${bg};" title="${tip}" `
+               + `data-term="${primaryKey}" data-type="date" `
+               + `data-all-keys="${keys.join(',')}" `
+               + `onclick="dmSelectCell(this)">${total > 0 ? '' : ''}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody>';
+      tbl.innerHTML = html;
+    }
+
+    function renderMonthBar() {
+      const bar = document.getElementById('dmMonthBar');
+      const months = dmData.months;
+
+      // Aggregate counts including variant spellings
+      let maxCount = 1;
+      for (const m of DM_MONTHS) {
+        let total = 0;
+        for (const mf of [m.heb, ...(m.alts || [])]) {
+          const entry = months[normalizeSofiot(mf)];
+          if (entry) total += entry.n;
+        }
+        if (total > maxCount) maxCount = total;
+      }
+
+      let html = '';
+      for (const m of DM_MONTHS) {
+        const termKey = normalizeSofiot(m.heb);
+        let total = 0;
+        for (const mf of [m.heb, ...(m.alts || [])]) {
+          const entry = months[normalizeSofiot(mf)];
+          if (entry) total += entry.n;
+        }
+        const bg = dmColor(total, maxCount);
+        const altsNote = m.alts ? ` [+${m.alts.join(',')}]` : '';
+        html += `<div class="dm-month-pill" style="background:${bg};color:#fff;" `
+             + `title="${m.heb} (${m.eng}): ${total} ELS hits${altsNote}" `
+             + `data-term="${termKey}" data-type="month" `
+             + `onclick="dmSelectCell(this)">`
+             + `${m.heb} <small>${total}</small></div>`;
+      }
+      bar.innerHTML = html;
+    }
+
+    function renderYearGrid() {
+      const grid = document.getElementById('dmYearGrid');
+      const years = dmData.years;
+      let maxCount = 1;
+      for (const v of Object.values(years)) {
+        if (v.n > maxCount) maxCount = v.n;
+      }
+
+      let html = '';
+      for (let y = 700; y < 800; y++) {
+        const termKey = normalizeSofiot(dmYearHeb(y));
+        const entry = years[termKey];
+        const count = entry ? entry.n : 0;
+        const bg = dmColor(count, maxCount);
+        const fullYear = y + 5000;
+        const gregYear = fullYear - 3760;
+        html += `<div class="dm-year-cell" style="background:${bg};color:#fff;" `
+             + `title="${dmYearHeb(y)} (${fullYear} / ~${gregYear} CE): ${count} ELS hits" `
+             + `data-term="${termKey}" data-type="year" `
+             + `onclick="dmSelectCell(this)">`
+             + `${dmYearHeb(y)}</div>`;
+      }
+      grid.innerHTML = html;
+    }
+
+    window.dmSelectCell = function(el) {
+      // Clear previous selection
+      document.querySelectorAll('.dm-cell.selected, .dm-month-pill.selected, .dm-year-cell.selected')
+        .forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+
+      const termKey = el.dataset.term;
+      const type = el.dataset.type;
+      const allKeysStr = el.dataset.allKeys || '';
+      dmSelected = { type, key: termKey };
+
+      const category = type + 's';
+      const detail = document.getElementById('dmDetail');
+
+      // Aggregate entries from all variant keys (dual day forms, alt month spellings)
+      const keys = allKeysStr ? allKeysStr.split(',') : [termKey];
+      let totalN = 0;
+      let minSkip = Infinity;
+      let allTop = [];
+      let label = '';
+
+      for (const k of keys) {
+        const entry = dmData[category][k];
+        if (!entry) continue;
+        totalN += entry.n;
+        if (!label && entry.label) label = entry.label;
+        if (entry.minSkip && entry.minSkip < minSkip) minSkip = entry.minSkip;
+        if (entry.top) allTop.push(...entry.top.map(h => ({ ...h, form: k })));
+      }
+
+      if (totalN === 0) {
+        detail.style.display = 'none';
+        return;
+      }
+      detail.style.display = 'block';
+
+      // Sort combined top hits by |skip|
+      allTop.sort((a, b) => Math.abs(a.s) - Math.abs(b.s));
+
+      const formsNote = keys.length > 1 ? ` [forms: ${keys.join(', ')}]` : '';
+      document.getElementById('dmDetailTitle').textContent =
+        `${termKey} — ${label}${formsNote}`;
+      document.getElementById('dmDetailCount').textContent =
+        `${totalN.toLocaleString()} ELS hits`;
+      document.getElementById('dmDetailMinSkip').textContent =
+        minSkip < Infinity ? `Min |skip| = ${minSkip}` : '';
+
+      // Render top hits (up to 20 from combined forms)
+      const hitsDiv = document.getElementById('dmDetailHits');
+      const topHits = allTop.slice(0, 20);
+      if (topHits.length > 0) {
+        let rows = '';
+        for (const h of topHits) {
+          let verseRef = '';
+          if (typeof charDatabase !== 'undefined' && charDatabase && h.p < charDatabase.length) {
+            const ch = charDatabase[h.p];
+            if (ch) {
+              const bName = BOOK_NAMES[ch.book] || `Book ${ch.book}`;
+              verseRef = ` — ${bName} ${ch.chapter}:${ch.verse}`;
+            }
+          }
+          const formTag = keys.length > 1 ? ` [${h.form}]` : '';
+          rows += `<div class="dm-hit-row">skip=${h.s > 0 ? '+' : ''}${h.s}  pos=${h.p.toLocaleString()}${verseRef}${formTag}</div>`;
+        }
+        hitsDiv.innerHTML = rows;
+      } else {
+        hitsDiv.innerHTML = '<div class="dm-hit-row">No detailed hits stored</div>';
+      }
+    };
+
+    window.dmTransferToScan = function() {
+      if (!dmSelected) return;
+      // Switch to scan tab
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
+      document.querySelector('[data-mode="scan"]').classList.add('active');
+      document.getElementById('scan-mode').classList.add('active');
+
+      // Put term in textarea
+      const ta = document.getElementById('batchTextarea');
+      if (ta) {
+        ta.value = dmSelected.key;
+        ta.focus();
+      }
+    };
+
+    window.dmExportCSV = function() {
+      if (!dmData) return;
+      let csv = 'Term,Type,Label,Hits,MinSkip,TopPositions\n';
+      for (const cat of ['dates', 'months', 'years']) {
+        for (const [term, entry] of Object.entries(dmData[cat])) {
+          const topStr = (entry.top || []).map(h => `${h.p}:${h.s}`).join(';');
+          csv += `"${term}","${cat}","${entry.label || ''}",${entry.n},${entry.minSkip || ''},${topStr}\n`;
+        }
+      }
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'hebrew-date-els-map.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    // Compute in browser fallback (uses main-thread findELS)
+    window.dmComputeInBrowser = async function() {
+      const prog = document.getElementById('dmComputeProgress');
+      prog.style.display = 'block';
+      prog.textContent = 'Loading Torah text...';
+
+      // Ensure Torah text is loaded
+      if (!torahText) {
+        const resp = await fetch('data/torahNoSpaces.txt');
+        torahText = await resp.text();
+      }
+      if (!torahTextNorm) torahTextNorm = normalizeSofiot(torahText);
+
+      // Generate all date terms (14 months, dual day 15/16 forms, variant month spellings)
+      const allTerms = [];
+      for (const m of DM_MONTHS) {
+        // Standalone month name + variants
+        const mNorm = normalizeSofiot(m.heb);
+        allTerms.push({ key: mNorm, type: 'month', label: m.eng });
+        for (const alt of (m.alts || [])) {
+          allTerms.push({ key: normalizeSofiot(alt), type: 'month', label: m.eng + ' (alt)' });
+        }
+        // Day+month combinations
+        for (let d = 1; d <= m.days; d++) {
+          const dayForms = dmDayHebForms(d);
+          const monthForms = [m.heb, ...(m.alts || [])];
+          for (let di = 0; di < dayForms.length; di++) {
+            for (let mi = 0; mi < monthForms.length; mi++) {
+              const combined = normalizeSofiot(dayForms[di] + monthForms[mi]);
+              const altNote = (di > 0 || mi > 0) ? ' (alt)' : '';
+              allTerms.push({ key: combined, type: 'date', label: `${d} ${m.eng}${altNote}`, day: d, month: m.eng });
+            }
+          }
+        }
+      }
+      for (let y = 700; y < 800; y++) {
+        const yh = dmYearHeb(y);
+        const yNorm = normalizeSofiot(yh);
+        allTerms.push({ key: yNorm, type: 'year', label: String(y + 5000), year: y + 5000 });
+      }
+
+      const maxSkip = 100; // Smaller range for browser compute
+      const topN = 10;
+      const results = { dates: {}, months: {}, years: {} };
+      let totalHits = 0;
+
+      for (let i = 0; i < allTerms.length; i++) {
+        const t = allTerms[i];
+        if (i % 10 === 0) {
+          prog.textContent = `Searching ${i+1}/${allTerms.length}: ${t.label}...`;
+          await new Promise(r => setTimeout(r, 0)); // yield to UI
+        }
+
+        const term = t.key;
+        const k = term.length;
+        const hits = [];
+
+        // Pre-compute first char positions
+        const ch0 = term[0];
+        const ch0Pos = [];
+        for (let j = 0; j < torahTextNorm.length; j++) {
+          if (torahTextNorm[j] === ch0) ch0Pos.push(j);
+        }
+
+        for (let skip = -maxSkip; skip <= maxSkip; skip++) {
+          if (skip === 0) continue;
+          const found = findELS(torahTextNorm, term, skip, ch0Pos);
+          for (const pos of found) hits.push({ p: pos, s: skip });
+        }
+
+        hits.sort((a, b) => Math.abs(a.s) - Math.abs(b.s));
+        const entry = { n: hits.length, label: t.label };
+        if (hits.length > 0) {
+          entry.minSkip = Math.abs(hits[0].s);
+          entry.top = hits.slice(0, topN);
+        }
+        if (t.day) entry.day = t.day;
+        if (t.month) entry.month = t.month;
+
+        const cat = t.type + 's';
+        results[cat][t.key] = entry;
+        totalHits += hits.length;
+      }
+
+      // Build dmData structure
+      dmData = {
+        meta: {
+          version: '1.0-browser',
+          skipRange: [1, maxSkip],
+          textLen: torahTextNorm.length,
+          generated: new Date().toISOString().slice(0, 10),
+          topN,
+          termCount: allTerms.length,
+          totalHits
+        },
+        dates: results.dates,
+        months: results.months,
+        years: results.years
+      };
+
+      prog.textContent = `Done! ${totalHits.toLocaleString()} hits across ${allTerms.length} terms.`;
+      initDateMap();
+    };
+
+    // Lazy-init: load data when Date Map tab is first activated
+    let dmInitDone = false;
+    document.querySelector('[data-mode="datemap"]').addEventListener('click', async () => {
+      if (dmInitDone) return;
+      dmInitDone = true;
+      // Also ensure charDB is loaded for verse references in detail view
+      if (typeof loadCharDB === 'function') loadCharDB().catch(() => {});
+      await initDateMap();
+    });
+
     // ============= 3D MATRIX VIEW =============
     let THREE = null, OrbitControls = null;
     let scene3D = null, camera3D = null, renderer3D = null, controls3D = null;
@@ -6171,7 +6926,9 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         // Store data for raycasting
         const termNames = [...data.termIdxs].map(t => scanTerms[t] || `Term ${t}`).join(', ');
         const verse = getVerseForPosition(pos);
-        mesh.userData = { pos, letter: data.letter, termNames, verse, col, row, layer };
+        const vk3d = getVerseKey(pos);
+        const sum3d = vk3d ? getVerseSummary(vk3d) : null;
+        mesh.userData = { pos, letter: data.letter, termNames, verse, col, row, layer, summary: sum3d };
         meshUserData.push(mesh);
       }
 
@@ -6251,8 +7008,9 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       if (intersects.length > 0) {
         const d = intersects[0].object.userData;
         if (d && d.termNames) {
+          const sumLine3d = d.summary ? `<br><em style="color:#90caf9;">${d.summary.s}${d.summary.feel ? ' — ' + d.summary.feel : ''}</em>` : '';
           tooltip.innerHTML = `<strong>${d.letter}</strong> — ${d.termNames}` +
-            (d.verse ? `<br>${d.verse}` : '') +
+            (d.verse ? `<br>${d.verse}` : '') + sumLine3d +
             `<br>pos: ${d.pos.toLocaleString()} | col: ${d.col} row: ${d.row} layer: ${d.layer}`;
           tooltip.style.display = 'block';
           tooltip.style.left = (event.clientX - rect.left + 12) + 'px';

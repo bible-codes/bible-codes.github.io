@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bible-codes-v8.1';
+const CACHE_NAME = 'bible-codes-v8.4';
 
 // Assets to cache for offline use
 const urlsToCache = [
@@ -31,6 +31,8 @@ const urlsToCache = [
   // Core data
   './data/torahNoSpaces.txt',
   './data/precomputed-terms.json',
+  './data/verse-summaries.json.gz',
+  './data/els-dates-index.json.gz',
 
   // Dictionary data (offline Hebrew dictionary support)
   './data/dictionaries/unified/hebrew-unified.json.gz',

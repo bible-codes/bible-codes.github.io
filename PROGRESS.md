@@ -1212,6 +1212,74 @@ python3 build-database.py --book genesis
 
 ---
 
+## Future Plans / Suggested Research Directions
+
+### Hebrew Date ELS Map ✅ (2026-02-19)
+- Pre-computed ELS density for all Hebrew calendar dates + years
+- 14 months (including Adar I/II), dual day 15/16 forms, variant month spellings
+- 652 terms, 1.74M hits, ±200 skip range, 29KB compressed index
+- Interactive heatmap with detail panel, CSV export, Full Scan transfer
+
+### Verse Semantic Context Database ✅ (2026-02-19)
+- Pre-computed summaries for all 5,847 Torah verses
+- Fields: summary, subjects, sentiment, themes
+- 124KB compressed, lazy-loaded on scan
+
+### ELS Hypergraph Modeling (Research Framework)
+
+**Core Concept**: Model the Torah text as a combinatorial structure where ELS occurrences form a **hypergraph** — each term occurrence is a node, each co-occurrence cluster is a hyperedge. This enables rigorous statistical analysis of term proximity patterns.
+
+#### 1. Combinatorial Explosion & Control
+- **Problem**: With 304,805 letters and skip ranges up to ±500, the search space for k-term clusters grows combinatorially
+- **Approach**: Define a *cluster quality function* Q(C) = f(span, skip_variance, semantic_relevance) and use it to rank clusters
+- **Control**: Compare observed Q-distribution against null model (permuted text, random letter assignment, shuffled term positions)
+- **Metric**: For each cluster, compute the probability P(Q ≥ Q_obs) under the null hypothesis
+
+#### 2. ELS Hypergraph Structure
+- **Nodes**: Each ELS occurrence (term, position, skip) is a node
+- **Hyperedges**: Co-located clusters (sets of nodes within a bounded region)
+- **Edge weights**: Inversely proportional to cluster span × max(|skip|)
+- **Analysis**: Spectral properties of the hypergraph adjacency tensor reveal non-random clustering patterns
+- **Comparison**: Same hypergraph structure computed on control texts (Isaiah, War and Peace Hebrew translation, random permutations)
+
+#### 3. Letter-Gate Algebra (22-Node Directed Graph)
+- **Concept**: Each Hebrew letter has a gematria value and occupies a position in the Kabbalistic framework (Sefer Yetzirah)
+- **Structure**: 22 letters as nodes, directed edges weighted by transition frequency in Torah text
+- **ELS integration**: ELS sequences define paths through this graph; analyze path properties (cycle structure, return times, spectral gap)
+- **Research question**: Do ELS-derived paths exhibit different graph-theoretic properties than random walks on the same letter graph?
+
+#### 4. Arithmetic Embedding Layer
+- **Gematria constraints**: Each Hebrew word has standard, reduced, and ordinal gematria values
+- **Observation**: ELS clusters sometimes exhibit gematria relationships between co-located terms
+- **Framework**: Define an arithmetic embedding φ: Terms → Z^3 (standard, reduced, ordinal) and analyze whether cluster members are closer in this embedding than expected by chance
+- **Statistical test**: Permutation test on intra-cluster gematria distances vs. inter-cluster baseline
+
+#### 5. Statistical Controls (Essential for Any Claims)
+- **Null models**:
+  1. Random letter permutation (destroys all structure)
+  2. Markov chain text generation (preserves letter frequencies + digram statistics)
+  3. Verse-shuffled Torah (preserves word structure, destroys global position)
+  4. Control texts of similar length and language
+- **Multiple testing correction**: Bonferroni / FDR correction for the number of terms × skip values searched
+- **Effect size**: Not just p-values — report the magnitude of departure from null expectation
+- **Replication**: Any finding on one text portion (e.g., Genesis) should be tested on held-out portions
+
+#### 6. Academic References
+- Witztum, Rips & Rosenberg (1994). "Equidistant Letter Sequences in the Book of Genesis." *Statistical Science*, 9(3), 429-438.
+- McKay, Bar-Natan, Bar-Hillel & Kalai (1999). "Solving the Bible Code Puzzle." *Statistical Science*, 14(2), 150-173.
+- Haralick (2006). "Testing the Torah Code Hypothesis: The Experimental Protocol."
+- Bar-Natan & McKay (2014). Various technical reports on WRR methodology.
+
+#### 7. Implementation Roadmap (If Pursued)
+1. **Phase A**: Build hypergraph data structure from existing scan results
+2. **Phase B**: Implement null model generators (permutation, Markov chain)
+3. **Phase C**: Compute cluster quality metrics and null distributions
+4. **Phase D**: Spectral analysis of ELS hypergraph
+5. **Phase E**: Interactive visualization of hypergraph structure
+6. **Phase F**: Write-up with full statistical methodology
+
+---
+
 **End of Progress Report**
 
 *Use this document to quickly resume work in future sessions.*
