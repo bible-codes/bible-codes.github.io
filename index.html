@@ -1611,6 +1611,8 @@
         document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.dataset.mode + '-mode').classList.add('active');
+        // Lazy-load 32MB ELS index only when Index Lookup tab is first activated
+        if (tab.dataset.mode === 'index') initIndexTab();
       });
     });
 
@@ -1625,6 +1627,8 @@
     }
 
     // ============= INIT =============
+
+    // Core init: loads Torah text (needed by Scan tab, the default)
     async function init() {
       try {
         document.getElementById('loadProgress').textContent = 'Loading Torah text...';
@@ -1644,6 +1648,21 @@
         // Load character database in background for word-spaced preview
         loadCharDB().catch(() => {});
 
+        document.getElementById('loadProgress').style.display = 'none';
+
+      } catch (error) {
+        console.error('Init failed:', error);
+        document.getElementById('loadProgress').textContent = 'Error loading Torah text.';
+      }
+    }
+
+    // Lazy init for Index Lookup tab: loads the 32MB ELS index only when needed
+    let indexInitDone = false;
+    async function initIndexTab() {
+      if (indexInitDone) return;
+      indexInitDone = true;
+      try {
+        document.getElementById('loadProgress').style.display = 'block';
         document.getElementById('loadProgress').textContent = 'Loading ELS index (32MB)...';
         if (!initElsIndex) throw new Error('ELS index module not available — try reloading the page');
         const metadata = await initElsIndex('data/els-index/els-index-50-min4.json.gz');
@@ -1655,18 +1674,16 @@
         displayStats(metadata);
         loadSavedSessions();
 
+        // Auto-restore previous session
+        try {
+          await autoRestoreSession();
+        } catch (e) {
+          console.warn('Auto-restore failed:', e);
+        }
       } catch (error) {
-        console.error('Init failed:', error);
+        console.error('ElsIndex init failed:', error);
         document.getElementById('indexLoading').innerHTML =
           `<div style="color: red;">Error loading index: ${error.message}</div>`;
-        return;
-      }
-
-      // Auto-restore previous session (outside try/catch so init errors don't mask it)
-      try {
-        await autoRestoreSession();
-      } catch (e) {
-        console.warn('Auto-restore failed:', e);
       }
     }
 
@@ -4893,11 +4910,12 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     }
 
     window.searchWordInELS = function(word) {
-      // Switch to index mode
+      // Switch to index mode and lazy-load ELS index
       document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
       document.querySelector('.mode-tab[data-mode="index"]').classList.add('active');
       document.getElementById('index-mode').classList.add('active');
+      initIndexTab();
 
       // Set the word as first term and search
       const container = document.getElementById('termEntries');
@@ -4920,11 +4938,12 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     };
 
     window.addWordToSearch = function(word) {
-      // Switch to index mode if not already
+      // Switch to index mode and lazy-load ELS index
       document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
       document.querySelector('.mode-tab[data-mode="index"]').classList.add('active');
       document.getElementById('index-mode').classList.add('active');
+      initIndexTab();
 
       // Add word as new term
       const container = document.getElementById('termEntries');
