@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Bible Codes">
   <meta name="description" content="Comprehensive Hebrew Bible analysis tools - ELS, Gematria, Notarikon, Tsirufim, and more">
   <link rel="icon" type="image/png" href="img/favicon.png">
-  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <title>Bible Codes</title>
   <script>
@@ -23,7 +23,7 @@
               if (newSW.state === 'activated') {
                 caches.keys().then(names => {
                   names.forEach(name => {
-                    if (name !== 'bible-codes-v6.0') caches.delete(name);
+                    if (name !== 'bible-codes-v9.0') caches.delete(name);
                   });
                 });
               }

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
-  <meta name="theme-color" content="#1e5aa8">
+  <meta name="theme-color" content="#667eea">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ELS Search">
   <meta name="description" content="Search for Equidistant Letter Sequences (ELS) in the Hebrew Bible">
   <link rel="icon" type="image/png" href="img/favicon.png">
-  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <title>Bible Codes - ELS Search</title>
   <script>
@@ -1268,7 +1268,7 @@
                 <option value="30" selected>30</option>
                 <option value="60">60</option>
               </select>
-              <button class="vid-btn vid-btn-dl" id="vidConvertBtn" onclick="vidConvertToMp4()" style="display:none;margin-left:auto;background:#1565c0;">Convert to MP4</button>
+              <!-- MP4 conversion removed: ffmpeg.wasm too heavy (32MB download + slow WASM encode) -->
               <button class="vid-btn vid-btn-dl" id="vidDownloadBtn" onclick="vidDownload()" style="display:none;">Download</button>
             </div>
             <div class="vid-row">
@@ -6723,7 +6723,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     let vidGifInterval = null;
     let vidCurrentFormat = { label: 'MP4', ext: 'mp4' };
     let vidFormatsDetected = false;
-    let vidFFmpeg = null; // lazy-loaded ffmpeg.wasm instance
+    // Video formats: WebM (native browser recording) + GIF (universal)
 
     // Detect supported video formats and populate the format dropdown
     function vidDetectFormats() {
@@ -6734,12 +6734,10 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       sel.innerHTML = '';
 
       const formats = [
-        { value: 'mp4', label: 'MP4', mimes: ['video/mp4;codecs=avc1', 'video/mp4;codecs=avc1.42E01E', 'video/mp4'] },
-        { value: 'webm', label: 'WebM', mimes: ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'] },
-        { value: 'gif', label: 'GIF', mimes: [] }  // GIF uses canvas frames, always supported
+        { value: 'webm', label: 'WebM (video)', mimes: ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'] },
+        { value: 'gif', label: 'GIF (animated)', mimes: [] }  // GIF uses canvas frames, always supported
       ];
 
-      let firstSupported = null;
       for (const f of formats) {
         const supported = f.mimes.length === 0 || f.mimes.some(m => MediaRecorder.isTypeSupported(m));
         if (supported) {
@@ -6747,15 +6745,12 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
           opt.value = f.value;
           opt.textContent = f.label;
           sel.appendChild(opt);
-          if (!firstSupported) firstSupported = f.value;
         }
       }
 
-      // Select best default
-      if (sel.querySelector('option[value="mp4"]')) {
-        sel.value = 'mp4';
-      } else if (sel.querySelector('option[value="webm"]')) {
-        sel.value = 'webm';
+      // Default to GIF (universally playable)
+      if (sel.querySelector('option[value="gif"]')) {
+        sel.value = 'gif';
       }
     }
 
@@ -7182,7 +7177,8 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       if (vidIsRecording) {
         alert('Format change will apply to the NEXT recording.\nCurrent recording continues in the original format.\n\nTo record in the new format: Stop → then Record again.');
       }
-      document.getElementById('vidFormatNote').textContent = 'Select before recording';
+      const noteEl = document.getElementById('vidFormatNote');
+      if (noteEl) noteEl.textContent = 'Select before recording';
     });
 
     window.vidToggleRecord = function() {
@@ -7238,42 +7234,14 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       vidBlob = null;
       vidFrameCount = 0;
 
-      // Choose codec based on selected format
+      // WebM is the only native MediaRecorder format
       let mimeType = '';
-      let formatLabel = '';
-      let fileExt = '';
-      if (format === 'mp4') {
-        // Try MP4 codecs (Chrome 130+, Safari)
-        const mp4Types = [
-          'video/mp4;codecs=avc1',
-          'video/mp4;codecs=avc1.42E01E',
-          'video/mp4'
-        ];
-        for (const mt of mp4Types) {
-          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
-        }
-        if (mimeType) {
-          formatLabel = 'MP4';
-          fileExt = 'mp4';
-        } else {
-          // Fall back to WebM if MP4 not supported
-          formatLabel = 'WebM';
-          fileExt = 'webm';
-        }
+      const webmTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+      for (const mt of webmTypes) {
+        if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
       }
-      if (!mimeType) {
-        // WebM fallback or explicit WebM selection
-        const webmTypes = [
-          'video/webm;codecs=vp9',
-          'video/webm;codecs=vp8',
-          'video/webm'
-        ];
-        for (const mt of webmTypes) {
-          if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
-        }
-        formatLabel = formatLabel || 'WebM';
-        fileExt = fileExt || 'webm';
-      }
+      const formatLabel = 'WebM';
+      const fileExt = 'webm';
 
       if (!mimeType) {
         alert('No supported video codec. Try Chrome or Firefox.');
@@ -7316,17 +7284,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         const dlBtn = document.getElementById('vidDownloadBtn');
         dlBtn.textContent = `Download ${vidCurrentFormat.label}`;
         dlBtn.style.display = '';
-        // Show "Convert to MP4" button if recording is WebM (not already MP4)
-        const convBtn = document.getElementById('vidConvertBtn');
-        if (convBtn) {
-          if (vidCurrentFormat.ext === 'webm') {
-            convBtn.style.display = '';
-            convBtn.disabled = false;
-            convBtn.textContent = 'Convert to MP4';
-          } else {
-            convBtn.style.display = 'none';
-          }
-        }
+        // WebM is universally playable (Chrome, Firefox, VLC, etc.)
         document.getElementById('vidTimeline').disabled = false;
         document.getElementById('vidTimeline').max = 100;
         document.getElementById('vidTimeline').value = 100;
@@ -7345,7 +7303,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       recBtn.textContent = 'Stop';
       recBtn.classList.add('recording');
       document.getElementById('vidDownloadBtn').style.display = 'none';
-      document.getElementById('vidConvertBtn').style.display = 'none';
+      // (MP4 convert button removed — WebM plays everywhere)
       document.getElementById('vidTimeline').disabled = true;
       vidUpdateStatus(`<span class="rec-dot">&#9679;</span> Recording ${formatLabel}...`);
 
@@ -7362,8 +7320,30 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       vidFrameCount = 0;
 
       const delay = Math.round(1000 / fps);
-      const w = canvas.width;
-      const h = canvas.height;
+      const srcW = canvas.width;
+      const srcH = canvas.height;
+
+      // Scale down for reasonable GIF file size (max 480px wide)
+      const GIF_MAX_W = 480;
+      const scale = srcW > GIF_MAX_W ? GIF_MAX_W / srcW : 1;
+      const gifW = Math.round(srcW * scale);
+      const gifH = Math.round(srcH * scale);
+
+      // Reusable offscreen canvas for scaling
+      const scaleCanvas = document.createElement('canvas');
+      scaleCanvas.width = gifW;
+      scaleCanvas.height = gifH;
+      const scaleCtx = scaleCanvas.getContext('2d');
+
+      // Source canvas to draw WebGL pixels onto (for drawImage scaling)
+      const srcCanvas = document.createElement('canvas');
+      srcCanvas.width = srcW;
+      srcCanvas.height = srcH;
+      const srcCtx = srcCanvas.getContext('2d');
+
+      // Store dimensions for encoding
+      vidGifFrames.gifW = gifW;
+      vidGifFrames.gifH = gifH;
 
       // Capture frames at specified FPS from WebGL canvas
       vidGifInterval = setInterval(() => {
@@ -7375,18 +7355,23 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         // Read pixels from WebGL
         const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
         if (!gl) return;
-        const pixels = new Uint8Array(w * h * 4);
-        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+        const pixels = new Uint8Array(srcW * srcH * 4);
+        gl.readPixels(0, 0, srcW, srcH, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-        // WebGL pixels are bottom-up, flip vertically
-        const flipped = new Uint8Array(w * h * 4);
-        for (let row = 0; row < h; row++) {
-          const srcOff = row * w * 4;
-          const dstOff = (h - 1 - row) * w * 4;
-          flipped.set(pixels.subarray(srcOff, srcOff + w * 4), dstOff);
+        // WebGL pixels are bottom-up — put into ImageData flipped, then scale
+        const imgData = new ImageData(srcW, srcH);
+        for (let row = 0; row < srcH; row++) {
+          const srcOff = row * srcW * 4;
+          const dstOff = (srcH - 1 - row) * srcW * 4;
+          imgData.data.set(pixels.subarray(srcOff, srcOff + srcW * 4), dstOff);
         }
+        srcCtx.putImageData(imgData, 0, 0);
 
-        vidGifFrames.push({ data: flipped, delay });
+        // Scale down using canvas drawImage (high-quality bilinear)
+        scaleCtx.drawImage(srcCanvas, 0, 0, gifW, gifH);
+        const scaled = scaleCtx.getImageData(0, 0, gifW, gifH);
+
+        vidGifFrames.push({ data: scaled.data, delay });
         vidFrameCount++;
       }, delay);
 
@@ -7394,7 +7379,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       recBtn.textContent = 'Stop';
       recBtn.classList.add('recording');
       document.getElementById('vidDownloadBtn').style.display = 'none';
-      document.getElementById('vidConvertBtn').style.display = 'none';
+      // (MP4 convert button removed — WebM plays everywhere)
       document.getElementById('vidTimeline').disabled = true;
       vidUpdateStatus('<span class="rec-dot">&#9679;</span> Recording GIF...');
       vidTimerInterval = setInterval(vidUpdateTime, 250);
@@ -7411,11 +7396,11 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         return;
       }
 
-      const canvas = renderer3D.domElement;
-      const w = canvas.width;
-      const h = canvas.height;
+      // Use stored scaled dimensions
+      const w = vidGifFrames.gifW || renderer3D.domElement.width;
+      const h = vidGifFrames.gifH || renderer3D.domElement.height;
 
-      vidUpdateStatus(`Encoding GIF (${vidGifFrames.length} frames)...`);
+      vidUpdateStatus(`Encoding GIF (${vidGifFrames.length} frames, ${w}×${h})...`);
 
       // Encode GIF asynchronously to avoid blocking UI
       setTimeout(() => {
@@ -7473,16 +7458,19 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         return { palette, indexed };
       }
 
-      // LZW encoder for GIF
+      // LZW encoder for GIF — uses numeric (prefix_code, suffix_char) keys
+      // Code size bump uses > (not >=) because encoder's table is 1 entry
+      // ahead of decoder's (encoder adds entry on first code after clear,
+      // decoder doesn't), so encoder must delay bump by 1 to stay in sync.
       function lzwEncode(indexed, minCodeSize) {
-        const clearCode = 1 << minCodeSize;
-        const eoiCode = clearCode + 1;
-        let codeSize = minCodeSize + 1;
-        let nextCode = eoiCode + 1;
-        const maxCode = 4096;
+        const CLEAR = 1 << minCodeSize;
+        const EOI = CLEAR + 1;
+        const MAX_CODE = 4096;
 
         const output = [];
         let bitBuf = 0, bitPos = 0;
+        let codeSize = minCodeSize + 1;
+        let nextCode = EOI + 1;
 
         function emit(code) {
           bitBuf |= (code << bitPos);
@@ -7494,42 +7482,39 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
           }
         }
 
-        // Initialize code table
         let table = new Map();
-        function resetTable() {
+        function initTable() {
           table = new Map();
-          for (let i = 0; i < clearCode; i++) table.set(String(i), i);
-          nextCode = eoiCode + 1;
+          nextCode = EOI + 1;
           codeSize = minCodeSize + 1;
         }
 
-        resetTable();
-        emit(clearCode);
+        initTable();
+        emit(CLEAR);
 
-        let cur = String(indexed[0]);
+        let curCode = indexed[0];
         for (let i = 1; i < indexed.length; i++) {
-          const next = String(indexed[i]);
-          const combined = cur + ',' + next;
-          if (table.has(combined)) {
-            cur = combined;
+          const nextChar = indexed[i];
+          const key = curCode * 256 + nextChar;
+          if (table.has(key)) {
+            curCode = table.get(key);
           } else {
-            emit(table.get(cur));
-            if (nextCode < maxCode) {
-              table.set(combined, nextCode++);
+            emit(curCode);
+            if (nextCode < MAX_CODE) {
+              table.set(key, nextCode);
+              nextCode++;
               if (nextCode > (1 << codeSize) && codeSize < 12) codeSize++;
             } else {
-              emit(clearCode);
-              resetTable();
+              emit(CLEAR);
+              initTable();
             }
-            cur = next;
+            curCode = nextChar;
           }
         }
-        emit(table.get(cur));
-        emit(eoiCode);
+        emit(curCode);
+        emit(EOI);
 
-        // Flush remaining bits
         if (bitPos > 0) output.push(bitBuf & 0xFF);
-
         return output;
       }
 
@@ -7576,7 +7561,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         writeByte(0x21); // extension
         writeByte(0xF9); // GCE
         writeByte(4);    // block size
-        writeByte(0);    // disposal: none, no transparency
+        writeByte(0x04); // disposal method 1 (do not dispose), no transparency
         writeShort(delay);
         writeByte(0);    // transparent color index
         writeByte(0);    // terminator
@@ -7718,77 +7703,8 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     };
 
-    // Convert WebM to MP4 in-browser using ffmpeg.wasm
-    window.vidConvertToMp4 = async function() {
-      if (!vidBlob) { alert('No recording to convert'); return; }
-      const convBtn = document.getElementById('vidConvertBtn');
-      const dlBtn = document.getElementById('vidDownloadBtn');
-      convBtn.disabled = true;
-      convBtn.textContent = 'Loading FFmpeg...';
-      vidUpdateStatus('Loading FFmpeg (~32 MB one-time download)...');
-
-      try {
-        // Lazy-load ffmpeg.wasm (single-threaded build — no COOP/COEP needed)
-        if (!vidFFmpeg) {
-          const baseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd';
-          const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-
-          // Load the FFmpeg UMD bundle
-          if (!window.FFmpegWASM) {
-            await new Promise((resolve, reject) => {
-              const s = document.createElement('script');
-              s.src = baseURL + '/ffmpeg.js';
-              s.onload = resolve;
-              s.onerror = () => reject(new Error('Failed to load FFmpeg script'));
-              document.head.appendChild(s);
-            });
-          }
-
-          const { FFmpeg } = window.FFmpegWASM || FFmpegWASM;
-          vidFFmpeg = new FFmpeg();
-          vidFFmpeg.on('progress', ({ progress }) => {
-            const pct = Math.round(progress * 100);
-            convBtn.textContent = `Converting ${pct}%`;
-            vidUpdateStatus(`Converting to MP4... ${pct}%`);
-          });
-
-          await vidFFmpeg.load({
-            coreURL: coreURL + '/ffmpeg-core.js',
-            wasmURL: coreURL + '/ffmpeg-core.wasm',
-          });
-        }
-
-        convBtn.textContent = 'Converting...';
-        vidUpdateStatus('Converting to MP4...');
-
-        // Write WebM blob to ffmpeg virtual filesystem
-        const inputData = new Uint8Array(await vidBlob.arrayBuffer());
-        await vidFFmpeg.writeFile('input.webm', inputData);
-
-        // Convert: fast copy if possible, otherwise re-encode
-        await vidFFmpeg.exec(['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'output.mp4']);
-
-        // Read the output MP4
-        const outputData = await vidFFmpeg.readFile('output.mp4');
-        vidBlob = new Blob([outputData], { type: 'video/mp4' });
-        vidCurrentFormat = { label: 'MP4', ext: 'mp4' };
-
-        // Clean up virtual filesystem
-        await vidFFmpeg.deleteFile('input.webm');
-        await vidFFmpeg.deleteFile('output.mp4');
-
-        // Update UI
-        convBtn.style.display = 'none';
-        dlBtn.textContent = 'Download MP4';
-        vidUpdateStatus(`MP4 ready (${(vidBlob.size / 1024 / 1024).toFixed(1)} MB)`);
-
-      } catch (e) {
-        console.error('FFmpeg conversion failed:', e);
-        vidUpdateStatus('Conversion failed: ' + e.message);
-        convBtn.textContent = 'Convert to MP4';
-        convBtn.disabled = false;
-      }
-    };
+    // FFmpeg.wasm MP4 conversion removed — was 32MB download + slow WASM encode.
+    // WebM plays natively in Chrome/Firefox/Edge/VLC. GIF works everywhere.
 
     // Cleanup video state on 3D scene destroy
     function vidCleanup() {
@@ -7902,6 +7818,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       <a href="dashboard.html">All Tools</a>
     </div>
     <p>Bible Codes &mdash; Hebrew Bible Analysis Suite</p>
+    <p style="margin-top:0.5em;font-style:italic;opacity:0.85;">Dedicated in loving memory of my Dad and teacher, Shmuel Zbaida z&quot;l</p>
   </footer>
 </body>
 </html>

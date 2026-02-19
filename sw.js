@@ -1,12 +1,14 @@
-const CACHE_NAME = 'bible-codes-v8.4';
+const CACHE_NAME = 'bible-codes-v9.0';
 
 // Assets to cache for offline use
 const urlsToCache = [
   // Core pages
   './',
   './index.html',
-  './bible-codes.html',
   './dashboard.html',
+  './heb-ocr.html',
+  './hebrew-date.html',
+  './other-resources.html',
   './text-search.html',
   './gematria.html',
   './acronym.html',
@@ -41,13 +43,13 @@ const urlsToCache = [
   './data/dictionaries/strongs-hebrew.json.gz',
   './data/dictionaries/hebrew-wiktionary.json.gz',
   './data/embeddings/hebrew-roots.json.gz',
-  './data/dictionaries/wikipedia-fulltext.json.gz',
+  // './data/dictionaries/wikipedia-fulltext.json.gz',  // 7 MB — loaded on-demand
   './data/dictionaries/names-combined.json.gz',
   './data/dictionaries/names-english.json',
 
-  // ELS Index files (large - loaded on demand)
-  './data/els-index/els-index-20-min4.json.gz',
-  './data/els-index/els-index-50-min4.json.gz',
+  // ELS Index files (45 MB combined) — NOT pre-cached, loaded on-demand when Index Lookup tab is clicked
+  // './data/els-index/els-index-20-min4.json.gz',
+  // './data/els-index/els-index-50-min4.json.gz',
 
   // Torah character database - Koren Edition (Rips et al., 1994)
   // 304,805 letters with proper final forms
@@ -105,7 +107,7 @@ const urlsToCache = [
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing v6.0...');
+  console.log('Service Worker: Installing v9.0...');
 
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -134,7 +136,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating v6.0...');
+  console.log('Service Worker: Activating v9.0...');
 
   const cacheWhitelist = [CACHE_NAME];
 

@@ -2195,5 +2195,7 @@ For compute-intensive tasks (ELS full scan across ±500 skips, large permutation
 
 ---
 
+*Dedicated in loving memory of my Dad and teacher, Shmuel Zbaida z"l.*
+
 *Last Updated: February 14, 2026*
 *Version: 4.1*
