@@ -19,8 +19,8 @@ function normalizeSofiot(s) {
 }
 
 // ---- Dynamic skip range D(w) ----
-// D(w) = smallest D such that expected ELS count >= 10
-// Expected = P(w) * (D-1)(2L - (k-1)(D+2))  [WRR formula, forward+backward]
+// D(w) = smallest D such that cumulative expected ELS count >= 10
+// Expected per skip d: E(w,d) = (L-(k-1)d) * P(w)  for d = 2..D
 function wrrMaxSkip(termNorm, L, letterFreqs, cap) {
   const k = termNorm.length;
   let logP = 0;
@@ -34,7 +34,7 @@ function wrrMaxSkip(termNorm, L, letterFreqs, cap) {
   for (let d = 2; d <= cap; d++) {
     const validStarts = L - (k - 1) * d;
     if (validStarts <= 0) return Math.max(d - 1, 2);
-    cumExpected += 2 * validStarts * pMatch;  // ×2 for forward+backward ELS
+    cumExpected += validStarts * pMatch;
     if (cumExpected >= 10) return d;
   }
   return cap;
@@ -200,7 +200,7 @@ function geoMean(results) {
 //
 // Key formulas:
 //   h_i = round(|d|/i) for i=1..10 — row lengths for cylinder wrapping
-//   δ(e,e',h) = min 2D distance between letter positions on cylinder width h
+//   δ(e,e',h) = min 2D distance on cylinder width h (with cylindrical wrapping)
 //   ω(e,e') = max over all h of 1/δ(e,e',h) — proximity measure
 //   ε(w,w') = Σ ω(e,e') over all ELS pairs (e of w, e' of w')
 //   c(w,w') = v/m — rank of actual ε among 125 spatial perturbations
@@ -219,27 +219,33 @@ function hitPositions(hit) {
   return pos;
 }
 
-// ---- Row lengths h_i = round(|d|/i) for i=1..10 from both skips ----
+// ---- Row lengths h_i = round(|d|/i) for i=1..10 from both ELS skips ----
+// For WRR1 (ELS↔ELS), h values from both skips gives resonance in both directions.
 function getHValues(skip1, skip2) {
   const hSet = new Set();
   const abs1 = Math.abs(skip1), abs2 = Math.abs(skip2);
   for (let i = 1; i <= 10; i++) {
     const h1 = Math.round(abs1 / i);
     if (h1 >= 2) hSet.add(h1);
-    const h2 = Math.round(abs2 / i);
-    if (h2 >= 2) hSet.add(h2);
+    if (abs2 !== abs1) {
+      const h2 = Math.round(abs2 / i);
+      if (h2 >= 2) hSet.add(h2);
+    }
   }
   return [...hSet];
 }
 
 // ---- Min 2D distance between two position arrays on cylinder width h ----
+// Per WRR paper: cylindrical wrapping — column distance wraps around.
 function minDist2D(pos1, pos2, h) {
   let bestSq = Infinity;
   for (let a = 0; a < pos1.length; a++) {
     const ra = Math.floor(pos1[a] / h), ca = pos1[a] % h;
     for (let b = 0; b < pos2.length; b++) {
       const rb = Math.floor(pos2[b] / h), cb = pos2[b] % h;
-      const dr = ra - rb, dc = ca - cb;
+      const dr = ra - rb;
+      const dcRaw = Math.abs(ca - cb);
+      const dc = Math.min(dcRaw, h - dcRaw);  // cylindrical wrapping
       const dSq = dr * dr + dc * dc;
       if (dSq < bestSq) bestSq = dSq;
     }

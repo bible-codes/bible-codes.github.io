@@ -4876,8 +4876,8 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     const wrrLoadGenesis = wrrLoadText;
 
     // ---- Dynamic skip range D(w) ----
-    // D(w) = smallest D such that expected ELS count >= 10
-    // Expected = P(w) * (D-1)(2L - (k-1)(D+2))  [WRR formula, forward+backward]
+    // D(w) = smallest D such that cumulative expected ELS count >= 10
+    // Expected per skip d: E(w,d) = (L-(k-1)d) * P(w)  for d = 2..D
     function wrrMaxSkip(termNorm, cap) {
       const k = termNorm.length;
       const L = WRR_GENESIS_LEN;
@@ -4893,7 +4893,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       for (let d = 2; d <= cap; d++) {
         const validStarts = L - (k - 1) * d;
         if (validStarts <= 0) return Math.max(d - 1, 2);
-        cumExpected += 2 * validStarts * pMatch;  // ×2 for forward+backward ELS
+        cumExpected += validStarts * pMatch;
         if (cumExpected >= 10) return d;
       }
       return cap; // rare word: search full range
