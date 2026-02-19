@@ -111,7 +111,10 @@ function findSL(text, termNorm) {
 function wrr2DDist(p1, p2, w) {
   const r1 = Math.floor(p1 / w), c1 = p1 % w;
   const r2 = Math.floor(p2 / w), c2 = p2 % w;
-  return Math.sqrt((r1 - r2) * (r1 - r2) + (c1 - c2) * (c1 - c2));
+  const dr = r1 - r2;
+  const dcRaw = Math.abs(c1 - c2);
+  const dc = Math.min(dcRaw, w - dcRaw);  // cylindrical wrapping
+  return Math.sqrt(dr * dr + dc * dc);
 }
 
 // ---- Min 2D distance between two ELS words ----
@@ -200,11 +203,11 @@ function geoMean(results) {
 //
 // Key formulas:
 //   h_i = round(|d|/i) for i=1..10 — row lengths for cylinder wrapping
-//   δ(e,e',h) = min 2D distance on cylinder width h (with cylindrical wrapping)
+//   δ(e,e',h) = min 2D Euclidean distance on cylinder of width h (with wrapping)
 //   ω(e,e') = max over all h of 1/δ(e,e',h) — proximity measure
 //   ε(w,w') = Σ ω(e,e') over all ELS pairs (e of w, e' of w')
 //   c(w,w') = v/m — rank of actual ε among 125 spatial perturbations
-//     where v = # perturbations with ε_pert ≥ ε_actual, m = # valid perturbations
+//     where v = (# strictly >) + (# tied)/2, m = # valid perturbations (≥10)
 //   Perturbation: shift last 3 letter POSITIONS by cumulative (x, x+y, x+y+z)
 //     for (x,y,z) ∈ {-2..2}³ (125 triples total)
 //   P₁ = binomial tail: P(Bin(N, 0.2) ≥ k) where k = #{c_i < 0.2}
@@ -253,7 +256,7 @@ function minDist2D(pos1, pos2, h) {
   return Math.sqrt(bestSq);
 }
 
-// ---- ω(e,e') = max(1/δ) across all h values ----
+// ---- ω(e,e') = max over h of 1/δ(e,e',h) ----
 function omega(pos1, pos2, hValues) {
   let maxOmega = 0;
   for (let hi = 0; hi < hValues.length; hi++) {
@@ -311,6 +314,8 @@ function perturbPositions(positions, x, y, z, textLen) {
 
 // ---- c(w,w') — perturbation-based proximity rank ----
 // Small c means actual proximity is unusually good (close to 0 = very significant).
+// WRR tie-breaking: v = (# strictly greater) + (# tied) / 2
+// WRR threshold: c is undefined when m < 10 (return null to exclude pair).
 function computeC(nameHits, dateHits, textLen) {
   // Pre-compute positions and skips
   const namePos = nameHits.map(hitPositions);
@@ -321,7 +326,7 @@ function computeC(nameHits, dateHits, textLen) {
   const actualEps = epsilon(namePos, nameSkips, datePos, dateSkips);
   if (actualEps === 0) return 1.0;
 
-  let v = 0, m = 0;
+  let strictlyGreater = 0, ties = 0, m = 0;
 
   for (let x = -2; x <= 2; x++) {
     for (let y = -2; y <= 2; y++) {
@@ -338,12 +343,18 @@ function computeC(nameHits, dateHits, textLen) {
 
         m++;
         const pertEps = epsilon(pertNamePos, nameSkips, datePos, dateSkips);
-        if (pertEps >= actualEps) v++;
+        if (pertEps > actualEps) strictlyGreater++;
+        else if (pertEps === actualEps) ties++;
       }
     }
   }
 
-  return m > 0 ? v / m : 1.0;
+  // WRR threshold: m must be >= 10 for a reliable c value
+  if (m < 10) return null;
+
+  // WRR tie-breaking: half of tied values count as "exceeding"
+  const v = strictlyGreater + ties / 2;
+  return v / m;
 }
 
 // ---- Binomial tail helper: P(Bin(N, p) ≥ k) ----
@@ -695,7 +706,7 @@ function runWRRFull(data) {
     let completed = 0;
 
     for (const r of processed) {
-      let bestC = 1.0, bestNameIdx = -1, bestDateIdx = -1;
+      let bestC = null, bestNameIdx = -1, bestDateIdx = -1;
       let bestNameHitCount = 0, bestDateHitCount = 0;
 
       for (let ni = 0; ni < r.nameHitsArr.length; ni++) {
@@ -703,7 +714,7 @@ function runWRRFull(data) {
         for (let di = 0; di < r.dateHitsArr.length; di++) {
           if (r.dateHitsArr[di].length === 0) continue;
           const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L);
-          if (c < bestC) {
+          if (c !== null && (bestC === null || c < bestC)) {
             bestC = c;
             bestNameIdx = ni;
             bestDateIdx = di;
@@ -728,17 +739,17 @@ function runWRRFull(data) {
       });
     }
 
-    // ---- Phase 3: Compute P₁, P₂, P₃, P₄ ----
-    const cValues = rabbiResults.filter(r => r.c < 1.0).map(r => r.c);
+    // ---- Phase 3: Compute P₁, P₂ (WRR paper uses only these two) ----
+    // Filter out null c values (pairs with m < 10 threshold)
+    const cValues = rabbiResults.filter(r => r.c !== null && r.c < 1.0).map(r => r.c);
     const p1 = computeP1(cValues);
     const p2 = computeP2(cValues);
-    const p3 = computeP3(cValues);
-    const p4 = computeP4(cValues);
-    const overallP = 4 * Math.min(p1, p2, p3, p4);
+    // WRR paper: P = 2·min(P₁, P₂) — Bonferroni correction for 2 statistics
+    const overallP = 2 * Math.min(p1, p2);
 
     self.postMessage({
       type: 'wrr-complete',
-      rabbiResults, cValues, p1, p2, p3, p4, overallP,
+      rabbiResults, cValues, p1, p2, overallP,
       matchedCount: cValues.length,
       totalRabbis: processed.length
     });
@@ -764,12 +775,13 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen)
   });
 
   // cMatrix[i][j] = best c when rabbi_i's names paired with rabbi_j's dates
+  // null means no valid c (m < 10 threshold)
   const cMatrix = new Array(N);
 
   for (let ni = 0; ni < N; ni++) {
-    cMatrix[ni] = new Float64Array(N);
+    cMatrix[ni] = new Array(N).fill(null);
     for (let di = 0; di < N; di++) {
-      let bestC = 1.0;
+      let bestC = null;
       for (let nf = 0; nf < processed[ni].nameHitsArr.length; nf++) {
         if (processed[ni].nameHitsArr[nf].length === 0) continue;
         for (let df = 0; df < processed[di].dateHitsArr.length; df++) {
@@ -779,7 +791,7 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen)
             processed[di].dateHitsArr[df],
             textLen
           );
-          if (c < bestC) bestC = c;
+          if (c !== null && (bestC === null || c < bestC)) bestC = c;
         }
       }
       cMatrix[ni][di] = bestC;
@@ -805,18 +817,16 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen)
   for (let p = 0; p < numPermutations; p++) {
     shuffle(dateIndices);
 
-    // Collect c values for this permutation
+    // Collect c values for this permutation (skip null from m<10 threshold)
     const permC = [];
     for (let i = 0; i < N; i++) {
       const c = cMatrix[i][dateIndices[i]];
-      if (c < 1.0) permC.push(c);
+      if (c !== null && c < 1.0) permC.push(c);
     }
 
     const permP1 = computeP1(permC);
     const permP2 = computeP2(permC);
-    const permP3 = computeP3(permC);
-    const permP4 = computeP4(permC);
-    const permP = 4 * Math.min(permP1, permP2, permP3, permP4);
+    const permP = 2 * Math.min(permP1, permP2);
 
     if (permP <= actualOverallP) betterCount++;
 
@@ -900,7 +910,7 @@ function runWRR2Nations(data) {
     let completed = 0;
 
     for (const r of processed) {
-      let bestC = 1.0, bestNameIdx = -1, bestDateIdx = -1;
+      let bestC = null, bestNameIdx = -1, bestDateIdx = -1;
       let bestNameHitCount = 0, bestDateHitCount = 0;
 
       for (let ni = 0; ni < r.nameHitsArr.length; ni++) {
@@ -908,7 +918,7 @@ function runWRR2Nations(data) {
         for (let di = 0; di < r.dateHitsArr.length; di++) {
           if (r.dateHitsArr[di].length === 0) continue;
           const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L);
-          if (c < bestC) {
+          if (c !== null && (bestC === null || c < bestC)) {
             bestC = c;
             bestNameIdx = ni;
             bestDateIdx = di;
@@ -933,17 +943,15 @@ function runWRR2Nations(data) {
       });
     }
 
-    // ---- Phase 3: Compute P₁, P₂, P₃, P₄ ----
-    const cValues = rabbiResults.filter(r => r.c < 1.0).map(r => r.c);
+    // ---- Phase 3: Compute P₁, P₂ (WRR paper uses only these two) ----
+    const cValues = rabbiResults.filter(r => r.c !== null && r.c < 1.0).map(r => r.c);
     const p1 = computeP1(cValues);
     const p2 = computeP2(cValues);
-    const p3 = computeP3(cValues);
-    const p4 = computeP4(cValues);
-    const overallP = 4 * Math.min(p1, p2, p3, p4);
+    const overallP = 2 * Math.min(p1, p2);
 
     self.postMessage({
       type: 'wrr-complete',
-      rabbiResults, cValues, p1, p2, p3, p4, overallP,
+      rabbiResults, cValues, p1, p2, overallP,
       matchedCount: cValues.length,
       totalRabbis: processed.length
     });

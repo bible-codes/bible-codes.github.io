@@ -5679,11 +5679,15 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       const deltaCell = cells[6];
       if (deltaCell) {
         const c = result.c;
-        const color = c < 0.05 ? '#1b5e20' : c < 0.2 ? '#2e7d32' : c < 0.5 ? '#f57f17' : '#888';
-        const secLabel = wrrActiveExperimentType === 'nations' ? 'Expr' : 'Date';
-        deltaCell.innerHTML = result.name
-          ? `<span style="color:${color};font-weight:bold;cursor:pointer;" title="c(w,w') = ${c.toFixed(4)} | Name: ${result.name} (${result.nameHitCount} ELS) | ${secLabel}: ${result.date} (${result.dateHitCount} ${wrrActiveExperimentType === 'nations' ? 'SL' : 'ELS'})">${c.toFixed(3)}</span>`
-          : '<span style="color:#ccc;">\u2014</span>';
+        if (c === null) {
+          deltaCell.innerHTML = '<span style="color:#ccc;" title="m < 10: insufficient valid perturbations">N/A</span>';
+        } else {
+          const color = c < 0.05 ? '#1b5e20' : c < 0.2 ? '#2e7d32' : c < 0.5 ? '#f57f17' : '#888';
+          const secLabel = wrrActiveExperimentType === 'nations' ? 'Expr' : 'Date';
+          deltaCell.innerHTML = result.name
+            ? `<span style="color:${color};font-weight:bold;cursor:pointer;" title="c(w,w') = ${c.toFixed(4)} | Name: ${result.name} (${result.nameHitCount} ELS) | ${secLabel}: ${result.date} (${result.dateHitCount} ${wrrActiveExperimentType === 'nations' ? 'SL' : 'ELS'})">${c.toFixed(3)}</span>`
+            : '<span style="color:#ccc;">\u2014</span>';
+        }
       }
     }
 
@@ -5748,9 +5752,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
           <div>c &lt; 0.2: <strong>${kLow}</strong> / ${msg.cValues.length} &nbsp; c &lt; 0.1: <strong>${k10}</strong></div>
           <div>P\u2081 (Bin 0.2): <strong>${msg.p1.toExponential(4)}</strong></div>
           <div>P\u2082 (Gamma): <strong>${msg.p2.toExponential(4)}</strong></div>
-          <div>P\u2083 (Bin 0.1): <strong>${(msg.p3 || 1).toExponential(4)}</strong></div>
-          <div>P\u2084 (\u0393 trunc): <strong>${(msg.p4 || 1).toExponential(4)}</strong></div>
-          <div style="font-size:15px;">P = 4\u00b7min(P\u2081..P\u2084): <strong style="color:${pColor};font-size:17px;">${p.toExponential(4)}</strong></div>
+          <div style="font-size:15px;">P = 2\u00b7min(P\u2081,P\u2082): <strong style="color:${pColor};font-size:17px;">${p.toExponential(4)}</strong></div>
           <div>Significance: <strong style="color:${pColor};">${sigLabel}</strong></div>
           <div>Skip cap: <strong>${skipCap}</strong></div>
         </div>
@@ -5902,14 +5904,12 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       const secHitLabel = isNations ? 'SL Hits' : 'Date Hits';
       const rows = [[subjectLabel, 'Name', secLabel, 'c(w,w\')', 'Name ELS Hits', secHitLabel]];
       for (const r of results.rabbiResults) {
-        rows.push([r.en || r.rabbiId, r.name || '', r.date || '', r.c.toFixed(6), r.nameHitCount, r.dateHitCount]);
+        rows.push([r.en || r.rabbiId, r.name || '', r.date || '', r.c !== null ? r.c.toFixed(6) : 'N/A', r.nameHitCount, r.dateHitCount]);
       }
       rows.push([]);
       rows.push(['P1 (binomial 0.2)', results.p1.toExponential(6)]);
       rows.push(['P2 (Gamma)', results.p2.toExponential(6)]);
-      rows.push(['P3 (binomial 0.1)', (results.p3 || 1).toExponential(6)]);
-      rows.push(['P4 (Gamma truncated)', (results.p4 || 1).toExponential(6)]);
-      rows.push(['Overall P = 4*min(P1..P4)', results.overallP.toExponential(6)]);
+      rows.push(['Overall P = 2*min(P1,P2)', results.overallP.toExponential(6)]);
       rows.push(['Text', wrrActiveTextName]);
       rows.push(['Dataset', wrrActiveListName]);
       rows.push(['Mode', isNations ? 'WRR2 Nations (ELS x SL)' : 'WRR1 Rabbis (ELS x ELS)']);
