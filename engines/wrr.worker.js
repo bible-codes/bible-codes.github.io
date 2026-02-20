@@ -205,7 +205,9 @@ function geoMean(results) {
 //   h_i = round(|d|/i) for i=1..10 — row lengths for cylinder wrapping
 //   δ(e,e',h) = min 2D Euclidean distance on cylinder of width h (with wrapping)
 //   ω(e,e') = max over all h of 1/δ(e,e',h) — proximity measure
-//   ε(w,w') = Σ ω(e,e') over all ELS pairs (e of w, e' of w')
+//   w(e) = Γ(T_e)/Γ(G) — domain-of-minimality weight for ELS occurrence e
+//     T_e = maximal text segment containing e with no smaller-|skip| ELS for w
+//   ε(w,w') = Σ w(e)·ω(e,e') over all ELS pairs (e of w, e' of w')
 //   c(w,w') = v/m — rank of actual ε among 125 spatial perturbations
 //     where v = (# strictly >) + (# tied)/2, m = # valid perturbations (≥10)
 //   Perturbation: shift last 3 letter POSITIONS by cumulative (x, x+y, x+y+z)
@@ -269,13 +271,77 @@ function omega(pos1, pos2, hValues) {
   return maxOmega;
 }
 
-// ---- ε(w,w') = Σ ω(e,e') across all name×date ELS pair combinations ----
-function epsilon(namePositions, nameSkips, datePositions, dateSkips) {
+// ---- Domain-of-minimality weight w(e) = Γ(T_e) / Γ(G) ----
+// For each ELS e with skip d, T_e is the maximal contiguous text segment
+// containing e that does NOT contain any other ELS for the same word w
+// with |skip| < |d|. Since competitors have smaller span ((k-1)*skip_bar <
+// (k-1)*d), they constrain T_e from the left or right but can never be
+// "wider" than e. If a competitor fits entirely within e's span, e is
+// dominated and gets weight 0.
+function computeRho(hits, textLen) {
+  const n = hits.length;
+  if (n === 0) return [];
+  if (n === 1) return new Float64Array([1.0]);
+
+  const k = hits[0].len;
+  const rhos = new Float64Array(n);
+
+  for (let i = 0; i < n; i++) {
+    const eSkip = hits[i].skip;
+    const eLo = hits[i].pos;
+    const eHi = hits[i].pos + (k - 1) * eSkip;
+
+    let aMin = 0;              // tightest left bound for T_e
+    let bMax = textLen - 1;    // tightest right bound for T_e
+    let dominated = false;
+
+    for (let j = 0; j < n; j++) {
+      if (j === i) continue;
+      if (hits[j].skip >= eSkip) continue; // only strictly smaller skips compete
+
+      const barLo = hits[j].pos;
+      const barHi = hits[j].pos + (k - 1) * hits[j].skip;
+
+      // Case: competitor entirely within e's span → e is dominated
+      if (barLo >= eLo && barHi <= eHi) {
+        dominated = true;
+        break;
+      }
+
+      // Left constraint: competitor ends within or before e's span end
+      // (barLo < eLo because if barLo >= eLo AND barHi <= eHi → Case above)
+      if (barHi <= eHi) {
+        aMin = Math.max(aMin, barLo + 1);
+      }
+
+      // Right constraint: competitor starts within or after e's span start
+      // (barHi > eHi because if barLo >= eLo AND barHi <= eHi → Case above)
+      if (barLo >= eLo) {
+        bMax = Math.min(bMax, barHi - 1);
+      }
+    }
+
+    if (dominated || aMin > eLo || bMax < eHi) {
+      rhos[i] = 0;
+    } else {
+      rhos[i] = (bMax - aMin + 1) / textLen;
+    }
+  }
+
+  return rhos;
+}
+
+// ---- ε(w,w') = Σ w(e)·ω(e,e') across all name×date ELS pair combinations ----
+// When nameRhos is provided, each name ELS occurrence is weighted by its
+// domain-of-minimality fraction. Without nameRhos, all weights default to 1.
+function epsilon(namePositions, nameSkips, datePositions, dateSkips, nameRhos) {
   let total = 0;
   for (let ni = 0; ni < namePositions.length; ni++) {
+    const w = nameRhos ? nameRhos[ni] : 1;
+    if (w === 0) continue;  // skip zero-weight (dominated) hits
     for (let di = 0; di < datePositions.length; di++) {
       const hVals = getHValues(nameSkips[ni], dateSkips[di]);
-      total += omega(namePositions[ni], datePositions[di], hVals);
+      total += w * omega(namePositions[ni], datePositions[di], hVals);
     }
   }
   return total;
@@ -316,14 +382,17 @@ function perturbPositions(positions, x, y, z, textLen) {
 // Small c means actual proximity is unusually good (close to 0 = very significant).
 // WRR tie-breaking: v = (# strictly greater) + (# tied) / 2
 // WRR threshold: c is undefined when m < 10 (return null to exclude pair).
-function computeC(nameHits, dateHits, textLen) {
+function computeC(nameHits, dateHits, textLen, useDoM) {
   // Pre-compute positions and skips
   const namePos = nameHits.map(hitPositions);
   const nameSkips = nameHits.map(h => h.skip);
   const datePos = dateHits.map(hitPositions);
   const dateSkips = dateHits.map(h => h.skip);
 
-  const actualEps = epsilon(namePos, nameSkips, datePos, dateSkips);
+  // Domain-of-minimality weights for name ELS occurrences (WRR2 only)
+  const nameRhos = useDoM ? computeRho(nameHits, textLen) : null;
+
+  const actualEps = epsilon(namePos, nameSkips, datePos, dateSkips, nameRhos);
   if (actualEps === 0) return 1.0;
 
   let strictlyGreater = 0, ties = 0, m = 0;
@@ -342,7 +411,9 @@ function computeC(nameHits, dateHits, textLen) {
         if (!valid) continue;
 
         m++;
-        const pertEps = epsilon(pertNamePos, nameSkips, datePos, dateSkips);
+        // Same rho weights apply to perturbed positions (rho is a property
+        // of the original ELS occurrence, not the perturbed variant)
+        const pertEps = epsilon(pertNamePos, nameSkips, datePos, dateSkips, nameRhos);
         if (pertEps > actualEps) strictlyGreater++;
         else if (pertEps === actualEps) ties++;
       }
@@ -684,6 +755,8 @@ function runWRRFull(data) {
     }
 
     // ---- Phase 2: Compute c(w,w') for each rabbi ----
+    // WRR paper (p.436): only word pairs where BOTH name and date are 5-8 chars.
+    // Also compute separate c-values for non-"Rabbi" appellation subset (for P₃/P₄).
     self.postMessage({
       type: 'wrr-phase', phase: 'computing-c',
       message: 'Computing c(w,w\') perturbation statistics (125 perturbations each)...'
@@ -691,16 +764,29 @@ function runWRRFull(data) {
 
     const rabbiResults = [];
     let completed = 0;
+    let totalPairsConsidered = 0, pairsFiltered = 0;
 
     for (const r of processed) {
       let bestC = null, bestNameIdx = -1, bestDateIdx = -1;
       let bestNameHitCount = 0, bestDateHitCount = 0;
+      // Separate tracking for non-"רבי" prefix appellations (for P₃/P₄)
+      let bestC_noRabbi = null, bestNameIdx_noRabbi = -1, bestDateIdx_noRabbi = -1;
 
       for (let ni = 0; ni < r.nameHitsArr.length; ni++) {
         if (r.nameHitsArr[ni].length === 0) continue;
+        const nameLen = r.nameNorms[ni].length;
+        if (nameLen < 5 || nameLen > 8) { pairsFiltered++; continue; }  // WRR 5-8 filter
+        const isRabbiPrefix = r.nameNorms[ni].startsWith('\u05E8\u05D1\u05D9'); // רבי
+
         for (let di = 0; di < r.dateHitsArr.length; di++) {
           if (r.dateHitsArr[di].length === 0) continue;
-          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L);
+          const dateLen = r.dateNorms[di].length;
+          if (dateLen < 5 || dateLen > 8) { pairsFiltered++; continue; }  // WRR 5-8 filter
+          totalPairsConsidered++;
+
+          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L, false);
+
+          // Best c across ALL appellations
           if (c !== null && (bestC === null || c < bestC)) {
             bestC = c;
             bestNameIdx = ni;
@@ -708,12 +794,18 @@ function runWRRFull(data) {
             bestNameHitCount = r.nameHitsArr[ni].length;
             bestDateHitCount = r.dateHitsArr[di].length;
           }
+          // Best c for non-"Rabbi" appellations only (for P₃/P₄)
+          if (!isRabbiPrefix && c !== null && (bestC_noRabbi === null || c < bestC_noRabbi)) {
+            bestC_noRabbi = c;
+            bestNameIdx_noRabbi = ni;
+            bestDateIdx_noRabbi = di;
+          }
         }
       }
 
       completed++;
       const result = {
-        rabbiId: r.id, en: r.en, c: bestC,
+        rabbiId: r.id, en: r.en, c: bestC, c_noRabbi: bestC_noRabbi,
         name: bestNameIdx >= 0 ? r.names[bestNameIdx] : null,
         date: bestDateIdx >= 0 ? r.dates[bestDateIdx] : null,
         nameHitCount: bestNameHitCount,
@@ -726,24 +818,31 @@ function runWRRFull(data) {
       });
     }
 
-    // ---- Phase 3: Compute P₁, P₂ (WRR paper uses only these two) ----
-    // Filter out null c values (pairs with m < 10 threshold)
+    // ---- Phase 3: Compute P₁–P₄ ----
+    // P₁/P₂: all appellations.  P₃/P₄: non-"Rabbi" appellations only.
+    // WRR paper: P = 4·min(P₁, P₂, P₃, P₄) — Bonferroni correction for 4 statistics.
     const cValues = rabbiResults.filter(r => r.c !== null && r.c < 1.0).map(r => r.c);
+    const cValues_noRabbi = rabbiResults.filter(r => r.c_noRabbi !== null && r.c_noRabbi < 1.0).map(r => r.c_noRabbi);
+
     const p1 = computeP1(cValues);
     const p2 = computeP2(cValues);
-    // WRR paper: P = 2·min(P₁, P₂) — Bonferroni correction for 2 statistics
-    const overallP = 2 * Math.min(p1, p2);
+    const p3 = cValues_noRabbi.length > 0 ? computeP1(cValues_noRabbi) : 1.0;
+    const p4 = cValues_noRabbi.length > 0 ? computeP2(cValues_noRabbi) : 1.0;
+    const overallP = 4 * Math.min(p1, p2, p3, p4);
 
     self.postMessage({
       type: 'wrr-complete',
-      rabbiResults, cValues, p1, p2, overallP,
+      rabbiResults, cValues, p1, p2, p3, p4, overallP,
+      cValues_noRabbi,
       matchedCount: cValues.length,
-      totalRabbis: processed.length
+      matchedCount_noRabbi: cValues_noRabbi.length,
+      totalRabbis: processed.length,
+      totalPairsConsidered, pairsFiltered
     });
 
     // ---- Phase 4: Optional permutation test ----
     if (runPermTest && numPermutations > 0) {
-      runWRRPermTestFull(processed, overallP, numPermutations, L);
+      runWRRPermTestFull(processed, overallP, numPermutations, L, false);
     }
 
   } catch (err) {
@@ -752,36 +851,51 @@ function runWRRFull(data) {
 }
 
 // ---- Permutation test using c(w,w') — pre-compute then shuffle ----
-function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen) {
+// WRR 5-8 char filter and P₃/P₄ (non-Rabbi subset) applied throughout.
+function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen, useDoM) {
   const N = processed.length;
 
   // Step 1: Pre-compute c for ALL possible (rabbi_i names, rabbi_j dates) pairings
+  // Two matrices: all appellations, and non-"רבי" prefix only.
   self.postMessage({
     type: 'wrr-phase', phase: 'perm-precompute',
     message: `Pre-computing c values for all ${N}x${N} name-date pairings...`
   });
 
-  // cMatrix[i][j] = best c when rabbi_i's names paired with rabbi_j's dates
-  // null means no valid c (m < 10 threshold)
-  const cMatrix = new Array(N);
+  const cMatrix = new Array(N);          // best c using ALL appellations
+  const cMatrix_noRabbi = new Array(N);   // best c using non-"רבי" appellations only
+  const RABBI_PREFIX = '\u05E8\u05D1\u05D9'; // רבי
 
   for (let ni = 0; ni < N; ni++) {
     cMatrix[ni] = new Array(N).fill(null);
+    cMatrix_noRabbi[ni] = new Array(N).fill(null);
+
     for (let di = 0; di < N; di++) {
-      let bestC = null;
+      let bestC = null, bestC_nr = null;
+
       for (let nf = 0; nf < processed[ni].nameHitsArr.length; nf++) {
         if (processed[ni].nameHitsArr[nf].length === 0) continue;
+        const nameLen = processed[ni].nameNorms[nf].length;
+        if (nameLen < 5 || nameLen > 8) continue;  // WRR 5-8 filter
+        const isRabbiPrefix = processed[ni].nameNorms[nf].startsWith(RABBI_PREFIX);
+
         for (let df = 0; df < processed[di].dateHitsArr.length; df++) {
           if (processed[di].dateHitsArr[df].length === 0) continue;
+          const dateLen = processed[di].dateNorms[df].length;
+          if (dateLen < 5 || dateLen > 8) continue;  // WRR 5-8 filter
+
           const c = computeC(
             processed[ni].nameHitsArr[nf],
             processed[di].dateHitsArr[df],
-            textLen
+            textLen,
+            useDoM
           );
           if (c !== null && (bestC === null || c < bestC)) bestC = c;
+          if (!isRabbiPrefix && c !== null && (bestC_nr === null || c < bestC_nr)) bestC_nr = c;
         }
       }
       cMatrix[ni][di] = bestC;
+      cMatrix_noRabbi[ni][di] = bestC_nr;
     }
 
     self.postMessage({
@@ -804,16 +918,20 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen)
   for (let p = 0; p < numPermutations; p++) {
     shuffle(dateIndices);
 
-    // Collect c values for this permutation (skip null from m<10 threshold)
-    const permC = [];
+    // Collect c values for this permutation
+    const permC = [], permC_nr = [];
     for (let i = 0; i < N; i++) {
       const c = cMatrix[i][dateIndices[i]];
       if (c !== null && c < 1.0) permC.push(c);
+      const c_nr = cMatrix_noRabbi[i][dateIndices[i]];
+      if (c_nr !== null && c_nr < 1.0) permC_nr.push(c_nr);
     }
 
     const permP1 = computeP1(permC);
     const permP2 = computeP2(permC);
-    const permP = 2 * Math.min(permP1, permP2);
+    const permP3 = permC_nr.length > 0 ? computeP1(permC_nr) : 1.0;
+    const permP4 = permC_nr.length > 0 ? computeP2(permC_nr) : 1.0;
+    const permP = 4 * Math.min(permP1, permP2, permP3, permP4);
 
     if (permP <= actualOverallP) betterCount++;
 
@@ -888,6 +1006,7 @@ function runWRR2Nations(data) {
     }
 
     // ---- Phase 2: Compute c(w,w') for each nation ----
+    // WRR 5-8 character filter applied to word pairs.
     self.postMessage({
       type: 'wrr-phase', phase: 'computing-c',
       message: 'Computing c(w,w\') perturbation statistics (125 perturbations each)...'
@@ -902,9 +1021,13 @@ function runWRR2Nations(data) {
 
       for (let ni = 0; ni < r.nameHitsArr.length; ni++) {
         if (r.nameHitsArr[ni].length === 0) continue;
+        const nameLen = r.nameNorms[ni].length;
+        if (nameLen < 5 || nameLen > 8) continue;  // WRR 5-8 filter
         for (let di = 0; di < r.dateHitsArr.length; di++) {
           if (r.dateHitsArr[di].length === 0) continue;
-          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L);
+          const dateLen = r.dateNorms[di].length;
+          if (dateLen < 5 || dateLen > 8) continue;  // WRR 5-8 filter
+          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L, true);
           if (c !== null && (bestC === null || c < bestC)) {
             bestC = c;
             bestNameIdx = ni;
@@ -930,7 +1053,7 @@ function runWRR2Nations(data) {
       });
     }
 
-    // ---- Phase 3: Compute P₁, P₂ (WRR paper uses only these two) ----
+    // ---- Phase 3: Compute P₁, P₂ (WRR2 nations uses 2-statistic) ----
     const cValues = rabbiResults.filter(r => r.c !== null && r.c < 1.0).map(r => r.c);
     const p1 = computeP1(cValues);
     const p2 = computeP2(cValues);
@@ -946,7 +1069,7 @@ function runWRR2Nations(data) {
     // ---- Phase 4: Optional permutation test ----
     // Reuses runWRRPermTestFull — processed data has compatible field names
     if (runPermTest && numPermutations > 0) {
-      runWRRPermTestFull(processed, overallP, numPermutations, L);
+      runWRRPermTestFull(processed, overallP, numPermutations, L, true);
     }
 
   } catch (err) {

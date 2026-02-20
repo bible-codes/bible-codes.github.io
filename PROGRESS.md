@@ -247,7 +247,7 @@ Full client-side replication of Witztum, Rips & Rosenberg (1994) "Equidistant Le
 
 5. **WRR2 Names experiments (B1/B2)** — 457 men's + 38 women's biblical names paired with "name beginning with [letter]" expressions
 
-6. **Domain of minimality weighting** — WRR2 weights each ELS occurrence by the range of skip values over which it is the closest occurrence to the SL text
+6. ~~**Domain of minimality weighting**~~ ✅ IMPLEMENTED — `computeRho()` weights each ELS by Γ(T_e)/Γ(G). Applied to WRR2 Nations (ELS↔SL). **Tested on WRR1 and confirmed it worsens results** (P=1.2e-3 → P=1.8e-2), so WRR1 uses unweighted epsilon.
 
 #### Files
 

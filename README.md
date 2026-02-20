@@ -1583,7 +1583,7 @@ These items have engines already built or detailed plans ready. They represent t
 - ~~Run c(w,w') perturbation test with ELS↔SL proximity~~ ✅ DONE
 - Add Targum Yonathan alternative nation/country names for improved match rate
 - Add "Names" B1/B2 datasets (457 men's + 38 women's biblical names)
-- Add domain of minimality weighting to ε(w,w') aggregation
+- ~~Add domain of minimality weighting to ε(w,w') aggregation~~ ✅ DONE (WRR2 nations only; tested on WRR1 and it worsened results from P=1.2e-3 to P=1.8e-2)
 - Extend permutation limit to 10⁹ with chunked processing and estimated time display
 - Add control text V generation (verse-permuted Genesis with fixed seed)
 
