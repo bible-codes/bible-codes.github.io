@@ -711,7 +711,7 @@ function runPermutationTest(data) {
 //
 function runWRRFull(data) {
   const { genesisNorm, rabbis, skipCap, letterFreqs,
-          runPermTest, numPermutations } = data;
+          runPermTest, numPermutations, use58Filter = true } = data;
 
   try {
     const L = genesisNorm.length;
@@ -775,13 +775,13 @@ function runWRRFull(data) {
       for (let ni = 0; ni < r.nameHitsArr.length; ni++) {
         if (r.nameHitsArr[ni].length === 0) continue;
         const nameLen = r.nameNorms[ni].length;
-        if (nameLen < 5 || nameLen > 8) { pairsFiltered++; continue; }  // WRR 5-8 filter
+        if (use58Filter && (nameLen < 5 || nameLen > 8)) { pairsFiltered++; continue; }
         const isRabbiPrefix = r.nameNorms[ni].startsWith('\u05E8\u05D1\u05D9'); // רבי
 
         for (let di = 0; di < r.dateHitsArr.length; di++) {
           if (r.dateHitsArr[di].length === 0) continue;
           const dateLen = r.dateNorms[di].length;
-          if (dateLen < 5 || dateLen > 8) { pairsFiltered++; continue; }  // WRR 5-8 filter
+          if (use58Filter && (dateLen < 5 || dateLen > 8)) { pairsFiltered++; continue; }
           totalPairsConsidered++;
 
           const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L, false);
@@ -842,7 +842,7 @@ function runWRRFull(data) {
 
     // ---- Phase 4: Optional permutation test ----
     if (runPermTest && numPermutations > 0) {
-      runWRRPermTestFull(processed, overallP, numPermutations, L, false);
+      runWRRPermTestFull(processed, overallP, numPermutations, L, false, use58Filter);
     }
 
   } catch (err) {
@@ -852,7 +852,7 @@ function runWRRFull(data) {
 
 // ---- Permutation test using c(w,w') — pre-compute then shuffle ----
 // WRR 5-8 char filter and P₃/P₄ (non-Rabbi subset) applied throughout.
-function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen, useDoM) {
+function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen, useDoM, use58Filter = true) {
   const N = processed.length;
 
   // Step 1: Pre-compute c for ALL possible (rabbi_i names, rabbi_j dates) pairings
@@ -876,13 +876,13 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen,
       for (let nf = 0; nf < processed[ni].nameHitsArr.length; nf++) {
         if (processed[ni].nameHitsArr[nf].length === 0) continue;
         const nameLen = processed[ni].nameNorms[nf].length;
-        if (nameLen < 5 || nameLen > 8) continue;  // WRR 5-8 filter
+        if (use58Filter && (nameLen < 5 || nameLen > 8)) continue;
         const isRabbiPrefix = processed[ni].nameNorms[nf].startsWith(RABBI_PREFIX);
 
         for (let df = 0; df < processed[di].dateHitsArr.length; df++) {
           if (processed[di].dateHitsArr[df].length === 0) continue;
           const dateLen = processed[di].dateNorms[df].length;
-          if (dateLen < 5 || dateLen > 8) continue;  // WRR 5-8 filter
+          if (use58Filter && (dateLen < 5 || dateLen > 8)) continue;
 
           const c = computeC(
             processed[ni].nameHitsArr[nf],

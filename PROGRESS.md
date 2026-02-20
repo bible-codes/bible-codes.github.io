@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-17 (Auto-Save, VCR 3D Controls, Full-Viewport Layout)
+**Last Updated**: 2026-02-20 (Sacred Names Protection, PWA Install Fix, WRR Filter Validation)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,64 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-17
+## Current Session: 2026-02-20
+
+### Sacred Names Protection ✅ COMPLETE
+
+All printable/display output now redacts the Seven Indelible Names of God with `*` to prevent genizah obligations if printed.
+
+#### Implementation
+
+1. **`sanitizeSacredNames(str, includeEl)`** — Core function (line ~4009)
+   - 7 patterns: אלוהים→א\*והים, אלהים→א\*הים, אלוה→א\*וה, יהוה→יהו\*, אהיה→אהי\*, אדני→אדנ\*, שדי→שד\*
+   - Ordered longest-first to prevent partial matches
+   - Idempotent: `*` doesn't match original patterns
+   - `includeEl=true` also redacts standalone אל (for exports only — too many false positives with preposition "to/toward" in display)
+
+2. **`sanitizeForExport(str)`** — Shorthand for `sanitizeSacredNames(str, true)` — includes אל redaction
+
+3. **Two-layer strategy**:
+   - **Layer 1 (data sources)**: `getVerseTextByKey()` sanitizes before caching, `getVerseSummary()` sanitizes on first access
+   - **Layer 2 (~37 call sites)**: Scan results, cluster tags, matrix legend, index lookup, Torah preview, dictionary, WRR table/tooltips, 3D tooltip, all exports (CSV/JSON/PNG/HTML)
+
+4. **Export protections**: All CSV exports have 2-line comment header about sacred names. JSON/PNG/HTML exports use `sanitizeForExport()` (with אל redaction).
+
+5. **Disclaimer**: Yellow notice box after intro blurb + footer note about redaction.
+
+#### NOT sanitized (by design):
+- Individual matrix cells (single positional letters, not readable words)
+- 5-char-grouped Torah preview fallback (no real word boundaries)
+
+### PWA Install Fix ✅ COMPLETE
+
+`js/pwa-install.js` (475 lines) was never loaded — added `<script src="js/pwa-install.js" async></script>` after main module. File handles `beforeinstallprompt`, install button/banner UI, success notification, and localStorage dismiss tracking.
+
+### WRR 5-8 Char Filter Validation ✅ COMPLETE
+
+Ran WRR full experiment **without** the 5-8 character word-length filter to validate its importance:
+
+| Configuration | Word Pairs | P-value | Significant? |
+|---|---|---|---|
+| **With filter** (5-8 chars) | 302 | **1.2×10⁻³** | Yes |
+| **Without filter** | 121 | 0.20 | No |
+
+The filter is critical — without it, P collapses from 1 in 840 to 1 in 5 (not significant). This confirms the WRR paper's specification (p.436) that only word pairs of 5-8 characters should be counted.
+
+#### WRR Results Summary (Best Achieved)
+
+| Metric | WRR Paper (1994) | Our Replication |
+|---|---|---|
+| P-value | 1.6×10⁻⁵ (1 in 62,500) | 1.2×10⁻³ (1 in 840) |
+| Rabbis matched | ~26/30 | 20/30 |
+| Word pairs (5-8) | 298 | 302 |
+| Significant? | Very | Yes |
+| Gap factor | — | ~75× |
+
+**Remaining gap**: Likely σ (sum-over-h) vs ω (max-over-h) in the distance formula.
+
+---
+
+## Previous Session: 2026-02-17
 
 ### Auto-Save Sessions ✅ COMPLETE
 

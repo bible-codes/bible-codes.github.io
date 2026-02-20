@@ -1011,6 +1011,12 @@
       </div>
     </details>
 
+    <div class="sacred-names-notice" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin:8px 0;font-size:13px;line-height:1.5;">
+      <strong>Notice:</strong> This site displays Torah text containing Sacred Names of God.
+      Sacred Names are redacted with <code>*</code> in display and exports to avoid <em>genizah</em> obligations.
+      Please use electronic viewing when possible. If you print any output, treat the materials with appropriate reverence.
+    </div>
+
     <!-- Mode Tabs -->
     <div class="mode-tabs">
       <button class="mode-tab" data-mode="index" style="opacity:0.5;">
@@ -1851,7 +1857,7 @@
         proximityPairs.forEach((p, idx) => {
           const cls = p.distance < 500 ? 'cell-close' : p.distance < 2000 ? 'cell-medium' : 'cell-far';
           html += `<tr class="clickable-row" onclick="showIndexMatrix(${idx})" data-idx="${idx}">
-            <td>${idx + 1}</td><td>${p.term1}</td><td>${p.term2}</td>
+            <td>${idx + 1}</td><td>${sanitizeSacredNames(p.term1)}</td><td>${sanitizeSacredNames(p.term2)}</td>
             <td class="${cls}">${p.distance.toLocaleString()}</td>
             <td>${p.pos1.toLocaleString()}</td><td>${p.skip1}</td>
             <td>${p.pos2.toLocaleString()}</td><td>${p.skip2}</td>
@@ -1913,8 +1919,8 @@
 
       const statsHtml = `
         <div class="matrix-stats" style="margin-bottom:15px;">
-          <div class="matrix-stat"><div class="value" style="color:#ffc107;">${pair.term1}</div><div class="label">Term 1</div></div>
-          <div class="matrix-stat"><div class="value" style="color:#00bcd4;">${pair.term2}</div><div class="label">Term 2</div></div>
+          <div class="matrix-stat"><div class="value" style="color:#ffc107;">${sanitizeSacredNames(pair.term1)}</div><div class="label">Term 1</div></div>
+          <div class="matrix-stat"><div class="value" style="color:#00bcd4;">${sanitizeSacredNames(pair.term2)}</div><div class="label">Term 2</div></div>
           <div class="matrix-stat"><div class="value">${pair.distance.toLocaleString()}</div><div class="label">Distance</div></div>
           <div class="matrix-stat"><div class="value">${pair.skip1}</div><div class="label">Skip 1</div></div>
           <div class="matrix-stat"><div class="value">${pair.skip2}</div><div class="label">Skip 2</div></div>
@@ -1925,8 +1931,8 @@
           <div class="matrix-grid" style="grid-template-columns:repeat(${width}, 26px);">${gridHtml}</div>
         </div>
         <div class="matrix-legend" style="margin-top:15px;">
-          <div class="legend-item"><div class="legend-color t1"></div><span>${pair.term1}</span></div>
-          <div class="legend-item"><div class="legend-color t2"></div><span>${pair.term2}</span></div>
+          <div class="legend-item"><div class="legend-color t1"></div><span>${sanitizeSacredNames(pair.term1)}</span></div>
+          <div class="legend-item"><div class="legend-color t2"></div><span>${sanitizeSacredNames(pair.term2)}</span></div>
           <div class="legend-item"><div class="legend-color both"></div><span>Overlap</span></div>
         </div>
       `;
@@ -2123,7 +2129,7 @@
         display += ch.base_char || torahText[i];
         if (ch.word_index !== undefined) lastWordIdx = ch.word_index;
       }
-      preview.textContent = display;
+      preview.textContent = sanitizeSacredNames(display);
       preview.dataset.wordsLoaded = '1';
     }
 
@@ -2166,7 +2172,16 @@
 
     function getVerseSummary(verseKey) {
       if (!verseSummaries) return null;
-      return verseSummaries[verseKey] || null;
+      const sum = verseSummaries[verseKey];
+      if (!sum) return null;
+      if (!sum._sanitized) {
+        if (sum.s) sum.s = sanitizeSacredNames(sum.s);
+        if (sum.feel) sum.feel = sanitizeSacredNames(sum.feel);
+        if (sum.who) sum.who = sum.who.map(w => sanitizeSacredNames(w));
+        if (sum.t) sum.t = sum.t.map(t => sanitizeSacredNames(t));
+        sum._sanitized = true;
+      }
+      return sum;
     }
 
     function formatSummaryLine(verseKey, verseLabel) {
@@ -2274,6 +2289,7 @@
           const first = verseTextCache.keys().next().value;
           verseTextCache.delete(first);
         }
+        text = sanitizeSacredNames(text);
         verseTextCache.set(key, text);
       }
       return text || null;
@@ -3006,7 +3022,7 @@
         const forms = new Set(results.map(r => r.form || term));
         const formLabel = forms.size > 1 ? ` (${[...forms].join(' / ')})` : '';
         const capped = results.length > DISPLAY_LIMIT;
-        html += `<h3 style="margin-top:20px;border-right:4px solid ${color};padding-right:10px;">${term}${formLabel}: ${results.length.toLocaleString()} occurrences${capped ? ` (showing first ${DISPLAY_LIMIT})` : ''}</h3>`;
+        html += `<h3 style="margin-top:20px;border-right:4px solid ${color};padding-right:10px;">${sanitizeSacredNames(term)}${formLabel}: ${results.length.toLocaleString()} occurrences${capped ? ` (showing first ${DISPLAY_LIMIT})` : ''}</h3>`;
         if (results.length > 0) {
           html += `<div class="results-scrollable" style="max-height:300px;" id="termResults_${tIdx}">`;
           const showCount = Math.min(results.length, DISPLAY_LIMIT);
@@ -3015,7 +3031,7 @@
             const actualForm = r.form || term;
             const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
             const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
-            const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${actualForm}]</span> ` : '';
+            const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${sanitizeSacredNames(actualForm)}]</span> ` : '';
             // Inline verse summary (first verse only, for brevity)
             let summaryStr = '';
             if (verseSummaries && charDatabase) {
@@ -3026,7 +3042,7 @@
               }
             }
             html += `<div class="result-item" onclick="showSingleTermMatrix(${tIdx}, ${i})">
-              <span class="term" style="color:${color};">${formNote}${actualForm}</span>
+              <span class="term" style="color:${color};">${formNote}${sanitizeSacredNames(actualForm)}</span>
               <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}${summaryStr}</span>
             </div>`;
           }
@@ -3067,14 +3083,14 @@
         const actualForm = r.form || term;
         const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
         const verseStr = verses.length > 0 ? `<span style="color:#888;font-size:12px;"> — ${verses.join(', ')}</span>` : '';
-        const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${actualForm}]</span> ` : '';
+        const formNote = actualForm !== term ? `<span style="color:#999;font-size:11px;">[${sanitizeSacredNames(actualForm)}]</span> ` : '';
         let summaryStr2 = '';
         if (verseSummaries && charDatabase) {
           const vk2 = getVerseKey(r.pos);
           if (vk2) { const sm = getVerseSummary(vk2); if (sm) summaryStr2 = `<span style="color:#78909c;font-size:11px;font-style:italic;"> (${sm.s})</span>`; }
         }
         html += `<div class="result-item" onclick="showSingleTermMatrix(${tIdx}, ${i})">
-          <span class="term" style="color:${color};">${formNote}${actualForm}</span>
+          <span class="term" style="color:${color};">${formNote}${sanitizeSacredNames(actualForm)}</span>
           <span class="info">Position: ${r.pos.toLocaleString()} | Skip: ${r.skip}${verseStr}${summaryStr2}</span>
         </div>`;
       }
@@ -3127,7 +3143,7 @@
           const verses = getVersesForHit(h.pos, h.skip, h.term.length);
           const verseStr = verses.length > 0 ? ` [${verses.join(', ')}]` : '';
           html += `<span class="cluster-term-tag" style="background:${color}20;border-color:${color};color:#333;">
-            "${h.term}" pos:${h.pos.toLocaleString()} skip:${h.skip}${verseStr}
+            "${sanitizeSacredNames(h.term)}" pos:${h.pos.toLocaleString()} skip:${h.skip}${verseStr}
           </span>`;
         });
         html += `</div></div>`;
@@ -3375,7 +3391,7 @@
         const verses = getVersesForHit(h.pos, h.skip, h.term.length);
         const verseSpans = makeVerseSpans(verses);
         const verseStr = verseSpans ? ` (${verseSpans})` : '';
-        legendHtml += `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${h.term}${verseStr}</span></div>`;
+        legendHtml += `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${sanitizeSacredNames(h.term)}${verseStr}</span></div>`;
         // Per-verse semantic summaries
         if (verseSummaries && charDatabase) {
           const seen = new Set();
@@ -3431,14 +3447,14 @@
 
       const view = document.getElementById('scanMatrixView');
       view.style.display = 'block';
-      const titleSuffix = actualForm !== primaryTerm ? ` [alt: ${primaryTerm}]` : '';
-      document.getElementById('scanMatrixTitle').textContent = `"${actualForm}"${titleSuffix}`;
+      const titleSuffix = actualForm !== primaryTerm ? ` [alt: ${sanitizeSacredNames(primaryTerm)}]` : '';
+      document.getElementById('scanMatrixTitle').textContent = `"${sanitizeSacredNames(actualForm)}"${titleSuffix}`;
 
       const color = TERM_COLORS[termIdx % 8];
       const verses = getVersesForHit(r.pos, r.skip, actualForm.length);
 
       document.getElementById('scanMatrixStats').innerHTML = `
-        <div class="matrix-stat"><div class="value" style="color:${color};">${actualForm}</div><div class="label">Term</div></div>
+        <div class="matrix-stat"><div class="value" style="color:${color};">${sanitizeSacredNames(actualForm)}</div><div class="label">Term</div></div>
         <div class="matrix-stat"><div class="value">${r.pos.toLocaleString()}</div><div class="label">Position</div></div>
         <div class="matrix-stat"><div class="value">${r.skip}</div><div class="label">Skip</div></div>
       `;
@@ -3447,7 +3463,7 @@
       buildHitVerseMap([hit]);
       const verseSpans = makeVerseSpans(verses);
       const verseStr = verseSpans ? ` — ${verseSpans}` : '';
-      let singleLegend = `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${actualForm}${verseStr}</span></div>`;
+      let singleLegend = `<div class="legend-item"><div class="legend-color" style="background:${color};"></div><span>${sanitizeSacredNames(actualForm)}${verseStr}</span></div>`;
       // Per-verse semantic summaries
       if (verseSummaries && charDatabase) {
         const seen = new Set();
@@ -3978,6 +3994,26 @@
       return s.replace(/[ךםןףץ]/g, ch => SOFIT_MAP[ch]);
     }
 
+    // Sacred Names protection — redact last letter (or ל in אלוה/אלוהים) to prevent genizah obligation if printed
+    const SACRED_NAMES_PATTERNS = [
+      [/אלוהים/g, 'א*והים'],   // modern spelling
+      [/אלהים/g,  'א*הים'],    // Torah consonantal
+      [/אלוה/g,   'א*וה'],
+      [/יהוה/g,   'יהו*'],     // Tetragrammaton
+      [/אהיה/g,   'אהי*'],     // Ehyeh
+      [/אדני/g,   'אדנ*'],     // Adonai
+      [/שדי/g,    'שד*'],      // Shaddai
+    ];
+    const SACRED_EL_RE = /(^|\s)(אל)(?=\s|$)/g;
+
+    function sanitizeSacredNames(str, includeEl) {
+      if (!str || typeof str !== 'string') return str;
+      for (const [pat, rep] of SACRED_NAMES_PATTERNS) str = str.replace(pat, rep);
+      if (includeEl) str = str.replace(SACRED_EL_RE, '$1א*');
+      return str;
+    }
+    function sanitizeForExport(str) { return sanitizeSacredNames(str, true); }
+
     function cleanHebrewName(name) {
       // Remove parenthetical content: (אדריאן), (אלכסנדר), (ג'ימי), (נטלי)
       let s = name.replace(/\([^)]*\)/g, '');
@@ -4102,9 +4138,9 @@
     window.exportBatchResults = function() {
       if (batchTerms.length === 0) return;
       // CSV export
-      let csv = 'Index,Original Name,Search Term,Letters,Hits,Best Skip,Best Position\n';
+      let csv = '# NOTICE: Sacred Names of God are redacted (*) to prevent desecration if printed.\n# Electronic viewing preferred. If printed, treat with appropriate reverence.\nIndex,Original Name,Search Term,Letters,Hits,Best Skip,Best Position\n';
       batchTerms.forEach((t, i) => {
-        csv += `${i+1},"${t.original}","${t.cleaned}",${t.cleaned.length},${t.hits},${t.bestSkip || ''},${t.bestPos || ''}\n`;
+        csv += `${i+1},"${sanitizeForExport(t.original)}","${sanitizeForExport(t.cleaned)}",${t.cleaned.length},${t.hits},${t.bestSkip || ''},${t.bestPos || ''}\n`;
       });
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
@@ -4275,7 +4311,14 @@
 
     window.exportScanResults = function() {
       if (scanTerms.length === 0) { alert('No results to export'); return; }
-      const data = { terms: scanTerms, allResults: scanAllResults, clusters: scanClusters, timestamp: new Date().toISOString() };
+      // Sanitize terms/results for export
+      const expTerms = scanTerms.map(t => sanitizeForExport(t));
+      const expResults = {};
+      for (const [k, v] of Object.entries(scanAllResults)) {
+        expResults[sanitizeForExport(k)] = v.map(r => ({ ...r, form: r.form ? sanitizeForExport(r.form) : undefined }));
+      }
+      const expClusters = scanClusters.map(c => ({ ...c, hits: c.hits.map(h => ({ ...h, term: sanitizeForExport(h.term) })) }));
+      const data = { terms: expTerms, allResults: expResults, clusters: expClusters, timestamp: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -4345,7 +4388,7 @@
           const color = TERM_COLORS[h.termIdx % 8];
           const verses = getVersesForHit(h.pos, h.skip, h.term.length);
           const verseStr = verses.length > 0 ? verses.join(', ') : '';
-          termLines.push({ text: `${h.term}  pos:${h.pos.toLocaleString()} skip:${h.skip}  ${verseStr}`, color });
+          termLines.push({ text: `${sanitizeForExport(h.term)}  pos:${h.pos.toLocaleString()} skip:${h.skip}  ${verseStr}`, color });
         }
       }
 
@@ -4362,7 +4405,7 @@
               const verseLabel = getVerseForPosition(p);
               const verseText = getVerseTextByKey(vk);
               if (verseLabel && verseText) {
-                verseLines.push(`${verseLabel}: ${verseText}`);
+                verseLines.push(`${verseLabel}: ${sanitizeForExport(verseText)}`);
               }
             }
           }
@@ -4598,7 +4641,7 @@
           const color = TERM_COLORS[h.termIdx % 8];
           const verses = getVersesForHit(h.pos, h.skip, h.term.length);
           termsHTML += `<tr>
-            <td style="border:1px solid #ccc;padding:8px;font-weight:bold;color:${color};font-size:16px;">${h.term}</td>
+            <td style="border:1px solid #ccc;padding:8px;font-weight:bold;color:${color};font-size:16px;">${sanitizeForExport(h.term)}</td>
             <td style="border:1px solid #ccc;padding:8px;">${h.pos.toLocaleString()}</td>
             <td style="border:1px solid #ccc;padding:8px;">${h.skip}</td>
             <td style="border:1px solid #ccc;padding:8px;">${verses.join(', ')}</td>
@@ -4660,7 +4703,7 @@
           for (const v of verseList) {
             const sumLine = v.summary ? `<div style="font-size:13px;color:#555;font-style:italic;margin-top:2px;">${v.summary.s}${v.summary.feel ? ' — ' + v.summary.feel : ''}${v.summary.who ? ' [' + v.summary.who.join(', ') + ']' : ''}</div>` : '';
             versesHTML += `<div style="padding:6px 10px;margin:4px 0;background:#f5f5f5;border-radius:4px;border-right:3px solid #1e5aa8;">
-              <strong style="color:#1e5aa8;">${v.label}</strong>: <span style="font-family:serif;font-size:16px;">${v.text}</span>${sumLine}
+              <strong style="color:#1e5aa8;">${v.label}</strong>: <span style="font-family:serif;font-size:16px;">${sanitizeForExport(v.text)}</span>${sumLine}
             </div>`;
           }
           versesHTML += '</div>';
@@ -4684,7 +4727,7 @@
           for (const d of allDisc) {
             const def = d.definition ? d.definition.substring(0, 80) : (d.english || '');
             discHTML += `<tr>
-              <td style="border:1px solid #ccc;padding:6px;font-weight:bold;font-size:15px;">${d.word}</td>
+              <td style="border:1px solid #ccc;padding:6px;font-weight:bold;font-size:15px;">${sanitizeForExport(d.word)}</td>
               <td style="border:1px solid #ccc;padding:6px;">${def}</td>
               <td style="border:1px solid #ccc;padding:6px;">${d.root || ''}</td>
               <td style="border:1px solid #ccc;padding:6px;">${d.minDistance}</td>
@@ -4702,7 +4745,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELS Report — ${title}</title>
+<title>ELS Report — ${sanitizeForExport(title)}</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; color: #333; direction: rtl; }
   h1 { color: #1e5aa8; border-bottom: 2px solid #1e5aa8; padding-bottom: 8px; }
@@ -4718,7 +4761,7 @@
 </style>
 </head>
 <body>
-<h1>${title}</h1>
+<h1>${sanitizeForExport(title)}</h1>
 <div class="meta">Generated: ${now} &nbsp;|&nbsp; Skip range: ${minSkip} to ${maxSkip} &nbsp;|&nbsp; bible-codes.github.io</div>
 
 <h2>Matrix</h2>
@@ -4792,12 +4835,12 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
             }
           }
         }
-        return { term: h.term, position: h.pos, skip: h.skip, termIndex: h.termIdx, verses, verseTexts };
+        return { term: sanitizeForExport(h.term), position: h.pos, skip: h.skip, termIndex: h.termIdx, verses, verseTexts: verseTexts.map(vt => ({ ...vt, text: sanitizeForExport(vt.text) })) };
       });
 
       // Discovered terms
       const discovered = (discoveredResults || []).filter(d => d.inDict).map(d => ({
-        word: d.word, english: d.english || '', skip: d.bestOcc.skip, position: d.bestOcc.pos, distance: d.minDistance,
+        word: sanitizeForExport(d.word), english: d.english || '', skip: d.bestOcc.skip, position: d.bestOcc.pos, distance: d.minDistance,
         zScore: d.zScore, pValue: d.pValue, source: d.dictSource, definition: d.definition, root: d.root,
         isName: d.isName, isDate: d.isDate,
       }));
@@ -4894,7 +4937,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
                      onmouseover="this.style.background='var(--blue-light)'"
                      onmouseout="this.style.background='transparent'">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:20px;font-weight:bold;color:var(--blue);" onclick="searchWordInELS('${r.word}')">${r.word}</span>
+            <span style="font-size:20px;font-weight:bold;color:var(--blue);" onclick="searchWordInELS('${r.word}')">${sanitizeSacredNames(r.word)}</span>
             <div style="display:flex;gap:6px;align-items:center;">
               <button class="btn btn-small" onclick="event.stopPropagation();addWordToSearch('${r.word}')" title="Add to search terms">+</button>
               ${indexBadge}
@@ -4902,7 +4945,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
             </div>
           </div>
           ${def ? `<div style="color:var(--gray);margin-top:4px;">${def.substring(0, 200)}${def.length > 200 ? '...' : ''}</div>` : ''}
-          ${r.root ? `<div style="font-size:12px;color:#888;margin-top:4px;">Root: ${r.root}</div>` : ''}
+          ${r.root ? `<div style="font-size:12px;color:#888;margin-top:4px;">Root: ${sanitizeSacredNames(r.root)}</div>` : ''}
         </div>`;
       });
       html += '</div></div>';
@@ -5349,8 +5392,8 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         html += `<tr id="wrrRow${r.id}" style="border-bottom:1px solid #eee;${rowStyle}">
           <td style="padding:6px 4px;text-align:center;color:var(--gray);">${r.id}</td>
           <td style="padding:6px 4px;font-size:12px;">${r.en}</td>
-          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${r.names[0]}${r.names.length > 1 ? ` <span style="color:#999;font-size:11px;">(+${r.names.length - 1})</span>` : ''}</td>
-          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:${isNations ? '12' : '14'}px;">${secondaryCell}</td>
+          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:14px;">${sanitizeSacredNames(r.names[0])}${r.names.length > 1 ? ` <span style="color:#999;font-size:11px;">(+${r.names.length - 1})</span>` : ''}</td>
+          <td style="padding:6px 4px;direction:rtl;font-family:'SBL Hebrew',serif;font-size:${isNations ? '12' : '14'}px;">${sanitizeSacredNames(secondaryCell)}</td>
           <td style="padding:6px 4px;text-align:center;">${pairCount || '\u2014'}</td>
           <td style="padding:6px 4px;text-align:center;font-size:11px;color:var(--gray);" id="wrrDw${r.id}">\u2014</td>
           <td style="padding:6px 4px;text-align:center;" id="wrrResult${r.id}"><span style="color:#ccc;">\u2014</span></td>
@@ -5444,7 +5487,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       const color = d < 5 ? '#1b5e20' : d < 20 ? '#2e7d32' : d < 50 ? '#558b2f' :
                     d < 100 ? '#f57f17' : d < 500 ? '#e65100' : '#c62828';
       const secLabel = wrrActiveExperimentType === 'nations' ? 'Expr' : 'Date';
-      const tip = `Name: ${result.name} (skip ${result.nameSkip})\n${secLabel}: ${result.date} (skip ${result.dateSkip})\n\u0394 = ${d.toFixed(2)} (2D Euclidean)`;
+      const tip = `Name: ${sanitizeSacredNames(result.name)} (skip ${result.nameSkip})\n${secLabel}: ${sanitizeSacredNames(result.date)} (skip ${result.dateSkip})\n\u0394 = ${d.toFixed(2)} (2D Euclidean)`;
       resultCell.innerHTML = `<span style="color:${color};font-weight:bold;cursor:pointer;" title="${tip}" onclick="viewWRRPair(${rabbiId})">${d.toFixed(1)}</span>`;
     }
 
@@ -5716,9 +5759,9 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       const isNations = wrrActiveExperimentType === 'nations';
       const subj = isNations ? 'Nation' : 'Rabbi';
       const sec = isNations ? 'Expression' : 'Date';
-      const hdr = `${subj} ID,Name (English),Best Name Form,Best ${sec} Form,Name Skip,${sec} Skip,Name Pos,${sec} Pos,Delta (2D Euclidean),Max D(w)\n`;
+      const hdr = `# NOTICE: Sacred Names of God are redacted (*) to prevent desecration if printed.\n# Electronic viewing preferred. If printed, treat with appropriate reverence.\n${subj} ID,Name (English),Best Name Form,Best ${sec} Form,Name Skip,${sec} Skip,Name Pos,${sec} Pos,Delta (2D Euclidean),Max D(w)\n`;
       const rows = wrrResults.map(r =>
-        `${r.rabbiId},"${r.en}","${r.name}","${r.date}",${r.nameSkip},${r.dateSkip},${r.namePos},${r.datePos},${r.dist.toFixed(4)},${r.maxDw}`
+        `${r.rabbiId},"${r.en}","${sanitizeForExport(r.name)}","${sanitizeForExport(r.date)}",${r.nameSkip},${r.dateSkip},${r.namePos},${r.datePos},${r.dist.toFixed(4)},${r.maxDw}`
       ).join('\n');
       const blob = new Blob(['\ufeff' + hdr + rows], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
@@ -5998,7 +6041,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
           const color = c < 0.05 ? '#1b5e20' : c < 0.2 ? '#2e7d32' : c < 0.5 ? '#f57f17' : '#888';
           const secLabel = wrrActiveExperimentType === 'nations' ? 'Expr' : 'Date';
           deltaCell.innerHTML = result.name
-            ? `<span style="color:${color};font-weight:bold;cursor:pointer;" title="c(w,w') = ${c.toFixed(4)} | Name: ${result.name} (${result.nameHitCount} ELS) | ${secLabel}: ${result.date} (${result.dateHitCount} ${wrrActiveExperimentType === 'nations' ? 'SL' : 'ELS'})">${c.toFixed(3)}</span>`
+            ? `<span style="color:${color};font-weight:bold;cursor:pointer;" title="c(w,w') = ${c.toFixed(4)} | Name: ${sanitizeSacredNames(result.name)} (${result.nameHitCount} ELS) | ${secLabel}: ${sanitizeSacredNames(result.date)} (${result.dateHitCount} ${wrrActiveExperimentType === 'nations' ? 'SL' : 'ELS'})">${c.toFixed(3)}</span>`
             : '<span style="color:#ccc;">\u2014</span>';
         }
       }
@@ -6229,7 +6272,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       const secHitLabel = isNations ? 'SL Hits' : 'Date Hits';
       const rows = [[subjectLabel, 'Name', secLabel, 'c(w,w\')', 'Name ELS Hits', secHitLabel]];
       for (const r of results.rabbiResults) {
-        rows.push([r.en || r.rabbiId, r.name || '', r.date || '', r.c !== null ? r.c.toFixed(6) : 'N/A', r.nameHitCount, r.dateHitCount]);
+        rows.push([r.en || r.rabbiId, sanitizeForExport(r.name || ''), sanitizeForExport(r.date || ''), r.c !== null ? r.c.toFixed(6) : 'N/A', r.nameHitCount, r.dateHitCount]);
       }
       rows.push([]);
       rows.push(['P1 (binomial 0.2)', results.p1.toExponential(6)]);
@@ -6580,11 +6623,11 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
 
     window.dmExportCSV = function() {
       if (!dmData) return;
-      let csv = 'Term,Type,Label,Hits,MinSkip,TopPositions\n';
+      let csv = '# NOTICE: Sacred Names of God are redacted (*) to prevent desecration if printed.\n# Electronic viewing preferred. If printed, treat with appropriate reverence.\nTerm,Type,Label,Hits,MinSkip,TopPositions\n';
       for (const cat of ['dates', 'months', 'years']) {
         for (const [term, entry] of Object.entries(dmData[cat])) {
           const topStr = (entry.top || []).map(h => `${h.p}:${h.s}`).join(';');
-          csv += `"${term}","${cat}","${entry.label || ''}",${entry.n},${entry.minSkip || ''},${topStr}\n`;
+          csv += `"${sanitizeForExport(term)}","${cat}","${sanitizeForExport(entry.label || '')}",${entry.n},${entry.minSkip || ''},${topStr}\n`;
         }
       }
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -6948,7 +6991,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
         group.add(mesh);
 
         // Store data for raycasting
-        const termNames = [...data.termIdxs].map(t => scanTerms[t] || `Term ${t}`).join(', ');
+        const termNames = [...data.termIdxs].map(t => sanitizeSacredNames(scanTerms[t] || `Term ${t}`)).join(', ');
         const verse = getVerseForPosition(pos);
         const vk3d = getVerseKey(pos);
         const sum3d = vk3d ? getVerseSummary(vk3d) : null;
@@ -7815,6 +7858,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     init();
     handleUrlParams();
   </script>
+  <script src="js/pwa-install.js" async></script>
   <footer class="site-footer">
     <div class="footer-links">
       <a href="text-search.html">Text Search</a>
@@ -7829,6 +7873,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     </div>
     <p>Bible Codes &mdash; Hebrew Bible Analysis Suite</p>
     <p style="margin-top:0.5em;font-style:italic;opacity:0.85;">Dedicated in loving memory of my Dad and teacher, Shmuel Zbaida z&quot;l</p>
+    <p style="margin-top:0.5em;font-size:11px;opacity:0.7;">Sacred Names are redacted in output. Please treat printed materials with reverence.</p>
   </footer>
 </body>
 </html>
