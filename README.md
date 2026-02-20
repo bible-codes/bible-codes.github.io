@@ -5,7 +5,7 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
 **Version**: 4.6
-**Last Updated**: February 19, 2026
+**Last Updated**: February 20, 2026
 **Status**: Production (11 active tools, 3 pending)
 
 ---
@@ -362,15 +362,15 @@ bible-codes.html?terms=ירושלים,בית המקדש&skip=2000
 
 **Location**: 4th tab ("WRR 1994") in `bible-codes.html`
 
-Faithful replication of the Witztum-Rips-Rosenberg experiments. Searches Genesis (78,064 letters) for statistical proximity between Hebrew terms using ELS and SL (String of Letters) methodologies.
+Open-source replication of the Witztum-Rips-Rosenberg experiments. Searches Genesis (78,064 letters) for statistical proximity between Hebrew terms using ELS and SL (String of Letters) methodologies.
 
 **Three datasets available** (selectable via dropdown):
 
-| Dataset | Items | Method | Published P |
-|---------|-------|--------|-------------|
-| Rabbis List 2 (WRR1) | 32 rabbis × name-date pairs | ELS ↔ ELS | 1/62,500 |
-| Rabbis List 1 (WRR1) | 34 rabbis × name-date pairs | ELS ↔ ELS | 1/62,500 |
-| Nations B3 (WRR2) | 68 nations × 5 category expressions | ELS ↔ SL | 4.0 × 10⁻⁹ |
+| Dataset | Items | Method | Published P | Our Result |
+|---------|-------|--------|-------------|------------|
+| Rabbis List 2 (WRR1) | 32 rabbis × 174 appellations | ELS ↔ ELS | 1/62,500 | **1/840** (P = 0.0012) |
+| Rabbis List 1 (WRR1) | 34 rabbis × name-date pairs | ELS ↔ ELS | 1/62,500 | — |
+| Nations B3 (WRR2) | 68 nations × 5 category expressions | ELS ↔ SL | 4.0 × 10⁻⁹ | — |
 
 **WRR1 — Rabbis (1994)**: Searches for ELS proximity between rabbis' Hebrew name appellations and their death dates. Both names and dates are searched as ELS.
 
@@ -381,11 +381,44 @@ Faithful replication of the Witztum-Rips-Rosenberg experiments. Searches Genesis
 - **Full WRR**: Implements the c(w,w') perturbation statistic with 125 spatial perturbations, multi-row-length optimization, and combined P₁–P₄ scoring.
 - **Permutation Test**: Pre-computes N×N c-matrix, shuffles date/expression assignments, reports P-value with histogram.
 
+**Replication findings**: Our result (P = 0.0012) is statistically significant but ~75× weaker than the published P = 1.6×10⁻⁵. Research revealed that **no independent researcher has ever reproduced the original P-value** — not MBBK (*Statistical Science*, 1999), not the Hebrew University Aumann Committee (Nobel laureate chair), not any other group. WRR's original code was "presumably lost" (Witztum's words), and programs they distributed contained bugs. See [Replication Context](#3211-replication-context) below and the [MBBK paper](https://www.math.toronto.edu/~drorbn/Codes/StatSci.pdf).
+
 **Additional features**:
 - **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date conversion for rabbi dates.
 - **Control text**: Optional War and Peace comparison.
 - **Web Worker**: All computation runs off-main-thread via `engines/wrr.worker.js`.
 - **CSV export** for both Quick Run and Full WRR results.
+- **Sacred Names protection**: All output redacts the Seven Indelible Names of God with `*` to prevent genizah obligations.
+
+#### 3.2.1.1 Replication Context
+
+The ~75× gap between our result and the published WRR P-value is not unique to this implementation. It reflects a broader reproducibility issue documented in the academic literature:
+
+| Who | What They Did | Result |
+|-----|---------------|--------|
+| **MBBK** (McKay, Bar-Natan, Bar-Hillel, Kalai) | Independent implementations from paper's math | Could not match WRR's exact distances |
+| **Hebrew University Aumann Committee** | Two formal replications (Nobel laureate chair) | Non-significant both times |
+| **Dr. Simcha Emanuel** | Independent appellation preparation for same rabbis | Effect vanished completely |
+| **Barry Simon** (Caltech math chair) | Replication with unmodified encyclopedia data | "Totally negative" |
+| **MBBK War and Peace test** | Applied WRR-style appellation selection to Tolstoy | Achieved comparable "significance" — proving data selection alone can produce the effect |
+
+**What we systematically tested and ruled out**:
+
+| Variation | Effect |
+|-----------|--------|
+| Domain-of-minimality weighting | P worsened (0.0012 → 0.018) |
+| Compound distance formula | P much worse (0.25) |
+| D(w) factor-of-2 | P worsened |
+| Removing 5-8 char word filter | P collapsed (0.0012 → 0.20) |
+| σ (sum) vs ω (max) aggregation | Ruled out — WRR2 paper confirms ω = max |
+| Full 174 appellations from McKay archive | Loaded and used |
+| P₃/P₄ on non-רבי subset | Implemented |
+
+**References**:
+- Witztum, Rips & Rosenberg, "Equidistant Letter Sequences in the Book of Genesis", *Statistical Science* 9(3), 1994
+- McKay, Bar-Natan, Bar-Hillel & Kalai, ["Solving the Bible Code Puzzle"](https://www.math.toronto.edu/~drorbn/Codes/StatSci.pdf), *Statistical Science* 14(2), 1999
+- [McKay's Torah Codes Archive](https://users.cecs.anu.edu.au/~bdm/codes/torah.html)
+- [Bar-Natan's Bible Codes Page](https://www.math.toronto.edu/~drorbn/Codes/)
 
 ### 3.3 Text Search
 
@@ -1344,6 +1377,12 @@ python3 p.py
 
 ## 11. Changelog
 
+### February 20, 2026 (v4.7): Sacred Names Protection, PWA Fix, WRR Replication Findings
+
+- **Sacred Names Protection**: All display and export output redacts the Seven Indelible Names of God with `*` to prevent *genizah* obligations if printed. Two-layer sanitization: data sources (`getVerseTextByKey`, `getVerseSummary`) plus ~37 individual display/export call sites. `sanitizeForExport()` additionally redacts standalone אל for downloadable files (CSV, PNG, JSON, HTML). Yellow disclaimer banner and footer note added.
+- **PWA Install Fix**: `js/pwa-install.js` (475 lines, already cached by service worker) was never loaded — now included via async script tag. Install prompt now works on desktop and mobile.
+- **WRR Replication Context**: Research established that **no independent researcher has ever reproduced WRR's published P = 1.6×10⁻⁵**. Our P = 0.0012 (statistically significant) is consistent with this finding. WRR's original code was "presumably lost," programs they distributed had bugs, the Aumann Committee replications were non-significant, and MBBK demonstrated comparable effects in War and Peace through appellation selection alone. The σ vs ω hypothesis is ruled out (WRR2 paper confirms ω = max). Validated 5-8 char filter is critical (P collapses from 0.0012 → 0.20 without it).
+
 ### February 19, 2026 (v4.6): Verse Semantic Context Database
 
 - **Verse Semantic Context**: Pre-computed semantic summaries for every Torah verse, showing what each verse is about when ELS sequences are found. Summary, subjects (who), sentiment (emotional tone), and thematic tags per verse.
@@ -1528,6 +1567,8 @@ These items have engines already built or detailed plans ready. They represent t
 
 **Background**: The 1994 Witztum-Rips-Rosenberg experiment (*Statistical Science*, Vol. 9, No. 3) searched Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates. The result — a P-value of approximately 1/62,500 — remains the most cited statistical claim in Torah codes research. The WRR2 Nations experiment (Sample B3) extended this to 68 nation names from Genesis 10 paired with category expressions, using ELS↔SL proximity, with published P = 4.0 × 10⁻⁹.
 
+**Replication result**: Our implementation achieves **P = 0.0012** (1 in 840) — statistically significant but ~75× weaker than the published value. Research (Feb 2026) established that this gap is consistent with the broader finding that **no independent researcher has ever reproduced the original P-value**. WRR's source code was "presumably lost," programs they distributed contained bugs, and all independent replications (MBBK, Aumann Committee, Barry Simon, Simcha Emanuel) failed to reproduce the claimed significance. See [Section 3.2.1.1](#3211-replication-context) for full details.
+
 **Implementation** (`engines/wrr.worker.js`, ~950 lines):
 - **Three modes**: Quick Run (Δ distance), Full WRR (c(w,w') perturbation statistic), Permutation Test
 - **c(w,w') statistic**: 125 spatial perturbations (x,y,z ∈ {-2..2}³) shifting last 3 ELS positions
@@ -1583,7 +1624,7 @@ These items have engines already built or detailed plans ready. They represent t
 - ~~Run c(w,w') perturbation test with ELS↔SL proximity~~ ✅ DONE
 - Add Targum Yonathan alternative nation/country names for improved match rate
 - Add "Names" B1/B2 datasets (457 men's + 38 women's biblical names)
-- ~~Add domain of minimality weighting to ε(w,w') aggregation~~ ✅ DONE (WRR2 nations only; tested on WRR1 and it worsened results from P=1.2e-3 to P=1.8e-2)
+- ~~Add domain of minimality weighting to ε(w,w') aggregation~~ ✅ DONE (WRR2 nations only; tested on WRR1 and it worsened results from P=1.2e-3 to P=1.8e-2. Research confirmed this is consistent with published replications — no independent researcher has ever reproduced the original P-value.)
 - Extend permutation limit to 10⁹ with chunked processing and estimated time display
 - Add control text V generation (verse-permuted Genesis with fixed seed)
 

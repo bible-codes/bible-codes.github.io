@@ -35,13 +35,21 @@ No server. No account. No installation required. Works offline after first visit
 
 ---
 
-**The honest part:**
+**The honest part — and the discovery:**
 
-My implementation achieves P = 0.001 on the WRR1 experiment. The published result is P = 0.00002. That's a 75x gap.
+My implementation achieves P = 0.0012 on the WRR1 experiment (statistically significant — 1 in 840 chance by random). The published result is P = 0.00002 (1 in 62,500). That's a 75x gap.
 
-I'm not hiding this. I'm documenting it.
+I systematically tested and eliminated potential sources: cylindrical wrapping, D(w) corrections, compound distance formulas, alternative P-statistics, domain-of-minimality weighting, and the σ vs ω aggregation question. Every variation either made results worse or was ruled out.
 
-I systematically tested and eliminated potential sources of the gap: cylindrical wrapping, D(w) corrections, compound distance formulas, alternative P-statistics, and domain-of-minimality weighting. That last one — where each ELS occurrence is weighted by the text region it dominates — actually made WRR1 results worse (P = 0.018), confirming it's a WRR2-specific technique. The remaining gap likely traces to undocumented appellation-matching details or minor distance-formula variants in the original closed-source implementation.
+Then I dug into the literature and found the real story:
+
+**Nobody has ever independently reproduced WRR's P-value. Not a single researcher in 30+ years.**
+
+McKay, Bar-Natan, Bar-Hillel, and Kalai (MBBK) — four mathematicians who published their critique in the same journal (*Statistical Science*, 1999) — wrote independent implementations and could not match WRR's exact distances. When they asked for the original code, WRR "were unable to provide their original computer programs." The programs they distributed had about half a dozen bugs. The specific program that generated the published results was described by Witztum himself as "presumably lost."
+
+The Hebrew University Aumann Committee, chaired by Nobel laureate Robert Aumann (who started out sympathetic), ran two formal replications. Both came back non-significant. When Dr. Simcha Emanuel independently prepared appellations for the same 32 rabbis, the effect vanished. MBBK then showed they could produce a comparable effect in Tolstoy's War and Peace through appellation selection alone.
+
+My ~75x gap isn't a bug — it's consistent with the fact that the published result appears to be unreproducible.
 
 Every formula, every constant, every decision is in the open source. You can inspect it, reproduce it, or improve it.
 

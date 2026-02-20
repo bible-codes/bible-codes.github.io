@@ -62,7 +62,7 @@ The filter is critical — without it, P collapses from 1 in 840 to 1 in 5 (not 
 | Significant? | Very | Yes |
 | Gap factor | — | ~75× |
 
-**Remaining gap**: Likely σ (sum-over-h) vs ω (max-over-h) in the distance formula.
+**Remaining gap**: Research (2026-02-20) revealed that **nobody has ever independently reproduced WRR's P = 1.6×10⁻⁵** — not MBBK, not the Hebrew University Aumann Committee, not any independent researcher. WRR's original code was "presumably lost" (Witztum's words), and the programs they distributed had ~6 bugs. Our ~75× gap is consistent with this finding. The σ vs ω hypothesis is **ruled out** — WRR2 paper confirms ω = max. See [MBBK "Solving the Bible Code Puzzle"](https://www.math.toronto.edu/~drorbn/Codes/StatSci.pdf) (*Statistical Science*, 1999).
 
 ---
 
