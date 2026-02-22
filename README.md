@@ -4,8 +4,8 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.6
-**Last Updated**: February 20, 2026
+**Version**: 4.8
+**Last Updated**: February 22, 2026
 **Status**: Production (11 active tools, 3 pending)
 
 ---
@@ -282,7 +282,12 @@ Monte Carlo permutation test for evaluating whether an N-term cluster is statist
 - **Per-cluster P-values**: After permutation test, every cluster row displays its own P-value via binary search on the sorted permuted span distribution — O(log N) per cluster.
 - **P-value**: Fraction of random shuffles producing a minimum span ≤ actual best span (global summary for best cluster).
 - **Controls**: Configurable number of trials (default 1,000, up to 100,000).
-- **Sortable clusters**: Sort by span (default) or by P-value after running the significance test. Two sort buttons in cluster header.
+- **Sortable clusters**: Four sort modes via buttons in the cluster header:
+  - **Sort: Span** (default) — smallest bounding region first
+  - **Sort: P-value** — most significant clusters first (available after running significance test)
+  - **Sort: Min |Skip|** — clusters containing the smallest absolute skip values first (ties broken by span)
+  - **Shared Letters First** — clusters where ELS terms share letter positions (e.g., מ in both משה and מרים) sorted to top
+- **Cluster badges**: Each cluster row shows a teal `|skip|≥N` badge (minimum skip value) and a purple `shared` badge when terms share letter positions.
 - **Output**: Per-cluster P-value badges (color-coded: green P<0.01, yellow-green P<0.05, orange P<0.1, red otherwise), global significance summary with histogram.
 - **Performance**: O(M) per trial — no new ELS searches needed, runs entirely on existing hit positions.
 
@@ -366,11 +371,11 @@ Open-source replication of the Witztum-Rips-Rosenberg experiments. Searches Gene
 
 **Three datasets available** (selectable via dropdown):
 
-| Dataset | Items | Method | Published P | Our Result |
-|---------|-------|--------|-------------|------------|
-| Rabbis List 2 (WRR1) | 32 rabbis × 174 appellations | ELS ↔ ELS | 1/62,500 | **1/840** (P = 0.0012) |
-| Rabbis List 1 (WRR1) | 34 rabbis × name-date pairs | ELS ↔ ELS | 1/62,500 | — |
-| Nations B3 (WRR2) | 68 nations × 5 category expressions | ELS ↔ SL | 4.0 × 10⁻⁹ | — |
+| Dataset | Items | Method | Published P | Our Result (ω/max) | Paper's Exact Formula (σ/sum) |
+|---------|-------|--------|-------------|---------------------|-------------------------------|
+| Rabbis List 2 (WRR1) | 32 rabbis × 174 appellations | ELS ↔ ELS | 1/62,500 | **1/60** (P = 0.017) | **1/1** (P = 1.18, non-significant) |
+| Rabbis List 1 (WRR1) | 34 rabbis × name-date pairs | ELS ↔ ELS | 1/62,500 | — | — |
+| Nations B3 (WRR2) | 68 nations × 5 category expressions | ELS ↔ SL | 4.0 × 10⁻⁹ | — | — |
 
 **WRR1 — Rabbis (1994)**: Searches for ELS proximity between rabbis' Hebrew name appellations and their death dates. Both names and dates are searched as ELS.
 
@@ -381,7 +386,15 @@ Open-source replication of the Witztum-Rips-Rosenberg experiments. Searches Gene
 - **Full WRR**: Implements the c(w,w') perturbation statistic with 125 spatial perturbations, multi-row-length optimization, and combined P₁–P₄ scoring.
 - **Permutation Test**: Pre-computes N×N c-matrix, shuffles date/expression assignments, reports P-value with histogram.
 
-**Replication findings**: Our result (P = 0.0012) is statistically significant but ~75× weaker than the published P = 1.6×10⁻⁵. Research revealed that **no independent researcher has ever reproduced the original P-value** — not MBBK (*Statistical Science*, 1999), not the Hebrew University Aumann Committee (Nobel laureate chair), not any other group. WRR's original code was "presumably lost" (Witztum's words), and programs they distributed contained bugs. See [Replication Context](#3211-replication-context) below and the [MBBK paper](https://www.math.toronto.edu/~drorbn/Codes/StatSci.pdf).
+**Replication findings (Feb 22, 2026)**: A line-by-line audit against the original 1994 paper uncovered three discrepancies in our implementation (see [WRR-CORRECTION-REPORT.md](./WRR-CORRECTION-REPORT.md)):
+
+1. **Distance formula**: Paper specifies δ = f² + f'² + t² (compound); we used δ = t (simple minimum distance)
+2. **Aggregation**: Paper specifies σ = SUM of 1/δ across row lengths; we used ω = MAX of 1/δ
+3. **P₁ threshold**: Paper says c ≤ 0.2; we used c < 0.2 (negligible impact)
+
+After implementing both formulas side by side: the ω/max formula gives P = 0.017 (marginally significant), while the paper's exact σ/sum formula gives **P = 1.18 (completely non-significant)**. The paper's own formula destroys the signal because f² terms dominate δ for most row lengths, making the proximity measure insensitive to actual inter-word distance.
+
+**No independent researcher has ever reproduced the original P-value of 1.6×10⁻⁵** — not MBBK (*Statistical Science*, 1999), not the Hebrew University Aumann Committee (Nobel laureate chair), not any other group. An exhaustive search of all public GitHub repositories (12+ Bible code projects) confirmed that our implementation is the **only open-source code implementing the full WRR statistical machinery**. WRR's original code was "presumably lost" (Witztum's words), and programs they distributed contained bugs. See [Replication Context](#3211-replication-context) below, the [MBBK paper](https://www.math.toronto.edu/~drorbn/Codes/StatSci.pdf), and the [Correction Report](./WRR-CORRECTION-REPORT.md).
 
 **Additional features**:
 - **Hebrew Date Converter**: Built-in Gregorian-to-Hebrew date conversion for rabbi dates.
@@ -406,13 +419,19 @@ The ~75× gap between our result and the published WRR P-value is not unique to 
 
 | Variation | Effect |
 |-----------|--------|
-| Domain-of-minimality weighting | P worsened (0.0012 → 0.018) |
-| Compound distance formula | P much worse (0.25) |
+| Paper's exact σ (sum) + δ = f²+f'²+t² | **P = 1.18 (non-significant)** — paper's own formula destroys signal |
+| ω (max) + δ = t (simple distance) | P = 0.017 (marginally significant) |
+| Domain-of-minimality weighting | P worsened (0.017 → 0.018) |
+| Compound distance formula alone | P much worse (0.25) |
 | D(w) factor-of-2 | P worsened |
-| Removing 5-8 char word filter | P collapsed (0.0012 → 0.20) |
-| σ (sum) vs ω (max) aggregation | Ruled out — WRR2 paper confirms ω = max |
+| Removing 5-8 char word filter | P collapsed (0.017 → 0.20) |
 | Full 174 appellations from McKay archive | Loaded and used |
 | P₃/P₄ on non-רבי subset | Implemented |
+
+**Files**:
+- [WRR-CORRECTION-REPORT.md](./WRR-CORRECTION-REPORT.md) — Full discrepancy analysis with per-rabbi c values
+- `tools/test-wrr.js` — Reproducible Node.js test script (run with `node tools/test-wrr.js`)
+- `engines/wrr.worker.js` — Implementation with both formulas (selectable via `useSigma` flag)
 
 **References**:
 - Witztum, Rips & Rosenberg, "Equidistant Letter Sequences in the Book of Genesis", *Statistical Science* 9(3), 1994
@@ -1047,6 +1066,7 @@ The `data/manuscripts/` directory contains Genesis text from multiple historical
 │   ├── dictionary-service.js   # Dictionary service
 │   ├── els.worker.js           # ELS Web Worker (IndexedDB-based)
 │   ├── scan.worker.js          # Full Scan Web Worker (streams to IndexedDB)
+│   ├── wrr.worker.js           # WRR experiment Web Worker (dual σ/ω formulas)
 │   └── tsirufim/               # Semantic permutation suite
 │       ├── permutations.js
 │       ├── embeddings.js
@@ -1080,7 +1100,8 @@ The `data/manuscripts/` directory contains Genesis text from multiple historical
 │   ├── build-wikipedia-dict.py # Wikipedia parser
 │   ├── validate-text.py        # Text validation
 │   ├── els-verify.py           # Hebrew text verification
-│   └── extract_heb.py          # Hebrew word extraction from Wikipedia
+│   ├── extract_heb.py          # Hebrew word extraction from Wikipedia
+│   └── test-wrr.js             # WRR experiment test harness (Node.js)
 │
 ├── audio/                      # Audio files (Igeret HaRamban)
 ├── reference/
@@ -1101,6 +1122,8 @@ The `data/manuscripts/` directory contains Genesis text from multiple historical
 │   ├── UNIFIED-DICTIONARY-PLAN.md
 │   └── MATRIX-DISCOVERY-PLAN.md
 │
+├── WRR-CORRECTION-REPORT.md    # WRR formula discrepancy analysis
+├── PROGRESS.md                 # Implementation progress tracking
 ├── sw.js                       # Service worker
 ├── manifest.json               # PWA manifest
 ├── styles.css                  # Global styles
@@ -1351,6 +1374,8 @@ python3 p.py
 | `engines/gematria.js` | 454 | Complete |
 | `engines/acronym.js` | 448 | Complete |
 | `engines/els.worker.js` | 343 | Complete |
+| `engines/wrr.worker.js` | 1,147 | Complete (dual σ/ω formulas) |
+| `engines/scan.worker.js` | ~250 | Complete |
 | `engines/roots.js` | 335 | Complete |
 | `engines/root-integration.js` | 290 | Complete |
 | `engines/matrix.js` | ~600 | Complete |
@@ -1358,6 +1383,7 @@ python3 p.py
 | `engines/els-index.js` | 534 | Complete |
 | `engines/dictionary-service.js` | ~400 | Complete |
 | `engines/tsirufim/` (5 files) | 2,209 | Complete |
+| `tools/test-wrr.js` | ~350 | Complete (WRR test harness) |
 
 ### Phase Completion
 
@@ -1376,6 +1402,15 @@ python3 p.py
 ---
 
 ## 11. Changelog
+
+### February 22, 2026 (v4.8): WRR Paper Formula Corrections, Cluster Sort Enhancements, GoatCounter Analytics
+
+- **WRR 1994 Paper Audit — 3 Discrepancies Found and Corrected**: Line-by-line audit against the original scanned paper identified three formula discrepancies. (1) **Distance formula**: Paper specifies δ = f² + f'² + t² (compound metric including inter-letter spread); our implementation used δ = t (simple minimum distance). Added `elsConsecutiveDist()` and `sigma()` functions implementing the paper's exact formula. (2) **Aggregation**: Paper specifies σ = SUM of 1/δ across up to 20 row lengths; our implementation used ω = MAX. Added sigma function with sum aggregation. (3) **P₁ threshold**: Changed from c < 0.2 to c ≤ 0.2 per paper p.436. Both old and new formulas are selectable via `useSigma` flag — WRR1 uses σ (paper's formula), WRR2 Nations preserves ω. Full details in [WRR-CORRECTION-REPORT.md](./WRR-CORRECTION-REPORT.md).
+- **WRR Test Results**: Paper's exact formula (σ/sum, δ=f²+f'²+t²) gives **P = 1.18 (completely non-significant)** — the paper's own described formula destroys the statistical signal. The ω/max formula gives P = 0.017 (marginally significant). Neither reproduces the published P = 1.6×10⁻⁵. Reproducible Node.js test: `node tools/test-wrr.js`.
+- **Only Open-Source WRR Implementation**: Exhaustive search of all public GitHub repositories (12+ Bible code projects across Python, Go, Rust, Java, JS, Clojure, Kotlin, C#) confirmed our `engines/wrr.worker.js` is the only open-source code implementing the full WRR statistical machinery (c(w,w'), P₁-P₄, permutation testing). WRR's original code is confirmed lost; MBBK never published their replication code either.
+- **Cluster Sort: Min |Skip|**: New sort button ranks clusters by the smallest absolute skip value present, with ties broken by span. Useful for prioritizing low-skip (high a priori probability) findings.
+- **Cluster Sort: Shared Letters First**: New sort button ranks clusters by number of positions where different ELS terms share the same letter. Detects cases like מ appearing in both משה and מרים at the same Torah position. Each cluster now shows a teal `|skip|≥N` badge and (when applicable) a purple `shared` badge.
+- **GoatCounter Analytics**: Privacy-friendly analytics (`bible-codes.goatcounter.com`) added to all 15 HTML pages. No cookies, GDPR-compliant, open-source counter.
 
 ### February 20, 2026 (v4.7): Sacred Names Protection, PWA Fix, WRR Replication Findings
 
@@ -1567,13 +1602,18 @@ These items have engines already built or detailed plans ready. They represent t
 
 **Background**: The 1994 Witztum-Rips-Rosenberg experiment (*Statistical Science*, Vol. 9, No. 3) searched Genesis (78,064 letters) for ELS proximity between 32 rabbis' Hebrew name appellations and their birth/death dates. The result — a P-value of approximately 1/62,500 — remains the most cited statistical claim in Torah codes research. The WRR2 Nations experiment (Sample B3) extended this to 68 nation names from Genesis 10 paired with category expressions, using ELS↔SL proximity, with published P = 4.0 × 10⁻⁹.
 
-**Replication result**: Our implementation achieves **P = 0.0012** (1 in 840) — statistically significant but ~75× weaker than the published value. Research (Feb 2026) established that this gap is consistent with the broader finding that **no independent researcher has ever reproduced the original P-value**. WRR's source code was "presumably lost," programs they distributed contained bugs, and all independent replications (MBBK, Aumann Committee, Barry Simon, Simcha Emanuel) failed to reproduce the claimed significance. See [Section 3.2.1.1](#3211-replication-context) for full details.
+**Replication result (Feb 22, 2026)**: After a line-by-line audit against the original scanned paper, we corrected 3 discrepancies and tested both formulas:
+- **ω/max formula** (simple distance): P = 0.017 (1 in 60) — marginally significant
+- **Paper's exact σ/sum formula** (compound distance δ=f²+f'²+t²): P = 1.18 (1 in 1) — completely non-significant
 
-**Implementation** (`engines/wrr.worker.js`, ~950 lines):
+**No independent researcher has ever reproduced the original P = 1.6×10⁻⁵.** WRR's source code was "presumably lost," programs they distributed contained bugs, and all independent replications (MBBK, Aumann Committee, Barry Simon, Simcha Emanuel) failed to reproduce the claimed significance. Our implementation is the **only open-source WRR statistical implementation in existence** (confirmed by exhaustive GitHub search). See [Section 3.2.1.1](#3211-replication-context), the [Correction Report](./WRR-CORRECTION-REPORT.md), and `tools/test-wrr.js` for reproducible tests.
+
+**Implementation** (`engines/wrr.worker.js`, ~1,080 lines):
 - **Three modes**: Quick Run (Δ distance), Full WRR (c(w,w') perturbation statistic), Permutation Test
+- **Dual formula support**: σ (sum, paper's formula) via `useSigma=true`, ω (max) via `useSigma=false`
 - **c(w,w') statistic**: 125 spatial perturbations (x,y,z ∈ {-2..2}³) shifting last 3 ELS positions
-- **Multi-row-length**: ω = max(1/δ) across h_i = round(|d|/i) for i=1..10
-- **P₁** = binomial tail, **P₂** = Gamma CDF, **P = 2·min(P₁,P₂)**
+- **Multi-row-length**: h_i = round(|d|/i) for i=1..10, from both ELS skips (up to 20 values)
+- **P₁** = binomial tail (c ≤ 0.2), **P₂** = Gamma CDF, **P = 4·min(P₁,P₂,P₃,P₄)**
 - **Permutation test**: Pre-compute N×N c-matrix, shuffle dates, recompute P₁/P₂
 - **Dynamic D(w)**: Cumulative expected ELS ≥ 10 via E(w,d) = (L-(k-1)d)·∏pᵢ
 - **Backward ELS**: Search reversed term (equivalent to negative skip)

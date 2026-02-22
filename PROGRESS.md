@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-20 (Sacred Names Protection, PWA Install Fix, WRR Filter Validation)
+**Last Updated**: 2026-02-22 (WRR Paper Formula Corrections, Cluster Sort Enhancements, GoatCounter)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,61 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-20
+## Current Session: 2026-02-22
+
+### WRR 1994 Paper Formula Corrections ✅ COMPLETE
+
+Line-by-line audit of our `engines/wrr.worker.js` against the original scanned WRR 1994 paper identified and corrected three discrepancies.
+
+#### Discrepancies Found
+
+1. **MAJOR — Distance Formula**: Paper specifies δ = f² + f'² + t² (compound metric); we used δ = t (simple minimum distance). Added `elsConsecutiveDist()` and `sigma()` functions.
+2. **MAJOR — Aggregation Method**: Paper specifies σ = SUM of 1/δ across up to 20 row lengths; we used ω = MAX. Added sigma function with sum.
+3. **MINOR — P₁ Threshold**: Changed from `c < 0.2` to `c <= 0.2` per paper p.436.
+
+#### Results After Correction
+
+| Formula | P-value | Significant? |
+|---------|---------|-------------|
+| ω/max (simple distance) | 0.017 (1 in 60) | Marginal |
+| **σ/sum (paper's exact formula)** | **1.18 (1 in 1)** | **No** |
+| WRR paper claim | 1.6×10⁻⁵ (1 in 62,500) | Very |
+
+Paper's own formula destroys the signal because f² terms dominate δ for most row lengths.
+
+#### Files Modified
+- `engines/wrr.worker.js` — Added `elsConsecutiveDist()`, `sigma()`, `useSigma` parameter throughout
+- `tools/test-wrr.js` — NEW: Reproducible Node.js test script
+- `WRR-CORRECTION-REPORT.md` — NEW: Full correction report with per-rabbi c values
+
+### Cluster Sort Enhancements ✅ COMPLETE
+
+Added two new cluster sort modes and per-cluster badges:
+
+- **Sort: Min |Skip|** — ranks clusters by smallest |skip| value present
+- **Shared Letters First** — ranks by shared letter positions between terms (e.g., shared מ between משה and מרים)
+- **Teal `|skip|≥N` badge** on every cluster row
+- **Purple `shared` badge** when terms share letter positions
+
+#### Files Modified
+- `index.html` — `countSharedPositions()` helper, sort buttons, badges, render logic
+
+### GoatCounter Analytics ✅ COMPLETE
+
+Added privacy-friendly GoatCounter analytics to all 15 HTML pages. Script tags committed and pushed to live site.
+
+### Open-Source WRR Survey ✅ COMPLETE
+
+Exhaustive search of all public GitHub repositories (12+ Bible code projects across Python, Go, Rust, Java, JS, Clojure, Kotlin, C#, Godot) confirmed:
+- **Our implementation is the ONLY open-source WRR statistical implementation in existence**
+- No other repo implements c(w,w'), P₁-P₄, or permutation testing
+- WRR's original code is confirmed lost (Witztum: "presumably lost")
+- MBBK never published their replication code
+- McKay's ANU page has data files but no source code
+
+---
+
+## Previous Session: 2026-02-20
 
 ### Sacred Names Protection ✅ COMPLETE
 
@@ -52,17 +106,19 @@ Ran WRR full experiment **without** the 5-8 character word-length filter to vali
 
 The filter is critical — without it, P collapses from 1 in 840 to 1 in 5 (not significant). This confirms the WRR paper's specification (p.436) that only word pairs of 5-8 characters should be counted.
 
-#### WRR Results Summary (Best Achieved)
+#### WRR Results Summary (Updated 2026-02-22)
 
-| Metric | WRR Paper (1994) | Our Replication |
-|---|---|---|
-| P-value | 1.6×10⁻⁵ (1 in 62,500) | 1.2×10⁻³ (1 in 840) |
-| Rabbis matched | ~26/30 | 20/30 |
-| Word pairs (5-8) | 298 | 302 |
-| Significant? | Very | Yes |
-| Gap factor | — | ~75× |
+| Metric | WRR Paper (1994) | ω/max (our approx.) | σ/sum (paper's exact) |
+|---|---|---|---|
+| P-value | 1.6×10⁻⁵ (1 in 62,500) | **0.017 (1 in 60)** | **1.18 (1 in 1)** |
+| Rabbis matched | ~26/30 | 23/30 | 23/30 |
+| Word pairs (5-8) | 298 | 119 | 119 |
+| k (c ≤ 0.2) | — | 10/23 | 4/23 |
+| Significant? | Very | Marginal | **No** |
 
-**Remaining gap**: Research (2026-02-20) revealed that **nobody has ever independently reproduced WRR's P = 1.6×10⁻⁵** — not MBBK, not the Hebrew University Aumann Committee, not any independent researcher. WRR's original code was "presumably lost" (Witztum's words), and the programs they distributed had ~6 bugs. Our ~75× gap is consistent with this finding. The σ vs ω hypothesis is **ruled out** — WRR2 paper confirms ω = max. See [MBBK "Solving the Bible Code Puzzle"](https://www.math.toronto.edu/~drorbn/Codes/StatSci.pdf) (*Statistical Science*, 1999).
+**Key finding (2026-02-22)**: The paper's own described formula (σ = sum of 1/δ where δ = f²+f'²+t²) produces P = 1.18 — completely non-significant. The f² terms dominate the distance measure, making it insensitive to actual inter-word proximity. See [WRR-CORRECTION-REPORT.md](./WRR-CORRECTION-REPORT.md) for full analysis.
+
+**Nobody has ever independently reproduced WRR's P = 1.6×10⁻⁵** — not MBBK, not the Hebrew University Aumann Committee, not any independent researcher. Our implementation is the **only open-source WRR statistical code in existence** (confirmed by exhaustive GitHub survey). WRR's original code was "presumably lost" (Witztum's words), and the programs they distributed had ~6 bugs.
 
 ---
 
