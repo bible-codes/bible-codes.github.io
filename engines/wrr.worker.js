@@ -259,6 +259,7 @@ function minDist2D(pos1, pos2, h) {
 }
 
 // ---- ω(e,e') = max over h of 1/δ(e,e',h) ----
+// Used by WRR2 Nations (ω = max, per WRR2 paper formulation)
 function omega(pos1, pos2, hValues) {
   let maxOmega = 0;
   for (let hi = 0; hi < hValues.length; hi++) {
@@ -269,6 +270,63 @@ function omega(pos1, pos2, hValues) {
     }
   }
   return maxOmega;
+}
+
+// =============================================================================
+// WRR 1994 Paper Exact Formulas (Section A.1, p.434-435)
+// =============================================================================
+// δ_h(e,e') = f² + f'² + t²
+//   f  = 2D distance between consecutive letters of e on cylinder width h
+//   f' = 2D distance between consecutive letters of e' on cylinder width h
+//   t  = minimum 2D distance between any letter of e and any letter of e'
+// μ_h(e,e') = 1/δ_h(e,e')
+// σ(e,e') = Σ_{i=1}^{10} μ_{h_i}(e,e') + Σ_{i=1}^{10} μ_{h'_i}(e,e')
+//   where h_i = round(|d|/i), h'_i = round(|d'|/i)
+// =============================================================================
+
+// ---- f: 2D distance between first two consecutive letters of an ELS on cylinder ----
+// For an ELS with positions [p0, p1, ...], f = dist(p0, p1) on cylinder of width h.
+// This measures how "spread out" the ELS letters are in the array.
+function elsConsecutiveDist(positions, h) {
+  if (positions.length < 2) return 0;
+  const r1 = Math.floor(positions[0] / h), c1 = positions[0] % h;
+  const r2 = Math.floor(positions[1] / h), c2 = positions[1] % h;
+  const dr = r1 - r2;
+  const dcRaw = Math.abs(c1 - c2);
+  const dc = Math.min(dcRaw, h - dcRaw);  // cylindrical wrapping
+  return Math.sqrt(dr * dr + dc * dc);
+}
+
+// ---- σ(e,e'): WRR 1994 paper's proximity measure (sum, not max) ----
+// Sums μ = 1/δ over h_i from BOTH ELS skips (up to 20 terms total).
+// Paper p.435: σ(e,e') := Σ_{i=1}^{10} μ_{h_i} + Σ_{i=1}^{10} μ_{h'_i}
+function sigma(pos1, pos2, skip1, skip2) {
+  let sum = 0;
+  const abs1 = Math.abs(skip1), abs2 = Math.abs(skip2);
+
+  // h_i from first ELS's skip (i = 1..10)
+  for (let i = 1; i <= 10; i++) {
+    const h = Math.round(abs1 / i);
+    if (h < 2) continue;
+    const f = elsConsecutiveDist(pos1, h);
+    const fPrime = elsConsecutiveDist(pos2, h);
+    const t = minDist2D(pos1, pos2, h);
+    const delta = f * f + fPrime * fPrime + t * t;
+    if (delta > 0) sum += 1 / delta;
+  }
+
+  // h'_i from second ELS's skip (i = 1..10)
+  for (let i = 1; i <= 10; i++) {
+    const h = Math.round(abs2 / i);
+    if (h < 2) continue;
+    const f = elsConsecutiveDist(pos1, h);
+    const fPrime = elsConsecutiveDist(pos2, h);
+    const t = minDist2D(pos1, pos2, h);
+    const delta = f * f + fPrime * fPrime + t * t;
+    if (delta > 0) sum += 1 / delta;
+  }
+
+  return sum;
 }
 
 // ---- Domain-of-minimality weight w(e) = Γ(T_e) / Γ(G) ----
@@ -331,17 +389,23 @@ function computeRho(hits, textLen) {
   return rhos;
 }
 
-// ---- ε(w,w') = Σ w(e)·ω(e,e') across all name×date ELS pair combinations ----
+// ---- ε(w,w') = Σ w(e)·proximity(e,e') across all name×date ELS pair combinations ----
+// When useSigma=true (WRR1 1994): uses paper's σ formula (sum of 1/δ, δ=f²+f'²+t²)
+// When useSigma=false (WRR2): uses ω formula (max of 1/t)
 // When nameRhos is provided, each name ELS occurrence is weighted by its
 // domain-of-minimality fraction. Without nameRhos, all weights default to 1.
-function epsilon(namePositions, nameSkips, datePositions, dateSkips, nameRhos) {
+function epsilon(namePositions, nameSkips, datePositions, dateSkips, nameRhos, useSigma) {
   let total = 0;
   for (let ni = 0; ni < namePositions.length; ni++) {
     const w = nameRhos ? nameRhos[ni] : 1;
     if (w === 0) continue;  // skip zero-weight (dominated) hits
     for (let di = 0; di < datePositions.length; di++) {
-      const hVals = getHValues(nameSkips[ni], dateSkips[di]);
-      total += w * omega(namePositions[ni], datePositions[di], hVals);
+      if (useSigma) {
+        total += w * sigma(namePositions[ni], datePositions[di], nameSkips[ni], dateSkips[di]);
+      } else {
+        const hVals = getHValues(nameSkips[ni], dateSkips[di]);
+        total += w * omega(namePositions[ni], datePositions[di], hVals);
+      }
     }
   }
   return total;
@@ -382,7 +446,9 @@ function perturbPositions(positions, x, y, z, textLen) {
 // Small c means actual proximity is unusually good (close to 0 = very significant).
 // WRR tie-breaking: v = (# strictly greater) + (# tied) / 2
 // WRR threshold: c is undefined when m < 10 (return null to exclude pair).
-function computeC(nameHits, dateHits, textLen, useDoM) {
+// useSigma=true (WRR1): use paper's σ (sum of 1/δ, δ=f²+f'²+t²)
+// useSigma=false (WRR2): use ω (max of 1/t)
+function computeC(nameHits, dateHits, textLen, useDoM, useSigma) {
   // Pre-compute positions and skips
   const namePos = nameHits.map(hitPositions);
   const nameSkips = nameHits.map(h => h.skip);
@@ -392,7 +458,7 @@ function computeC(nameHits, dateHits, textLen, useDoM) {
   // Domain-of-minimality weights for name ELS occurrences (WRR2 only)
   const nameRhos = useDoM ? computeRho(nameHits, textLen) : null;
 
-  const actualEps = epsilon(namePos, nameSkips, datePos, dateSkips, nameRhos);
+  const actualEps = epsilon(namePos, nameSkips, datePos, dateSkips, nameRhos, useSigma);
   if (actualEps === 0) return 1.0;
 
   let strictlyGreater = 0, ties = 0, m = 0;
@@ -413,7 +479,7 @@ function computeC(nameHits, dateHits, textLen, useDoM) {
         m++;
         // Same rho weights apply to perturbed positions (rho is a property
         // of the original ELS occurrence, not the perturbed variant)
-        const pertEps = epsilon(pertNamePos, nameSkips, datePos, dateSkips, nameRhos);
+        const pertEps = epsilon(pertNamePos, nameSkips, datePos, dateSkips, nameRhos, useSigma);
         if (pertEps > actualEps) strictlyGreater++;
         else if (pertEps === actualEps) ties++;
       }
@@ -459,11 +525,12 @@ function gammaTail(cVals) {
   return Math.min(Math.max(Math.exp(-t) * sum, 0), 1.0);
 }
 
-// ---- P₁: binomial tail P(Bin(N, 0.2) ≥ k₁) where k₁ = #{c < 0.2} ----
+// ---- P₁: binomial tail P(Bin(N, 0.2) ≥ k₁) where k₁ = #{c ≤ 0.2} ----
+// Paper p.436: "k be the number of word pairs for which c(w,w') ≤ 1/5"
 function computeP1(cValues) {
   const N = cValues.length;
   if (N === 0) return 1.0;
-  const k = cValues.filter(c => c < 0.2).length;
+  const k = cValues.filter(c => c <= 0.2).length;
   return binomialTail(N, 0.2, k);
 }
 
@@ -784,7 +851,7 @@ function runWRRFull(data) {
           if (use58Filter && (dateLen < 5 || dateLen > 8)) { pairsFiltered++; continue; }
           totalPairsConsidered++;
 
-          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L, false);
+          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L, false, true);
 
           // Best c across ALL appellations
           if (c !== null && (bestC === null || c < bestC)) {
@@ -842,7 +909,7 @@ function runWRRFull(data) {
 
     // ---- Phase 4: Optional permutation test ----
     if (runPermTest && numPermutations > 0) {
-      runWRRPermTestFull(processed, overallP, numPermutations, L, false, use58Filter);
+      runWRRPermTestFull(processed, overallP, numPermutations, L, false, use58Filter, true);
     }
 
   } catch (err) {
@@ -852,7 +919,8 @@ function runWRRFull(data) {
 
 // ---- Permutation test using c(w,w') — pre-compute then shuffle ----
 // WRR 5-8 char filter and P₃/P₄ (non-Rabbi subset) applied throughout.
-function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen, useDoM, use58Filter = true) {
+// useSigma: true for WRR1 (paper's σ formula), false for WRR2 (ω formula)
+function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen, useDoM, use58Filter = true, useSigma = false) {
   const N = processed.length;
 
   // Step 1: Pre-compute c for ALL possible (rabbi_i names, rabbi_j dates) pairings
@@ -888,7 +956,8 @@ function runWRRPermTestFull(processed, actualOverallP, numPermutations, textLen,
             processed[ni].nameHitsArr[nf],
             processed[di].dateHitsArr[df],
             textLen,
-            useDoM
+            useDoM,
+            useSigma
           );
           if (c !== null && (bestC === null || c < bestC)) bestC = c;
           if (!isRabbiPrefix && c !== null && (bestC_nr === null || c < bestC_nr)) bestC_nr = c;
@@ -1027,7 +1096,7 @@ function runWRR2Nations(data) {
           if (r.dateHitsArr[di].length === 0) continue;
           const dateLen = r.dateNorms[di].length;
           if (dateLen < 5 || dateLen > 8) continue;  // WRR 5-8 filter
-          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L, true);
+          const c = computeC(r.nameHitsArr[ni], r.dateHitsArr[di], L, true, false);
           if (c !== null && (bestC === null || c < bestC)) {
             bestC = c;
             bestNameIdx = ni;

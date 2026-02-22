@@ -2497,7 +2497,7 @@
     let currentSelectedClusterIdx = 0;
     let clusterPermRunning = false;
     let clusterPValues = [];         // P-value per cluster
-    let clusterSortMode = 'span';    // 'span' or 'pvalue'
+    let clusterSortMode = 'span';    // 'span', 'pvalue', or 'minskip'
     let permSpanDistribution = null; // sorted permuted spans for re-use
     let discoveredResults = []; // stored for filter toggling
     let discSortCol = 'default'; // current sort column
@@ -2998,6 +2998,8 @@
         html += `<label style="font-size:12px;color:#666;">N=<input id="clusterPermN" type="number" value="1000" min="100" max="100000" step="100" style="width:70px;margin-left:4px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;font-size:12px;"></label>`;
         html += `<button id="clusterSortSpan" onclick="sortClusters('span')" style="background:#e65100;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:1;">Sort: Span</button>`;
         html += `<button id="clusterSortP" onclick="sortClusters('pvalue')" disabled style="background:#7b1fa2;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:0.4;">Sort: P-value</button>`;
+        html += `<button id="clusterSortSkip" onclick="sortClusters('minskip')" style="background:#00695c;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:0.5;">Sort: Min |Skip|</button>`;
+        html += `<button id="clusterSortShared" onclick="sortClusters('shared')" style="background:#4a148c;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;opacity:0.5;">Shared Letters First</button>`;
         html += `</div>`;
         html += `<div id="clusterPermResults" style="display:none;margin-bottom:12px;"></div>`;
         html += `<p style="font-size:13px;color:#666;margin-bottom:12px;">Click to view matrix with all terms</p>`;
@@ -3104,6 +3106,24 @@
       container.insertAdjacentHTML('beforeend', html);
     };
 
+    // --- Count shared letter positions between terms in a cluster ---
+    function countSharedPositions(cluster) {
+      const posMap = new Map();
+      for (const h of cluster.hits) {
+        const termLen = h.term.length;
+        for (let i = 0; i < termLen; i++) {
+          const p = h.pos + i * h.skip;
+          if (!posMap.has(p)) posMap.set(p, new Set());
+          posMap.get(p).add(h.termIdx);
+        }
+      }
+      let shared = 0;
+      for (const termSet of posMap.values()) {
+        if (termSet.size > 1) shared++;
+      }
+      return shared;
+    }
+
     // --- Render cluster list (called initially and on sort change) ---
     function renderClusterList() {
       const container = document.getElementById('clusterListContainer');
@@ -3113,14 +3133,32 @@
       const indices = scanClusters.map((_, i) => i);
       if (clusterSortMode === 'pvalue' && clusterPValues.length === scanClusters.length) {
         indices.sort((a, b) => clusterPValues[a] - clusterPValues[b]);
+      } else if (clusterSortMode === 'minskip') {
+        // Sort by smallest |skip| in the cluster (smallest first)
+        indices.sort((a, b) => {
+          const minA = Math.min(...scanClusters[a].hits.map(h => Math.abs(h.skip)));
+          const minB = Math.min(...scanClusters[b].hits.map(h => Math.abs(h.skip)));
+          return minA - minB || scanClusters[a].span - scanClusters[b].span;
+        });
+      } else if (clusterSortMode === 'shared') {
+        // Sort clusters by number of shared letter positions (most shared first)
+        indices.sort((a, b) => {
+          const sharedA = countSharedPositions(scanClusters[a]);
+          const sharedB = countSharedPositions(scanClusters[b]);
+          return sharedB - sharedA || scanClusters[a].span - scanClusters[b].span;
+        });
       }
       // else keep original order (by span, smallest first)
 
       // Update sort button active states
       const btnSpan = document.getElementById('clusterSortSpan');
       const btnP = document.getElementById('clusterSortP');
+      const btnSkip = document.getElementById('clusterSortSkip');
+      const btnShared = document.getElementById('clusterSortShared');
       if (btnSpan) btnSpan.style.opacity = clusterSortMode === 'span' ? '1' : '0.5';
       if (btnP) btnP.style.opacity = clusterSortMode === 'pvalue' ? '1' : '0.5';
+      if (btnSkip) btnSkip.style.opacity = clusterSortMode === 'minskip' ? '1' : '0.5';
+      if (btnShared) btnShared.style.opacity = clusterSortMode === 'shared' ? '1' : '0.5';
 
       let html = '';
       for (const idx of indices) {
@@ -3128,6 +3166,14 @@
         html += `<div class="cluster-row" onclick="showClusterMatrix(${idx})">`;
         html += `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">`;
         html += `<span class="cluster-span">${c.span.toLocaleString()} chars</span>`;
+        // Min |skip| badge
+        const minSkip = Math.min(...c.hits.map(h => Math.abs(h.skip)));
+        html += `<span style="font-size:11px;font-weight:bold;color:#00695c;background:#e0f2f1;padding:2px 6px;border-radius:4px;">|skip|≥${minSkip}</span>`;
+        // Shared letter badge
+        const sharedCount = countSharedPositions(c);
+        if (sharedCount > 0) {
+          html += `<span style="font-size:11px;font-weight:bold;color:#4a148c;background:#f3e5f5;padding:2px 6px;border-radius:4px;">🔗 ${sharedCount} shared</span>`;
+        }
         // P-value badge if computed
         if (clusterPValues.length > idx && permSpanDistribution) {
           const p = clusterPValues[idx];
@@ -7875,5 +7921,7 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     <p style="margin-top:0.5em;font-style:italic;opacity:0.85;">Dedicated in loving memory of my Dad and teacher, Shmuel Zbaida z&quot;l</p>
     <p style="margin-top:0.5em;font-size:11px;opacity:0.7;">Sacred Names are redacted in output. Please treat printed materials with reverence.</p>
   </footer>
+<script data-goatcounter="https://bible-codes.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
