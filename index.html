@@ -1740,7 +1740,10 @@
         displayScanResults(scanTerms, scanAllResults, scanClusters);
 
         // Restore discovered terms
-        if (s.discoveredResults) discoveredResults = s.discoveredResults;
+        if (s.discoveredResults) {
+          discoveredResults = s.discoveredResults;
+          discoveredClusterIdx = s.discoveredClusterIdx ?? -1;
+        }
 
         // Restore selected cluster and matrix
         if (scanClusters.length > 0) {
@@ -2510,6 +2513,7 @@
     let clusterSortMode = 'span';    // 'span', 'pvalue', or 'minskip'
     let permSpanDistribution = null; // sorted permuted spans for re-use
     let discoveredResults = []; // stored for filter toggling
+    let discoveredClusterIdx = -1; // which cluster index the discovered results belong to
     let discSortCol = 'default'; // current sort column
     let discSortAsc = true;      // sort direction
     let namesEnglishMap = null;  // Hebrew → English name lookup
@@ -3565,6 +3569,100 @@
       if (window.innerWidth < 1024) view.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // --- Core discovery logic (no UI) — returns discovered terms for given hits ---
+    async function discoverForHits(hits) {
+      if (!hits || hits.length === 0 || !elsService) return [];
+
+      // Ensure services are loaded
+      if (!namesEnglishMap) {
+        try {
+          const resp = await fetch('data/dictionaries/names-english.json');
+          if (resp.ok) namesEnglishMap = await resp.json();
+        } catch (e) { namesEnglishMap = {}; }
+      }
+      if (!dictService) {
+        if (typeof initDictionaries !== 'function') return [];
+        try {
+          await initDictionaries(['unified', 'bdb', 'strongs', 'wiktionary', 'names', 'wikipedia-fulltext']);
+          dictService = getDictionaryService();
+        } catch (e) {
+          try {
+            await initDictionaries(['unified']);
+            dictService = getDictionaryService();
+          } catch (e2) { dictService = null; }
+        }
+      }
+      if (!dictService) return [];
+
+      // Compute bounding region
+      const allPositions = [];
+      const searchTermSet = new Set();
+      for (const h of hits) {
+        searchTermSet.add(h.term);
+        for (let i = 0; i < h.term.length; i++) {
+          allPositions.push(h.pos + i * h.skip);
+        }
+      }
+      const minPos = Math.min(...allPositions);
+      const maxPos = Math.max(...allPositions);
+      const center = Math.round((minPos + maxPos) / 2);
+      const radius = Math.max(Math.round((maxPos - minPos) / 2) + 100, 500);
+
+      await new Promise(r => setTimeout(r, 10));
+
+      const nearby = elsService.findNearby(center, radius, {
+        minWordLength: 2,
+        maxResults: 500
+      });
+
+      const discovered = [];
+      const SHORT_SRC = {'Unified Hebrew Dictionary':'Unified','Brown-Driver-Briggs':'BDB',
+        "Strong's Hebrew Concordance":"Strong's",'Hebrew Wiktionary':'Wikt','Tanakh Extracted':'Tanakh',
+        'Hebrew Wikipedia':'Wiki','Wikipedia Full-Text':'Wiki-FT','Hebrew Names':'Names'};
+
+      for (const item of nearby) {
+        if (searchTermSet.has(item.word)) continue;
+        item.occurrences = item.occurrences.filter(o => Math.abs(o.skip) >= 2);
+        if (item.occurrences.length === 0) continue;
+        item.occurrences.sort((a, b) => a.distance - b.distance);
+        item.minDistance = item.occurrences[0].distance;
+
+        const lookups = dictService.lookup(item.word);
+        if (!lookups || lookups.length === 0) continue;
+
+        const srcNames = [...new Set(lookups.map(l => {
+          const name = l.sourceName || l.source || '';
+          return SHORT_SRC[name] || name;
+        }))].filter(Boolean);
+        const dictSource = srcNames.join(', ');
+        let definition = '';
+        for (const l of lookups) {
+          if (l.definitions && l.definitions.length > 0) { definition = l.definitions[0]; break; }
+        }
+        if (!definition && wikiDefCache[item.word]) definition = wikiDefCache[item.word];
+        const rootInfo = dictService.getRoot(item.word);
+        const root = rootInfo ? rootInfo.root : '';
+        const sig = elsService.significanceScore(item.word);
+        const isName = dictSource.includes('Names') || dictSource.includes('names');
+        const english = (namesEnglishMap && namesEnglishMap[item.word]) || '';
+        const isDate = /^(ניסן|אייר|סיון|תמוז|אלול|תשרי|חשון|חשוון|כסלו|טבת|שבט|אדר|יום|חדש|שנה|שנת|נולד|נפטר)$/.test(item.word);
+        const L = 304805;
+        const region = 2 * item.minDistance + 1;
+        const pProximity = 1 - Math.pow(1 - Math.min(region, L) / L, item.totalOccurrences);
+
+        discovered.push({
+          word: item.word, english, minDistance: item.minDistance,
+          occurrences: item.occurrences.length, totalOccurrences: item.totalOccurrences,
+          zScore: sig.zScore, pValue: pProximity, inDict: true,
+          definition, hasDef: definition !== '', root, dictSource,
+          isName, isDate, bestOcc: item.occurrences[0]
+        });
+      }
+
+      discovered.sort((a, b) => b.zScore - a.zScore);
+      return discovered;
+    }
+
     // --- Discover dictionary-validated ELS terms within current matrix region ---
     window.discoverMatrixTerms = async function() {
       if (!current3DHits || current3DHits.length === 0) {
@@ -3581,161 +3679,25 @@
       const statusSpan = document.getElementById('discoverTermsStatus');
       panel.style.display = 'block';
       resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching...</div>';
-      statusSpan.textContent = '';
+      statusSpan.textContent = 'Searching...';
 
       try {
+        const discovered = await discoverForHits(current3DHits);
 
-      // Compute the bounding region of the current matrix hits
-      const allPositions = [];
-      const searchTermSet = new Set();
-      for (const h of current3DHits) {
-        searchTermSet.add(h.term);
-        for (let i = 0; i < h.term.length; i++) {
-          allPositions.push(h.pos + i * h.skip);
-        }
-      }
-      const minPos = Math.min(...allPositions);
-      const maxPos = Math.max(...allPositions);
-      const center = Math.round((minPos + maxPos) / 2);
-      const radius = Math.max(Math.round((maxPos - minPos) / 2) + 100, 500);
+        // Store for filter toggling
+        discoveredResults = discovered;
+        discoveredClusterIdx = currentSelectedClusterIdx;
 
-      // Load names English map if not yet loaded
-      if (!namesEnglishMap) {
-        try {
-          const resp = await fetch('data/dictionaries/names-english.json');
-          if (resp.ok) namesEnglishMap = await resp.json();
-        } catch (e) { namesEnglishMap = {}; }
-      }
+        // Render initial results immediately
+        renderDiscoveredResults();
+        if (window.innerWidth < 1024) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-      // Load dictionary if not yet loaded
-      if (!dictService) {
-        if (typeof initDictionaries !== 'function') {
-          statusSpan.textContent = 'Dictionary module unavailable — try reloading the page.';
-          resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#c00;font-weight:600;">Dictionary module failed to load. Clear cache and reload.</div>';
-          return;
-        }
-        statusSpan.textContent = 'Loading dictionaries...';
-        try {
-          await initDictionaries(['unified', 'bdb', 'strongs', 'wiktionary', 'names', 'wikipedia-fulltext']);
-          dictService = getDictionaryService();
-        } catch (e) {
-          console.warn('Full dictionary load failed, trying minimal:', e);
-          // Try minimal fallback
-          try {
-            await initDictionaries(['unified']);
-            dictService = getDictionaryService();
-          } catch (e2) {
-            console.error('Dictionary fallback also failed:', e2);
-            dictService = null;
-          }
-        }
-      }
-
-      statusSpan.textContent = `Searching ±${radius} around position ${center}...`;
-
-      // Use setTimeout to allow UI to update before heavy computation
-      await new Promise(r => setTimeout(r, 50));
-
-      // Find all ELS-indexed words near the cluster
-      const nearby = elsService.findNearby(center, radius, {
-        minWordLength: 2,
-        maxResults: 500
-      });
-
-      // Filter: exclude the search terms themselves, ELS-only (|skip| >= 2), validate against dictionary
-      const discovered = [];
-      for (const item of nearby) {
-        // Skip the original search terms
-        if (searchTermSet.has(item.word)) continue;
-
-        // Keep only true ELS occurrences (|skip| >= 2), sorted by distance
-        item.occurrences = item.occurrences.filter(o => Math.abs(o.skip) >= 2);
-        if (item.occurrences.length === 0) continue;
-        item.occurrences.sort((a, b) => a.distance - b.distance);
-        item.minDistance = item.occurrences[0].distance;
-
-        // Must be in dictionary — skip non-dictionary words entirely
-        let definition = '';
-        let root = '';
-        let dictSource = '';
-        if (!dictService) continue;
-        const lookups = dictService.lookup(item.word);
-        if (!lookups || lookups.length === 0) continue;
-
-        // Get source names — use short abbreviations
-        const SHORT_SRC = {'Unified Hebrew Dictionary':'Unified','Brown-Driver-Briggs':'BDB',
-          "Strong's Hebrew Concordance":"Strong's",'Hebrew Wiktionary':'Wikt','Tanakh Extracted':'Tanakh',
-          'Hebrew Wikipedia':'Wiki','Wikipedia Full-Text':'Wiki-FT','Hebrew Names':'Names'};
-        const srcNames = [...new Set(lookups.map(l => {
-          const name = l.sourceName || l.source || '';
-          return SHORT_SRC[name] || name;
-        }))].filter(Boolean);
-        dictSource = srcNames.join(', ');
-        // Get best definition
-        for (const l of lookups) {
-          if (l.definitions && l.definitions.length > 0) {
-            definition = l.definitions[0];
-            break;
-          }
-        }
-        // Fall back to session-cached Wikipedia definition
-        if (!definition && wikiDefCache[item.word]) {
-          definition = wikiDefCache[item.word];
-        }
-        const rootInfo = dictService.getRoot(item.word);
-        if (rootInfo) root = rootInfo.root;
-
-        // Get significance
-        const sig = elsService.significanceScore(item.word);
-
-        // Categorize: is it a name?
-        const isName = dictSource.includes('Names') || dictSource.includes('names');
-        // English equivalent from names map
-        const english = (namesEnglishMap && namesEnglishMap[item.word]) || '';
-
-        // Categorize: is it a date-related term? (Hebrew months, days, years)
-        const isDate = /^(ניסן|אייר|סיון|תמוז|אלול|תשרי|חשון|חשוון|כסלו|טבת|שבט|אדר|יום|חדש|שנה|שנת|נולד|נפטר)$/.test(item.word);
-
-        // Analytical P-value: probability of at least one ELS occurrence within minDistance by chance
-        const L = 304805;
-        const region = 2 * item.minDistance + 1;
-        const pProximity = 1 - Math.pow(1 - Math.min(region, L) / L, item.totalOccurrences);
-
-        discovered.push({
-          word: item.word,
-          english,
-          minDistance: item.minDistance,
-          occurrences: item.occurrences.length,
-          totalOccurrences: item.totalOccurrences,
-          zScore: sig.zScore,
-          pValue: pProximity,
-          inDict: true,
-          definition,
-          hasDef: definition !== '',
-          root,
-          dictSource,
-          isName,
-          isDate,
-          bestOcc: item.occurrences[0] // closest occurrence
+        // Enrich undefined terms with Wikipedia (async, re-renders when done)
+        enrichDiscoveredWithWiki(discovered).then(changed => {
+          if (changed) renderDiscoveredResults();
         });
-      }
 
-      // Sort by z-score descending (all are dictionary-validated)
-      discovered.sort((a, b) => b.zScore - a.zScore);
-
-      // Store for filter toggling
-      discoveredResults = discovered;
-
-      // Render initial results immediately
-      renderDiscoveredResults();
-      if (window.innerWidth < 1024) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-      // Enrich undefined terms with Wikipedia (async, re-renders when done)
-      enrichDiscoveredWithWiki(discovered).then(changed => {
-        if (changed) renderDiscoveredResults();
-      });
-
-      autoSaveSession();
+        autoSaveSession();
 
       } catch (err) {
         console.error('Discover Terms error:', err);
@@ -4254,6 +4216,7 @@
         clusterPValues,
         permSpanDistribution: permSpanDistribution ? permSpanDistribution.slice(0, 2000) : null,
         discoveredResults: discoveredResults.length > 0 ? discoveredResults : null,
+        discoveredClusterIdx: discoveredResults.length > 0 ? discoveredClusterIdx : -1,
         selectedClusterIdx: currentSelectedClusterIdx,
         is3DActive,
         savedAt: new Date().toISOString(),
@@ -4421,6 +4384,7 @@
       clusterPValues = [];
       permSpanDistribution = null;
       discoveredResults = [];
+      discoveredClusterIdx = -1;
       currentSelectedClusterIdx = 0;
       localStorage.removeItem('elsAutoSession');
       const autoEl = document.getElementById('autoSaveStatus');
@@ -4726,8 +4690,44 @@
       try { return canvas3d.toDataURL('image/png'); } catch (e) { return null; }
     }
 
+    // Compute which cluster indices appear in the report (deduped top 3 from 4 categories)
+    function getReportClusterCategories() {
+      const categoryDefs = [
+        { name: 'Smallest Span', sort: (a, b) => scanClusters[a].span - scanClusters[b].span },
+        { name: 'Best P-value', sort: clusterPValues.length > 0
+          ? (a, b) => (clusterPValues[a] ?? 1) - (clusterPValues[b] ?? 1)
+          : null },
+        { name: 'Min |Skip|', sort: (a, b) => {
+          const minA = Math.min(...scanClusters[a].hits.map(h => Math.abs(h.skip)));
+          const minB = Math.min(...scanClusters[b].hits.map(h => Math.abs(h.skip)));
+          return minA - minB || scanClusters[a].span - scanClusters[b].span;
+        }},
+        { name: 'Most Shared Letters', sort: (a, b) => {
+          const sA = countSharedPositions(scanClusters[a]);
+          const sB = countSharedPositions(scanClusters[b]);
+          return sB - sA || scanClusters[a].span - scanClusters[b].span;
+        }}
+      ];
+      const clusterCategories = new Map();
+      const allIndices = scanClusters.map((_, i) => i);
+      for (const cat of categoryDefs) {
+        if (!cat.sort) continue;
+        const sorted = [...allIndices].sort(cat.sort);
+        for (let rank = 0; rank < Math.min(3, sorted.length); rank++) {
+          const idx = sorted[rank];
+          if (!clusterCategories.has(idx)) clusterCategories.set(idx, []);
+          clusterCategories.get(idx).push({ category: cat.name, rank: rank + 1 });
+        }
+      }
+      return clusterCategories;
+    }
+
+    function getReportClusterIndices() {
+      return new Set(getReportClusterCategories().keys());
+    }
+
     // Build full report HTML with overall + deduped top clusters from 4 sort categories
-    function buildFullReportHTML() {
+    function buildFullReportHTML(clusterDiscoveries) {
       const minSkip = document.getElementById('minSkip')?.value || '-500';
       const maxSkip = document.getElementById('maxSkip')?.value || '500';
       const now = new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
@@ -4776,36 +4776,7 @@
       }
 
       // --- Part 2: Deduped top 3 from 4 sort categories ---
-      const categoryDefs = [
-        { name: 'Smallest Span', sort: (a, b) => scanClusters[a].span - scanClusters[b].span },
-        { name: 'Best P-value', sort: clusterPValues.length > 0
-          ? (a, b) => (clusterPValues[a] ?? 1) - (clusterPValues[b] ?? 1)
-          : null },
-        { name: 'Min |Skip|', sort: (a, b) => {
-          const minA = Math.min(...scanClusters[a].hits.map(h => Math.abs(h.skip)));
-          const minB = Math.min(...scanClusters[b].hits.map(h => Math.abs(h.skip)));
-          return minA - minB || scanClusters[a].span - scanClusters[b].span;
-        }},
-        { name: 'Most Shared Letters', sort: (a, b) => {
-          const sA = countSharedPositions(scanClusters[a]);
-          const sB = countSharedPositions(scanClusters[b]);
-          return sB - sA || scanClusters[a].span - scanClusters[b].span;
-        }}
-      ];
-
-      // Build deduplication map: clusterIdx → Set of {categoryName, rank}
-      const clusterCategories = new Map();
-      const allIndices = scanClusters.map((_, i) => i);
-
-      for (const cat of categoryDefs) {
-        if (!cat.sort) continue; // skip p-value if not computed
-        const sorted = [...allIndices].sort(cat.sort);
-        for (let rank = 0; rank < Math.min(3, sorted.length); rank++) {
-          const idx = sorted[rank];
-          if (!clusterCategories.has(idx)) clusterCategories.set(idx, []);
-          clusterCategories.get(idx).push({ category: cat.name, rank: rank + 1 });
-        }
-      }
+      const clusterCategories = getReportClusterCategories();
 
       // Generate detailed reports for each unique cluster
       let detailHTML = '';
@@ -4909,9 +4880,10 @@
           }
         }
 
-        // Discovered terms — only for the cluster that was in focus when Discover was run
-        if (discoveredResults && discoveredResults.length > 0 && idx === currentSelectedClusterIdx) {
-          const clusterDisc = discoveredResults.filter(d => d.inDict);
+        // Discovered terms for this cluster (auto-discovered during report generation)
+        const clusterDiscList = clusterDiscoveries ? clusterDiscoveries.get(idx) : null;
+        if (clusterDiscList && clusterDiscList.length > 0) {
+          const clusterDisc = clusterDiscList.filter(d => d.inDict);
           if (clusterDisc.length > 0) {
             detailHTML += `<h3>Discovered Terms (${clusterDisc.length})</h3>`;
             detailHTML += `<table class="rpt-table" style="font-size:13px;"><thead><tr><th>Term</th><th>Definition</th><th>Skip</th><th>Distance</th><th>z-score</th></tr></thead><tbody>`;
@@ -4980,8 +4952,8 @@ ${detailHTML}
 </html>`;
     }
 
-    // Orchestrator: generate full PDF report
-    window.generateFullReport = function() {
+    // Orchestrator: generate full PDF report (auto-discovers terms for each cluster)
+    window.generateFullReport = async function() {
       if (scanTerms.length === 0 || scanClusters.length === 0) {
         alert('No scan results with clusters. Run a multi-term search first.');
         return;
@@ -4992,13 +4964,45 @@ ${detailHTML}
         if (!confirm('P-values not yet computed. Generate report without them?\n\nTip: Click "Significance Test" first for a more complete report.')) return;
       }
 
-      const html = buildFullReportHTML();
+      const statusEl = document.getElementById('scanStatus');
+
+      // Build the set of cluster indices that will appear in the report
+      const reportClusterIndices = getReportClusterIndices();
+
+      // Auto-discover terms for each report cluster
+      const clusterDiscoveries = new Map(); // clusterIdx → discovered[]
+      if (elsService) {
+        let done = 0;
+        for (const idx of reportClusterIndices) {
+          done++;
+          if (statusEl) statusEl.textContent = `Discovering terms for cluster ${done}/${reportClusterIndices.size}...`;
+          await new Promise(r => setTimeout(r, 20));
+
+          // Use existing results if this is the cluster that was already discovered
+          if (idx === discoveredClusterIdx && discoveredResults.length > 0) {
+            clusterDiscoveries.set(idx, discoveredResults);
+          } else {
+            try {
+              const disc = await discoverForHits(scanClusters[idx].hits);
+              if (disc.length > 0) clusterDiscoveries.set(idx, disc);
+            } catch (e) {
+              console.warn(`Discovery failed for cluster ${idx}:`, e.message);
+            }
+          }
+        }
+        if (statusEl) statusEl.textContent = 'Building report...';
+        await new Promise(r => setTimeout(r, 20));
+      }
+
+      const html = buildFullReportHTML(clusterDiscoveries);
       const win = window.open('', '_blank');
       if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
       win.document.write(html);
       win.document.close();
       win.focus();
       setTimeout(() => win.print(), 600);
+
+      if (statusEl) statusEl.textContent = 'Report generated.';
 
       // Also export session JSON
       exportFullSession();
@@ -5058,6 +5062,7 @@ ${detailHTML}
         clusterSortMode,
         selectedClusterIdx: currentSelectedClusterIdx,
         discoveredResults: expDiscovered.length > 0 ? expDiscovered : undefined,
+        discoveredClusterIdx: expDiscovered.length > 0 ? discoveredClusterIdx : undefined,
         hitCounts
       };
 
@@ -5112,8 +5117,10 @@ ${detailHTML}
             isDate: d.isDate,
             totalOccurrences: d.totalOccurrences || 0
           }));
+          discoveredClusterIdx = data.discoveredClusterIdx ?? -1;
         } else {
           discoveredResults = [];
+          discoveredClusterIdx = -1;
         }
 
         // Restore UI inputs
