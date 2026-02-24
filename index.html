@@ -433,8 +433,9 @@
     .matrix-cell.term-color-7 { background: #607d8b; color: #fff; font-weight: bold; }
     .matrix-cell.multi-term { background: #9c27b0; color: #fff; font-weight: bold; }
     /* (scan-term-entries removed — replaced by unified textarea input) */
-    .cluster-row { padding: 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .cluster-row { padding: 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s, border-color 0.15s; border: 2px solid transparent; border-radius: 6px; margin-bottom: 2px; }
     .cluster-row:hover { background: var(--blue-light); }
+    .cluster-row.selected { border-color: #000; background: #fff8e1; }
     .cluster-span { font-weight: bold; color: var(--green); font-size: 16px; }
     .cluster-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .cluster-term-tag { padding: 4px 10px; border-radius: 4px; font-size: 13px; border: 1px solid; }
@@ -3172,7 +3173,7 @@
       let html = '';
       for (const idx of indices) {
         const c = scanClusters[idx];
-        html += `<div class="cluster-row" onclick="showClusterMatrix(${idx})">`;
+        html += `<div class="cluster-row${idx === currentSelectedClusterIdx ? ' selected' : ''}" data-cluster-idx="${idx}" onclick="showClusterMatrix(${idx})">`;
         html += `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">`;
         html += `<span class="cluster-span">${c.span.toLocaleString()} chars</span>`;
         // Min |skip| badge
@@ -3487,6 +3488,15 @@
       if (window.innerWidth < 1024) view.scrollIntoView({ behavior: 'smooth' });
 
       currentSelectedClusterIdx = idx;
+
+      // Highlight selected cluster row
+      const container = document.getElementById('clusterListContainer');
+      if (container) {
+        for (const row of container.querySelectorAll('.cluster-row')) {
+          row.classList.toggle('selected', parseInt(row.dataset.clusterIdx) === idx);
+        }
+      }
+
       autoSaveSession();
     };
 
@@ -4899,8 +4909,8 @@
           }
         }
 
-        // Discovered terms for this cluster (if any)
-        if (discoveredResults && discoveredResults.length > 0) {
+        // Discovered terms — only for the cluster that was in focus when Discover was run
+        if (discoveredResults && discoveredResults.length > 0 && idx === currentSelectedClusterIdx) {
           const clusterDisc = discoveredResults.filter(d => d.inDict);
           if (clusterDisc.length > 0) {
             detailHTML += `<h3>Discovered Terms (${clusterDisc.length})</h3>`;
