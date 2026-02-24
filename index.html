@@ -3571,7 +3571,13 @@
 
     // --- Core discovery logic (no UI) — returns discovered terms for given hits ---
     async function discoverForHits(hits) {
-      if (!hits || hits.length === 0 || !elsService) return [];
+      if (!hits || hits.length === 0) return [];
+
+      // Auto-load ELS index if needed
+      if (!elsService) {
+        try { await initIndexTab(); } catch (e) { /* silent */ }
+        if (!elsService) return [];
+      }
 
       // Ensure services are loaded
       if (!namesEnglishMap) {
@@ -3669,15 +3675,29 @@
         alert('No matrix displayed. Click a cluster first.');
         return;
       }
-      if (!elsService) {
-        alert('ELS index not loaded yet.');
-        return;
-      }
-
       const panel = document.getElementById('discoverTermsPanel');
       const resultsDiv = document.getElementById('discoverTermsResults');
       const statusSpan = document.getElementById('discoverTermsStatus');
       panel.style.display = 'block';
+
+      // Auto-load ELS index if not yet initialized
+      if (!elsService) {
+        resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Loading ELS index (32MB)...</div>';
+        statusSpan.textContent = 'Loading ELS index...';
+        try {
+          await initIndexTab();
+        } catch (e) {
+          resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#c00;font-weight:600;">Failed to load ELS index. Try reloading the page.</div>';
+          statusSpan.textContent = 'Index load failed';
+          return;
+        }
+        if (!elsService) {
+          resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#c00;font-weight:600;">ELS index unavailable. Try reloading the page.</div>';
+          statusSpan.textContent = 'Index unavailable';
+          return;
+        }
+      }
+
       resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching...</div>';
       statusSpan.textContent = 'Searching...';
 

@@ -91,21 +91,28 @@ def build_prompt(book_name, chapter, verses):
 
     return f"""You are a Hebrew Bible scholar. Below are the consonantal Hebrew verses from {book_name} Chapter {chapter}.
 
-For EACH verse, provide a brief semantic summary in this exact JSON format:
+For EACH verse, provide a UNIQUE per-verse summary in this exact JSON format:
 {{
   "{v['book']}:{chapter}:VERSE_NUM": {{
-    "s": "3-10 word summary of what happens",
-    "who": ["key subjects/people"],
+    "s": "summary of THIS SPECIFIC verse only",
+    "who": ["key subjects/people mentioned in THIS verse"],
     "feel": "emotional tone/sentiment (1-3 words)",
     "t": ["1-3 thematic tags"]
   }}
 }}
 
-Use short, dense summaries. "who" should list actual names when possible.
-"feel" captures the emotional register (e.g., "awe", "grief, despair", "joy", "command").
-"t" uses lowercase tags like "creation", "covenant", "war", "prophecy", "law", "prayer", "genealogy".
+CRITICAL RULES:
+- Each verse MUST have its own DISTINCT summary describing what THAT verse says.
+- NEVER copy the same summary across multiple verses. Even in repetitive sections (lists, genealogies, census counts, offerings), each verse has DIFFERENT specific details — name them.
+- For genealogy/list verses: name the specific person, tribe, or item in THAT verse.
+  Example: verse listing "Of the tribe of Asher, Sethur son of Michael" → "Sethur son of Michael represents tribe of Asher"
+- For census verses: include the specific tribe name and count from THAT verse.
+- For offering verses: include the specific day number or offerer name.
+- "who" should list actual names when possible (people, tribes, places).
+- "feel" captures the emotional register (e.g., "awe", "grief", "joy", "command", "enumeration").
+- "t" uses lowercase tags like "creation", "covenant", "war", "prophecy", "law", "prayer", "genealogy", "census", "offering".
 
-Respond with ONLY a valid JSON object containing all verses. No commentary.
+Respond with ONLY a valid JSON object containing all {len(verses)} verses. No commentary.
 
 {book_name} Chapter {chapter}:
 {verses_block}"""
