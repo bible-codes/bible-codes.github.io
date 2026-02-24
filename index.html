@@ -1109,7 +1109,9 @@
         <div class="save-panel">
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <span id="autoSaveStatus" style="font-size:11px;color:#666;">Not saved yet</span>
-            <button class="btn btn-secondary btn-small" onclick="exportScanResults()">Export JSON</button>
+            <button class="btn btn-secondary btn-small" onclick="exportFullSession()">Export JSON</button>
+            <button class="btn btn-secondary btn-small" onclick="document.getElementById('importSessionFile').click()">Import</button>
+            <input type="file" id="importSessionFile" accept=".json" onchange="importSessionFromFile(this)" style="display:none;">
             <button class="btn btn-secondary btn-small" onclick="clearScanSession()">Clear</button>
           </div>
         </div>
@@ -1120,6 +1122,7 @@
 
         <div class="action-row">
           <button class="btn" id="scanBtn" onclick="startScan()">Search</button>
+          <button class="btn" id="scanReportBtn" onclick="generateFullReport()" style="background:linear-gradient(135deg,#1565c0,#0d47a1);" title="Generate PDF report of all results">PDF Report</button>
           <button class="btn btn-danger" id="scanCancelBtn" onclick="cancelScan()" style="display:none;">Cancel</button>
           <span id="scanStatus" style="font-size: 12px; color: #666;"></span>
         </div>
@@ -2226,7 +2229,7 @@
             const sum = getVerseSummary(vk);
             if (sum) {
               const label = getVerseForPosition(p) || vk;
-              entries.push({ label, sum });
+              entries.push({ label, sum, vk });
             }
           }
         }
@@ -2240,7 +2243,12 @@
       let html = '';
       for (const e of entries) {
         html += `<div style="padding:3px 0;border-bottom:1px solid #263238;">`;
-        html += `<strong style="color:#e3f2fd;">${e.label}</strong> — ${e.sum.s}`;
+        const verseSpan = makeVerseSpans([e.label]) || e.label;
+        html += `<strong style="color:#e3f2fd;">${verseSpan}</strong> — ${e.sum.s}`;
+        const verseText = getVerseTextByKey(e.vk);
+        if (verseText) {
+          html += `<div style="font-size:13px;font-family:serif;direction:rtl;margin:2px 0 4px 26px;line-height:1.7;">${sanitizeSacredNames(verseText)}</div>`;
+        }
         const meta = [];
         if (e.sum.who && e.sum.who.length) meta.push(`<span style="color:#a5d6a7;">Subjects: ${e.sum.who.join(', ')}</span>`);
         if (e.sum.feel) meta.push(`<span style="color:#ffcc80;">Sentiment: ${e.sum.feel}</span>`);
@@ -4666,6 +4674,489 @@
 
       return canvas.toDataURL('image/png');
     }
+
+    // ============= FULL PDF REPORT =============
+
+    // Helper: get shared letter details for a cluster
+    function getSharedLetterDetails(cluster) {
+      const posMap = new Map();
+      for (const h of cluster.hits) {
+        for (let i = 0; i < h.term.length; i++) {
+          const p = h.pos + i * h.skip;
+          if (!posMap.has(p)) posMap.set(p, []);
+          posMap.get(p).push({ termIdx: h.termIdx, term: h.term, charIdx: i });
+        }
+      }
+      const shared = [];
+      for (const [pos, entries] of posMap) {
+        if (entries.length > 1) {
+          const letter = torahText ? torahText[pos] : '?';
+          shared.push({ pos, letter, terms: entries });
+        }
+      }
+      return shared;
+    }
+
+    // Helper: render a specific cluster's matrix to canvas and return data URL
+    function renderClusterToCanvas(hits) {
+      // Temporarily render this cluster's matrix into the DOM grid
+      const savedHits = current3DHits;
+      renderScanMatrix(hits);
+      const dataURL = getMatrixPNGDataURL();
+      // Restore previous hits in DOM
+      if (savedHits) renderScanMatrix(savedHits);
+      return dataURL;
+    }
+
+    // Helper: get 3D screenshot if active
+    function get3DScreenshotDataURL() {
+      if (!is3DActive || !THREE) return null;
+      const canvas3d = document.querySelector('#scanMatrix3D canvas');
+      if (!canvas3d) return null;
+      try { return canvas3d.toDataURL('image/png'); } catch (e) { return null; }
+    }
+
+    // Build full report HTML with overall + deduped top clusters from 4 sort categories
+    function buildFullReportHTML() {
+      const minSkip = document.getElementById('minSkip')?.value || '-500';
+      const maxSkip = document.getElementById('maxSkip')?.value || '500';
+      const now = new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+
+      // --- Part 1: Overall Results Summary ---
+      let overallHTML = '';
+
+      // Search metadata
+      overallHTML += `<h2>Search Parameters</h2>`;
+      overallHTML += `<table class="rpt-table"><tbody>`;
+      overallHTML += `<tr><td><strong>Terms</strong></td><td>${scanTerms.map(t => sanitizeForExport(t)).join(', ')}</td></tr>`;
+      overallHTML += `<tr><td><strong>Skip Range</strong></td><td>${minSkip} to ${maxSkip}</td></tr>`;
+      overallHTML += `<tr><td><strong>Total Clusters</strong></td><td>${scanClusters.length.toLocaleString()}</td></tr>`;
+      overallHTML += `</tbody></table>`;
+
+      // Hits per term
+      overallHTML += `<h3>Hits per Term</h3><table class="rpt-table"><thead><tr><th>Term</th><th>Hits</th></tr></thead><tbody>`;
+      for (const t of scanTerms) {
+        const count = (scanAllResults[t] || []).length;
+        overallHTML += `<tr><td>${sanitizeForExport(t)}</td><td>${count.toLocaleString()}</td></tr>`;
+      }
+      overallHTML += `</tbody></table>`;
+
+      // Top 20 clusters summary table
+      const top20 = scanClusters.slice(0, 20);
+      if (top20.length > 0) {
+        overallHTML += `<h3>Top ${top20.length} Clusters (by Span)</h3>`;
+        overallHTML += `<table class="rpt-table"><thead><tr><th>#</th><th>Span</th>`;
+        if (clusterPValues.length > 0) overallHTML += `<th>P-value</th>`;
+        overallHTML += `<th>Min |Skip|</th><th>Shared</th><th>Terms</th></tr></thead><tbody>`;
+        for (let i = 0; i < top20.length; i++) {
+          const c = top20[i];
+          const minS = Math.min(...c.hits.map(h => Math.abs(h.skip)));
+          const shared = countSharedPositions(c);
+          let pStr = '';
+          if (clusterPValues.length > i) {
+            const p = clusterPValues[i];
+            pStr = p === 0 ? '< ' + (1 / (permSpanDistribution?.length || 1000)).toFixed(6) : p < 0.001 ? p.toExponential(2) : p.toFixed(4);
+          }
+          overallHTML += `<tr><td>${i + 1}</td><td>${c.span.toLocaleString()}</td>`;
+          if (clusterPValues.length > 0) overallHTML += `<td>${pStr}</td>`;
+          overallHTML += `<td>${minS}</td><td>${shared}</td>`;
+          overallHTML += `<td>${c.hits.map(h => sanitizeForExport(h.term)).join(' + ')}</td></tr>`;
+        }
+        overallHTML += `</tbody></table>`;
+      }
+
+      // --- Part 2: Deduped top 3 from 4 sort categories ---
+      const categoryDefs = [
+        { name: 'Smallest Span', sort: (a, b) => scanClusters[a].span - scanClusters[b].span },
+        { name: 'Best P-value', sort: clusterPValues.length > 0
+          ? (a, b) => (clusterPValues[a] ?? 1) - (clusterPValues[b] ?? 1)
+          : null },
+        { name: 'Min |Skip|', sort: (a, b) => {
+          const minA = Math.min(...scanClusters[a].hits.map(h => Math.abs(h.skip)));
+          const minB = Math.min(...scanClusters[b].hits.map(h => Math.abs(h.skip)));
+          return minA - minB || scanClusters[a].span - scanClusters[b].span;
+        }},
+        { name: 'Most Shared Letters', sort: (a, b) => {
+          const sA = countSharedPositions(scanClusters[a]);
+          const sB = countSharedPositions(scanClusters[b]);
+          return sB - sA || scanClusters[a].span - scanClusters[b].span;
+        }}
+      ];
+
+      // Build deduplication map: clusterIdx → Set of {categoryName, rank}
+      const clusterCategories = new Map();
+      const allIndices = scanClusters.map((_, i) => i);
+
+      for (const cat of categoryDefs) {
+        if (!cat.sort) continue; // skip p-value if not computed
+        const sorted = [...allIndices].sort(cat.sort);
+        for (let rank = 0; rank < Math.min(3, sorted.length); rank++) {
+          const idx = sorted[rank];
+          if (!clusterCategories.has(idx)) clusterCategories.set(idx, []);
+          clusterCategories.get(idx).push({ category: cat.name, rank: rank + 1 });
+        }
+      }
+
+      // Generate detailed reports for each unique cluster
+      let detailHTML = '';
+      const savedHits = current3DHits;
+      let clusterNum = 0;
+
+      for (const [idx, categories] of clusterCategories) {
+        clusterNum++;
+        const cluster = scanClusters[idx];
+        const rankLabel = categories.map(c => `#${c.rank} ${c.category}`).join(', ');
+
+        detailHTML += `<div class="page-break"></div>`;
+        detailHTML += `<h2>Cluster Detail #${clusterNum}</h2>`;
+        detailHTML += `<div class="rank-badges">${categories.map(c =>
+          `<span class="rank-badge">#${c.rank} ${c.category}</span>`
+        ).join(' ')}</div>`;
+
+        // Matrix image
+        const matrixDataURL = renderClusterToCanvas(cluster.hits);
+        if (matrixDataURL) {
+          detailHTML += `<div style="text-align:center;margin:12px 0;"><img src="${matrixDataURL}" alt="Cluster Matrix" style="max-width:100%;border-radius:8px;"></div>`;
+        }
+
+        // Cluster stats
+        const minSkipVal = Math.min(...cluster.hits.map(h => Math.abs(h.skip)));
+        const sharedCount = countSharedPositions(cluster);
+        let pStr = 'N/A';
+        let sigLabel = '';
+        if (clusterPValues.length > idx && permSpanDistribution) {
+          const p = clusterPValues[idx];
+          pStr = p === 0 ? '< ' + (1 / permSpanDistribution.length).toFixed(6) : p < 0.001 ? p.toExponential(2) : p.toFixed(4);
+          sigLabel = p < 0.01 ? 'Highly Significant' : p < 0.05 ? 'Significant' : p < 0.1 ? 'Marginal' : 'Not Significant';
+        }
+        detailHTML += `<table class="rpt-table"><tbody>`;
+        detailHTML += `<tr><td><strong>Span</strong></td><td>${cluster.span.toLocaleString()} characters</td></tr>`;
+        detailHTML += `<tr><td><strong>P-value</strong></td><td>${pStr}${sigLabel ? ' — ' + sigLabel : ''}</td></tr>`;
+        detailHTML += `<tr><td><strong>Min |Skip|</strong></td><td>${minSkipVal}</td></tr>`;
+        detailHTML += `<tr><td><strong>Shared Letters</strong></td><td>${sharedCount}</td></tr>`;
+        detailHTML += `</tbody></table>`;
+
+        // Terms table
+        detailHTML += `<h3>Search Terms</h3>`;
+        detailHTML += `<table class="rpt-table"><thead><tr><th>Term</th><th>Position</th><th>Skip</th><th>Verses</th></tr></thead><tbody>`;
+        for (const h of cluster.hits) {
+          const color = TERM_COLORS[h.termIdx % 8];
+          const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+          detailHTML += `<tr>
+            <td style="font-weight:bold;color:${color};font-size:16px;">${sanitizeForExport(h.term)}</td>
+            <td>${h.pos.toLocaleString()}</td>
+            <td>${h.skip}</td>
+            <td>${verses.join(', ')}</td>
+          </tr>`;
+        }
+        detailHTML += `</tbody></table>`;
+
+        // Shared letters details
+        const sharedDetails = getSharedLetterDetails(cluster);
+        if (sharedDetails.length > 0) {
+          detailHTML += `<h3>Shared Letter Positions</h3>`;
+          detailHTML += `<table class="rpt-table"><thead><tr><th>Position</th><th>Letter</th><th>Terms Sharing</th></tr></thead><tbody>`;
+          for (const s of sharedDetails) {
+            const termNames = s.terms.map(t => `${sanitizeForExport(t.term)}[${t.charIdx}]`).join(', ');
+            detailHTML += `<tr><td>${s.pos.toLocaleString()}</td><td style="font-size:18px;font-family:serif;">${s.letter}</td><td>${termNames}</td></tr>`;
+          }
+          detailHTML += `</tbody></table>`;
+        }
+
+        // Cross verses with full text and summaries
+        if (charDatabase) {
+          const seenVk = new Set();
+          const verseList = [];
+          for (const h of cluster.hits) {
+            for (let i = 0; i < h.term.length; i++) {
+              const p = h.pos + i * h.skip;
+              const vk = getVerseKey(p);
+              if (vk && !seenVk.has(vk)) {
+                seenVk.add(vk);
+                const vLabel = getVerseForPosition(p);
+                const vText = getVerseTextByKey(vk);
+                const vSum = getVerseSummary(vk);
+                if (vLabel) verseList.push({ label: vLabel, text: vText, sum: vSum });
+              }
+            }
+          }
+          if (verseList.length > 0) {
+            detailHTML += `<h3>Verse Texts</h3>`;
+            for (const v of verseList) {
+              detailHTML += `<div class="verse-block">`;
+              detailHTML += `<strong style="color:#1e5aa8;">${v.label}</strong>`;
+              if (v.text) detailHTML += `<div style="font-family:serif;font-size:16px;margin:4px 0;">${sanitizeForExport(v.text)}</div>`;
+              if (v.sum) {
+                const parts = [];
+                if (v.sum.s) parts.push(v.sum.s);
+                if (v.sum.feel) parts.push(`Sentiment: ${v.sum.feel}`);
+                if (v.sum.who && v.sum.who.length) parts.push(`Subjects: ${v.sum.who.join(', ')}`);
+                if (v.sum.t && v.sum.t.length) parts.push(`Themes: ${v.sum.t.join(', ')}`);
+                detailHTML += `<div style="font-size:13px;color:#555;font-style:italic;margin-top:2px;">${parts.join(' | ')}</div>`;
+              }
+              detailHTML += `</div>`;
+            }
+          }
+        }
+
+        // Discovered terms for this cluster (if any)
+        if (discoveredResults && discoveredResults.length > 0) {
+          const clusterDisc = discoveredResults.filter(d => d.inDict);
+          if (clusterDisc.length > 0) {
+            detailHTML += `<h3>Discovered Terms (${clusterDisc.length})</h3>`;
+            detailHTML += `<table class="rpt-table" style="font-size:13px;"><thead><tr><th>Term</th><th>Definition</th><th>Skip</th><th>Distance</th><th>z-score</th></tr></thead><tbody>`;
+            for (const d of clusterDisc.slice(0, 20)) {
+              const def = d.definition ? d.definition.substring(0, 80) : (d.english || '');
+              detailHTML += `<tr>
+                <td style="font-weight:bold;font-size:15px;">${sanitizeForExport(d.word)}</td>
+                <td>${def}</td>
+                <td>${d.bestOcc ? d.bestOcc.skip : ''}</td>
+                <td>${d.minDistance}</td>
+                <td>${d.zScore.toFixed(1)}</td>
+              </tr>`;
+            }
+            detailHTML += `</tbody></table>`;
+          }
+        }
+      }
+
+      // Restore the original matrix display
+      if (savedHits) renderScanMatrix(savedHits);
+
+      return `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELS Full Report — ${scanTerms.map(t => sanitizeForExport(t)).join(' + ')}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; color: #333; direction: rtl; }
+  h1 { color: #1e5aa8; border-bottom: 2px solid #1e5aa8; padding-bottom: 8px; }
+  h2 { color: #333; margin-top: 24px; border-bottom: 1px solid #ccc; padding-bottom: 6px; }
+  h3 { color: #555; margin-top: 18px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 20px; }
+  img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+  .rpt-table { width: 100%; border-collapse: collapse; margin: 12px 0; direction: rtl; }
+  .rpt-table th, .rpt-table td { border: 1px solid #ccc; padding: 8px; text-align: right; }
+  .rpt-table th { background: #1e5aa8; color: #fff; }
+  .rpt-table tbody tr:nth-child(even) { background: #f5f5f5; }
+  .rank-badges { margin: 8px 0 12px; }
+  .rank-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; border-radius: 12px; padding: 3px 10px; font-size: 12px; font-weight: 600; margin-left: 6px; }
+  .verse-block { padding: 6px 10px; margin: 4px 0; background: #f5f5f5; border-radius: 4px; border-right: 3px solid #1e5aa8; }
+  .page-break { page-break-before: always; }
+  @media print {
+    body { margin: 0; padding: 10px; font-size: 11pt; }
+    .no-print { display: none; }
+    img { max-height: 400px; object-fit: contain; }
+    .page-break { page-break-before: always; }
+    h2 { page-break-after: avoid; }
+    table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<h1>ELS Full Report</h1>
+<div class="meta">Generated: ${now} &nbsp;|&nbsp; Skip range: ${minSkip} to ${maxSkip} &nbsp;|&nbsp; bible-codes.github.io</div>
+
+${overallHTML}
+
+${detailHTML}
+
+<hr style="margin-top:30px;border:none;border-top:1px solid #ccc;">
+<div style="text-align:center;font-size:12px;color:#999;margin-top:10px;">
+  Generated by <a href="https://bible-codes.github.io" style="color:#1e5aa8;">bible-codes.github.io</a> — ELS Search Tool
+</div>
+</body>
+</html>`;
+    }
+
+    // Orchestrator: generate full PDF report
+    window.generateFullReport = function() {
+      if (scanTerms.length === 0 || scanClusters.length === 0) {
+        alert('No scan results with clusters. Run a multi-term search first.');
+        return;
+      }
+
+      // Warn if p-values not computed
+      if (clusterPValues.length === 0) {
+        if (!confirm('P-values not yet computed. Generate report without them?\n\nTip: Click "Significance Test" first for a more complete report.')) return;
+      }
+
+      const html = buildFullReportHTML();
+      const win = window.open('', '_blank');
+      if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 600);
+
+      // Also export session JSON
+      exportFullSession();
+    };
+
+    // ============= FULL SESSION EXPORT =============
+    window.exportFullSession = function() {
+      if (scanTerms.length === 0) { alert('No results to export'); return; }
+
+      const expTerms = scanTerms.map(t => sanitizeForExport(t));
+      const expResults = {};
+      for (const [k, v] of Object.entries(scanAllResults)) {
+        expResults[sanitizeForExport(k)] = v.map(r => ({
+          pos: r.pos, skip: r.skip,
+          form: r.form ? sanitizeForExport(r.form) : undefined
+        }));
+      }
+      const expClusters = scanClusters.map(c => ({
+        span: c.span,
+        hits: c.hits.map(h => ({
+          pos: h.pos, skip: h.skip, termIdx: h.termIdx,
+          term: sanitizeForExport(h.term)
+        }))
+      }));
+      const expDiscovered = (discoveredResults || []).map(d => ({
+        word: sanitizeForExport(d.word),
+        english: d.english || '',
+        skip: d.bestOcc ? d.bestOcc.skip : 0,
+        pos: d.bestOcc ? d.bestOcc.pos : 0,
+        minDistance: d.minDistance,
+        zScore: d.zScore,
+        pValue: d.pValue,
+        source: d.dictSource,
+        definition: d.definition,
+        root: d.root,
+        inDict: d.inDict,
+        isName: d.isName,
+        isDate: d.isDate,
+        totalOccurrences: d.totalOccurrences
+      }));
+
+      const hitCounts = {};
+      for (const t of scanTerms) hitCounts[sanitizeForExport(t)] = (scanAllResults[t] || []).length;
+
+      const data = {
+        version: 1,
+        format: 'els-session',
+        exportedAt: new Date().toISOString(),
+        terms: expTerms,
+        skipRange: {
+          min: parseInt(document.getElementById('minSkip')?.value) || -500,
+          max: parseInt(document.getElementById('maxSkip')?.value) || 500
+        },
+        allResults: expResults,
+        clusters: expClusters,
+        clusterPValues: clusterPValues.length > 0 ? clusterPValues : undefined,
+        clusterSortMode,
+        selectedClusterIdx: currentSelectedClusterIdx,
+        discoveredResults: expDiscovered.length > 0 ? expDiscovered : undefined,
+        hitCounts
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `els-session-${scanTerms.map(t => sanitizeForExport(t)).join('-').substring(0, 40)}-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    // ============= SESSION IMPORT =============
+    window.importSessionFromFile = async function(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        // Validate minimum required fields
+        if (!data.terms || !data.allResults) {
+          // Try old format (pre-version)
+          if (!data.terms) { alert('Invalid session file: missing "terms" field.'); return; }
+        }
+
+        // Restore state
+        scanTerms = data.terms || [];
+        scanAllResults = data.allResults || {};
+        scanClusters = (data.clusters || []).map(c => ({
+          span: c.span,
+          hits: c.hits || []
+        }));
+        clusterPValues = data.clusterPValues || [];
+        clusterSortMode = data.clusterSortMode || 'span';
+        currentSelectedClusterIdx = data.selectedClusterIdx || 0;
+
+        // Restore discovered results
+        if (data.discoveredResults) {
+          discoveredResults = data.discoveredResults.map(d => ({
+            word: d.word,
+            english: d.english || '',
+            bestOcc: { skip: d.skip || 0, pos: d.pos || 0 },
+            minDistance: d.minDistance || 0,
+            zScore: d.zScore || 0,
+            pValue: d.pValue,
+            dictSource: d.source,
+            definition: d.definition,
+            root: d.root,
+            inDict: d.inDict !== false,
+            isName: d.isName,
+            isDate: d.isDate,
+            totalOccurrences: d.totalOccurrences || 0
+          }));
+        } else {
+          discoveredResults = [];
+        }
+
+        // Restore UI inputs
+        document.getElementById('batchTextarea').value = scanTerms.join('\n');
+        if (data.skipRange) {
+          const minEl = document.getElementById('minSkip');
+          const maxEl = document.getElementById('maxSkip');
+          if (minEl) minEl.value = data.skipRange.min;
+          if (maxEl) maxEl.value = data.skipRange.max;
+        }
+
+        // Ensure Torah text and charDB are loaded
+        if (!torahText) {
+          const resp = await fetch('data/torahNoSpaces.txt');
+          torahText = await resp.text();
+          torahTextNorm = normalizeSofiot(torahText);
+        }
+        await loadCharDB();
+        await loadVerseSummaries();
+
+        // Display results
+        displayScanResults(scanTerms, scanAllResults, scanClusters);
+
+        // Show first cluster matrix
+        if (scanClusters.length > 0) {
+          const showIdx = Math.min(currentSelectedClusterIdx, scanClusters.length - 1);
+          showClusterMatrix(showIdx);
+        }
+
+        // Restore cluster sort mode buttons
+        if (clusterPValues.length > 0) {
+          const pBtn = document.getElementById('clusterSortP');
+          if (pBtn) { pBtn.disabled = false; pBtn.style.opacity = '1'; }
+          permSpanDistribution = permSpanDistribution || []; // enable p-value display
+          renderClusterList();
+        }
+
+        // Auto-run significance test if no p-values and multi-term
+        if (scanTerms.length >= 2 && scanClusters.length > 0 && clusterPValues.length === 0) {
+          setTimeout(() => runClusterPermTest(), 200);
+        }
+
+        document.getElementById('scanStatus').textContent =
+          `Imported: ${scanTerms.length} terms, ${scanClusters.length} clusters, ${Object.values(scanAllResults).reduce((s, r) => s + r.length, 0).toLocaleString()} hits`;
+
+      } catch (e) {
+        alert('Error importing session: ' + e.message);
+        console.error('Import error:', e);
+      }
+
+      // Reset file input so same file can be re-imported
+      input.value = '';
+    };
 
     // --- Build standalone HTML report ---
     function buildReportHTML() {

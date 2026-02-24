@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-22 (WRR Paper Formula Corrections, Cluster Sort Enhancements, GoatCounter)
+**Last Updated**: 2026-02-24 (PDF Report, Session Export/Import, Verse Tooltip Fix)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,58 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-22
+## Current Session: 2026-02-24
+
+### PDF Full Report ✅ COMPLETE
+
+Comprehensive PDF report generation with overall results summary + detailed cluster reports from 4 sort categories (deduplicated).
+
+**Features:**
+- **Overall Summary**: Search parameters, hits per term, top 20 clusters table with span/p-value/min-skip/shared counts
+- **Deduped Cluster Details**: Top 3 from each of 4 sort categories (Span, P-value, Min |Skip|, Shared Letters) → deduplicated into unique cluster reports
+- Each cluster report includes: 2D matrix PNG, terms table with positions/skips/verses, cluster stats, shared letter positions, full Hebrew verse texts with summaries/sentiment/subjects/themes, discovered terms
+- **Rank badges** show which categories each cluster ranks in (e.g., "#1 Smallest Span, #2 Best P-value")
+- Page breaks between sections for clean PDF printing
+- Opens in new window with print dialog; also auto-exports session JSON
+
+**New Functions**: `buildFullReportHTML()`, `generateFullReport()`, `getSharedLetterDetails()`, `renderClusterToCanvas()`, `get3DScreenshotDataURL()`
+
+**UI**: "PDF Report" button (blue gradient) next to Search button
+
+#### Files Modified
+- `index.html` — Added ~490 lines: report generation, session export/import, verse tooltip fix
+
+### Full Session JSON Export/Import ✅ COMPLETE
+
+**Export** (`exportFullSession()`):
+- Saves complete session state: version, format, terms, skip range, all results (pos/skip/form per hit), clusters, p-values, sort mode, selected cluster index, discovered results, hit counts
+- Replaces old `exportScanResults()` on the Export JSON button
+- Sanitized sacred names in output
+
+**Import** (`importSessionFromFile()`):
+- Hidden file input triggered by "Import" button
+- Validates JSON structure, supports both old format (terms+allResults) and new format (version 1)
+- Restores: scanTerms, scanAllResults, scanClusters, clusterPValues, clusterSortMode, discoveredResults
+- Restores UI: textarea, skip range inputs
+- Auto-loads Torah text + charDB if not loaded
+- Re-displays results, shows first cluster matrix
+- Auto-runs significance test if p-values not present in file
+
+**UI**: "Import" button added next to Export JSON, "Export JSON" now calls `exportFullSession()`
+
+### Verse Context Panel Tooltip Fix ✅ COMPLETE
+
+**Bug**: Verse references in the Verse Context Analysis panel were rendered as plain `<strong>` tags — not hoverable, no Hebrew verse text shown on hover.
+
+**Fix**:
+- `updateVerseContextPanel()` now passes `vk` (verse key) into entries
+- Verse labels use `makeVerseSpans()` for hover interactivity
+- Full Hebrew verse text shown inline below each verse reference via `getVerseTextByKey()`
+- Sacred names sanitized in verse text display
+
+---
+
+## Previous Session: 2026-02-22
 
 ### WRR 1994 Paper Formula Corrections ✅ COMPLETE
 
