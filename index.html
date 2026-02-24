@@ -4965,9 +4965,18 @@ ${detailHTML}
       }
 
       const statusEl = document.getElementById('scanStatus');
+      const progressDiv = document.getElementById('scanProgress');
+      const progressBar = document.getElementById('scanProgressBar');
+      const reportBtn = document.getElementById('scanReportBtn');
+      if (reportBtn) { reportBtn.disabled = true; reportBtn.textContent = 'Generating...'; }
+
+      // Show progress bar
+      if (progressDiv) progressDiv.style.display = '';
+      if (progressBar) { progressBar.style.width = '0%'; progressBar.textContent = '0%'; }
 
       // Build the set of cluster indices that will appear in the report
       const reportClusterIndices = getReportClusterIndices();
+      const total = reportClusterIndices.size;
 
       // Auto-discover terms for each report cluster
       const clusterDiscoveries = new Map(); // clusterIdx → discovered[]
@@ -4975,7 +4984,9 @@ ${detailHTML}
         let done = 0;
         for (const idx of reportClusterIndices) {
           done++;
-          if (statusEl) statusEl.textContent = `Discovering terms for cluster ${done}/${reportClusterIndices.size}...`;
+          const pct = Math.round((done / (total + 1)) * 100);
+          if (progressBar) { progressBar.style.width = pct + '%'; progressBar.textContent = pct + '%'; }
+          if (statusEl) statusEl.textContent = `Discovering terms for cluster ${done}/${total}...`;
           await new Promise(r => setTimeout(r, 20));
 
           // Use existing results if this is the cluster that was already discovered
@@ -4990,19 +5001,34 @@ ${detailHTML}
             }
           }
         }
-        if (statusEl) statusEl.textContent = 'Building report...';
-        await new Promise(r => setTimeout(r, 20));
       }
 
+      // Final step: building report
+      if (progressBar) { progressBar.style.width = '95%'; progressBar.textContent = '95%'; }
+      if (statusEl) statusEl.textContent = 'Building report...';
+      await new Promise(r => setTimeout(r, 20));
+
       const html = buildFullReportHTML(clusterDiscoveries);
+
+      // Complete progress
+      if (progressBar) { progressBar.style.width = '100%'; progressBar.textContent = '100%'; }
+
       const win = window.open('', '_blank');
-      if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
+      if (!win) {
+        alert('Pop-up blocked. Please allow pop-ups for this site.');
+        if (progressDiv) progressDiv.style.display = 'none';
+        if (reportBtn) { reportBtn.disabled = false; reportBtn.textContent = 'PDF Report'; }
+        return;
+      }
       win.document.write(html);
       win.document.close();
       win.focus();
       setTimeout(() => win.print(), 600);
 
-      if (statusEl) statusEl.textContent = 'Report generated.';
+      // Hide progress, restore button
+      if (progressDiv) setTimeout(() => { progressDiv.style.display = 'none'; }, 1000);
+      if (reportBtn) { reportBtn.disabled = false; reportBtn.textContent = 'PDF Report'; }
+      if (statusEl) statusEl.textContent = `Report generated — ${clusterDiscoveries.size} clusters with discovered terms.`;
 
       // Also export session JSON
       exportFullSession();
