@@ -4704,33 +4704,37 @@
     function renderClusterToCanvas(hits) {
       // Direct canvas render — no DOM manipulation, much faster for batch reports
       if (!torahText) return null;
-      const width = Math.max(...hits.map(h => Math.abs(h.skip)), 30);
+
+      // Use findOptimalDimensions for best grid width, capped for PDF readability
+      const { W } = findOptimalDimensions(hits);
+      const width = Math.min(W, 80); // cap at 80 cols so it fits on a page
 
       const allPositions = [];
-      for (const h of hits) {
-        for (let i = 0; i < h.term.length; i++) allPositions.push(h.pos + i * h.skip);
-      }
-      const minPos = Math.min(...allPositions);
-      const maxPos = Math.max(...allPositions);
-      const padding = 3;
-      const startRow = Math.max(0, Math.floor(minPos / width) - padding);
-      const endRow = Math.floor(maxPos / width) + padding;
-      const rows = endRow - startRow + 1;
-
-      // Build posMap
       const posMap = new Map();
       for (const h of hits) {
         for (let i = 0; i < h.term.length; i++) {
           const p = h.pos + i * h.skip;
+          allPositions.push(p);
           if (!posMap.has(p)) posMap.set(p, new Set());
           posMap.get(p).add(h.termIdx);
         }
       }
+      const minPos = Math.min(...allPositions);
+      const maxPos = Math.max(...allPositions);
+      const padding = 2;
+      const startRow = Math.max(0, Math.floor(minPos / width) - padding);
+      const endRow = Math.floor(maxPos / width) + padding;
+      const totalRows = endRow - startRow + 1;
 
-      const cellSize = 22;
-      const headerHeight = 40;
-      const canvasW = Math.max(width * cellSize + 60, 400);
-      const canvasH = headerHeight + rows * cellSize + 30;
+      // Cap total rows to prevent enormous canvases
+      const maxRows = 60;
+      const rows = Math.min(totalRows, maxRows);
+      const actualEndRow = startRow + rows - 1;
+
+      const cellSize = 18;
+      const headerHeight = 36;
+      const canvasW = Math.max(width * cellSize + 40, 300);
+      const canvasH = headerHeight + rows * cellSize + 20;
       const canvas = document.createElement('canvas');
       canvas.width = canvasW;
       canvas.height = canvasH;
@@ -4741,18 +4745,18 @@
 
       const title = hits.map(h => sanitizeSacredNames(h.term)).join(' + ');
       ctx.fillStyle = '#8bb8e8';
-      ctx.font = 'bold 14px sans-serif';
+      ctx.font = 'bold 13px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(title, canvasW / 2, 25);
+      ctx.fillText(title, canvasW / 2, 22);
 
       const termColors = ['#ffc107','#00bcd4','#ff5722','#4caf50','#e91e63','#3f51b5','#795548','#607d8b'];
-      const darkText = new Set([0, 1]); // indices needing dark text
-      ctx.font = '14px Courier New';
+      const darkText = new Set([0, 1]);
+      ctx.font = '12px Courier New';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const matrixX = Math.floor((canvasW - width * cellSize) / 2);
 
-      for (let row = startRow; row <= endRow; row++) {
+      for (let row = startRow; row <= actualEndRow; row++) {
         const rowStart = row * width;
         if (rowStart < 0) continue;
         for (let col = 0; col < width; col++) {
