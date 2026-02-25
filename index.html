@@ -2506,6 +2506,7 @@
     let scanActiveWorker = null;     // Web Worker for scan
     let scanAllResults = {};  // { term: [{pos, skip}, ...] }
     let scanTerms = [];
+    let scanTermAlts = {};   // primary -> [all alternate forms] for report display
     let scanClusters = [];
     let currentSelectedClusterIdx = 0;
     let clusterPermRunning = false;
@@ -2698,6 +2699,7 @@
       permSpanDistribution = null;
       verseTextCache.clear();
       scanTerms = terms;
+      scanTermAlts = termAlts;
       for (const term of terms) scanAllResults[term] = [];
 
       // Reset batch term statuses if batch is active
@@ -4702,41 +4704,50 @@
 
     // Helper: render a specific cluster's matrix to canvas and return data URL
     function renderClusterToCanvas(hits) {
-      // Render each term as its own labeled row showing the ELS letters in sequence
-      // This is compact, always readable, and works for any skip values
+      // Proper grid matrix centered on the cluster region
+      // Grid width = median |skip| across all terms (so ~half the terms align vertically)
       if (!torahText) return null;
 
       const termColors = ['#ffc107','#00bcd4','#ff5722','#4caf50','#e91e63','#3f51b5','#795548','#607d8b'];
       const darkText = new Set([0, 1]);
-      const cellSize = 28;
-      const labelWidth = 160;
-      const headerHeight = 36;
-      const rowHeight = cellSize + 4;
-      const contextCells = 3; // letters before and after the term
 
-      // Compute layout: one row per hit, each showing [context] TERM [context]
-      const rowData = [];
+      // Collect all highlighted positions + build posMap
+      const posMap = new Map();
+      const allPositions = [];
       for (const h of hits) {
-        const termLen = h.term.length;
-        const startPos = h.pos - contextCells * (h.skip > 0 ? h.skip : -h.skip);
-        const totalLetters = contextCells + termLen + contextCells;
-        const cells = [];
-        for (let i = -contextCells; i < termLen + contextCells; i++) {
+        for (let i = 0; i < h.term.length; i++) {
           const p = h.pos + i * h.skip;
-          if (p < 0 || p >= torahText.length) {
-            cells.push({ ch: '', highlight: false });
-          } else {
-            cells.push({ ch: torahText[p], highlight: i >= 0 && i < termLen, pos: p });
-          }
+          allPositions.push(p);
+          if (!posMap.has(p)) posMap.set(p, new Set());
+          posMap.get(p).add(h.termIdx);
         }
-        const verse = getVerseForPosition(h.pos) || '';
-        const label = `${sanitizeSacredNames(h.term)} (skip ${h.skip})`;
-        rowData.push({ cells, label, termIdx: h.termIdx, verse });
       }
 
-      const maxCells = Math.max(...rowData.map(r => r.cells.length));
-      const canvasW = labelWidth + maxCells * cellSize + 30;
-      const canvasH = headerHeight + rowData.length * rowHeight + 20;
+      // Grid width = median |skip| (so roughly half the terms appear as vertical columns)
+      const skips = hits.map(h => Math.abs(h.skip)).filter(s => s >= 2).sort((a, b) => a - b);
+      let width;
+      if (skips.length > 0) {
+        width = skips[Math.floor(skips.length / 2)]; // median
+        width = Math.max(20, Math.min(width, 80)); // clamp 20..80
+      } else {
+        width = 40;
+      }
+
+      const minPos = Math.min(...allPositions);
+      const maxPos = Math.max(...allPositions);
+      const padding = 2;
+      const startRow = Math.max(0, Math.floor(minPos / width) - padding);
+      const endRow = Math.floor(maxPos / width) + padding;
+      const totalRows = endRow - startRow + 1;
+      const maxRows = 50;
+      const rows = Math.min(totalRows, maxRows);
+      const actualEndRow = startRow + rows - 1;
+
+      const cellSize = 16;
+      const headerHeight = 32;
+      const legendHeight = hits.length * 16 + 8;
+      const canvasW = Math.max(width * cellSize + 40, 300);
+      const canvasH = headerHeight + rows * cellSize + legendHeight + 20;
       const canvas = document.createElement('canvas');
       canvas.width = canvasW;
       canvas.height = canvasH;
@@ -4747,50 +4758,57 @@
       ctx.fillRect(0, 0, canvasW, canvasH);
 
       // Title
-      const title = hits.map(h => sanitizeSacredNames(h.term)).join(' + ');
+      const title = hits.map(h => sanitizeSacredNames(h.term)).join(' + ') + `  (width=${width})`;
       ctx.fillStyle = '#8bb8e8';
-      ctx.font = 'bold 14px sans-serif';
+      ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(title, canvasW / 2, 22);
+      ctx.fillText(title, canvasW / 2, 18);
 
-      // Draw rows
+      // Draw grid
+      ctx.font = `${Math.min(cellSize - 2, 14)}px Courier New`;
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      for (let r = 0; r < rowData.length; r++) {
-        const rd = rowData[r];
-        const y = headerHeight + r * rowHeight;
-        const color = termColors[rd.termIdx % 8];
+      const matrixX = Math.floor((canvasW - width * cellSize) / 2);
 
-        // Label
-        ctx.fillStyle = color;
-        ctx.font = 'bold 13px sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(rd.label, labelWidth - 8, y + cellSize / 2);
-
-        // Cells
-        ctx.font = '16px Courier New';
-        ctx.textAlign = 'center';
-        for (let c = 0; c < rd.cells.length; c++) {
-          const cell = rd.cells[c];
-          const cx = labelWidth + c * cellSize;
-          if (cell.highlight) {
-            ctx.fillStyle = color;
-            ctx.fillRect(cx, y, cellSize - 1, cellSize - 1);
-            ctx.fillStyle = darkText.has(rd.termIdx % 8) ? '#000' : '#fff';
-          } else {
-            ctx.fillStyle = '#2d2d44';
-            ctx.fillRect(cx, y, cellSize - 1, cellSize - 1);
-            ctx.fillStyle = '#888';
+      for (let row = startRow; row <= actualEndRow; row++) {
+        const rowStart = row * width;
+        if (rowStart < 0) continue;
+        for (let col = 0; col < width; col++) {
+          const pos = rowStart + col;
+          if (pos >= torahText.length) break;
+          const x = matrixX + col * cellSize;
+          const y = headerHeight + (row - startRow) * cellSize;
+          const termSet = posMap.get(pos);
+          let bg = '#2d2d44', fg = '#555';
+          if (termSet) {
+            if (termSet.size > 1) {
+              bg = '#9c27b0'; fg = '#fff';
+            } else {
+              const idx = termSet.values().next().value;
+              bg = termColors[idx % 8];
+              fg = darkText.has(idx % 8) ? '#000' : '#fff';
+            }
           }
-          if (cell.ch) ctx.fillText(cell.ch, cx + cellSize / 2, y + cellSize / 2);
+          ctx.fillStyle = bg;
+          ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+          ctx.fillStyle = fg;
+          ctx.fillText(torahText[pos], x + cellSize / 2, y + cellSize / 2);
         }
+      }
 
-        // Verse reference
-        if (rd.verse) {
-          ctx.fillStyle = '#667';
-          ctx.font = '10px sans-serif';
-          ctx.textAlign = 'left';
-          ctx.fillText(rd.verse, labelWidth + rd.cells.length * cellSize + 4, y + cellSize / 2);
-        }
+      // Legend below matrix
+      const legendY = headerHeight + rows * cellSize + 8;
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      for (let i = 0; i < hits.length; i++) {
+        const h = hits[i];
+        const color = termColors[h.termIdx % 8];
+        const ly = legendY + i * 16;
+        ctx.fillStyle = color;
+        ctx.fillRect(canvasW - 200, ly, 10, 10);
+        ctx.fillStyle = '#ccc';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${sanitizeSacredNames(h.term)} (skip ${h.skip})`, canvasW - 185, ly + 6);
       }
 
       return canvas.toDataURL('image/png');
@@ -4849,19 +4867,26 @@
       // --- Part 1: Overall Results Summary ---
       let overallHTML = '';
 
-      // Search metadata
+      // Search metadata — show alternates
+      const termsWithAlts = scanTerms.map(t => {
+        const alts = scanTermAlts[t];
+        if (alts && alts.length > 1) return alts.map(a => sanitizeForExport(a)).join(' / ');
+        return sanitizeForExport(t);
+      });
       overallHTML += `<h3>Search Parameters</h3>`;
       overallHTML += `<table class="rpt-table"><tbody>`;
-      overallHTML += `<tr><td><strong>Terms</strong></td><td>${scanTerms.map(t => sanitizeForExport(t)).join(', ')}</td></tr>`;
+      overallHTML += `<tr><td><strong>Terms</strong></td><td>${termsWithAlts.join(', ')}</td></tr>`;
       overallHTML += `<tr><td><strong>Skip Range</strong></td><td>${minSkip} to ${maxSkip}</td></tr>`;
       overallHTML += `<tr><td><strong>Total Clusters</strong></td><td>${scanClusters.length.toLocaleString()}</td></tr>`;
       overallHTML += `</tbody></table>`;
 
-      // Hits per term
-      overallHTML += `<h3>Hits per Term</h3><table class="rpt-table"><thead><tr><th>Term</th><th>Hits</th></tr></thead><tbody>`;
+      // Hits per term — show alternates
+      overallHTML += `<h3>Hits per Term</h3><table class="rpt-table"><thead><tr><th>Term</th><th>Alternate Spellings</th><th>Hits</th></tr></thead><tbody>`;
       for (const t of scanTerms) {
         const count = (scanAllResults[t] || []).length;
-        overallHTML += `<tr><td>${sanitizeForExport(t)}</td><td>${count.toLocaleString()}</td></tr>`;
+        const alts = scanTermAlts[t];
+        const altStr = (alts && alts.length > 1) ? alts.filter(a => a !== t).map(a => sanitizeForExport(a)).join(', ') : '—';
+        overallHTML += `<tr><td>${sanitizeForExport(t)}</td><td style="font-size:13px;color:#666;">${altStr}</td><td>${count.toLocaleString()}</td></tr>`;
       }
       overallHTML += `</tbody></table>`;
 
@@ -4936,14 +4961,19 @@
         detailHTML += `<tr><td><strong>Shared Letters</strong></td><td>${sharedCount}</td></tr>`;
         detailHTML += `</tbody></table>`;
 
-        // Terms table
+        // Terms table — show primary + matched form if different
         detailHTML += `<h3>Search Terms</h3>`;
         detailHTML += `<table class="rpt-table"><thead><tr><th>Term</th><th>Position</th><th>Skip</th><th>Verses</th></tr></thead><tbody>`;
         for (const h of cluster.hits) {
           const color = TERM_COLORS[h.termIdx % 8];
           const verses = getVersesForHit(h.pos, h.skip, h.term.length);
+          const primary = scanTerms[h.termIdx];
+          const isAlt = primary && h.term !== primary;
+          const termDisplay = isAlt
+            ? `${sanitizeForExport(h.term)} <span style="font-size:12px;color:#999;font-weight:normal;">(alt of ${sanitizeForExport(primary)})</span>`
+            : sanitizeForExport(h.term);
           detailHTML += `<tr>
-            <td style="font-weight:bold;color:${color};font-size:16px;">${sanitizeForExport(h.term)}</td>
+            <td style="font-weight:bold;color:${color};font-size:16px;">${termDisplay}</td>
             <td>${h.pos.toLocaleString()}</td>
             <td>${h.skip}</td>
             <td>${verses.join(', ')}</td>
@@ -5251,7 +5281,8 @@ ${detailHTML}
         selectedClusterIdx: currentSelectedClusterIdx,
         discoveredResults: expDiscovered.length > 0 ? expDiscovered : undefined,
         discoveredClusterIdx: expDiscovered.length > 0 ? discoveredClusterIdx : undefined,
-        hitCounts
+        hitCounts,
+        termAlts: Object.keys(scanTermAlts).length > 0 ? scanTermAlts : undefined
       };
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -5287,6 +5318,7 @@ ${detailHTML}
         clusterPValues = data.clusterPValues || [];
         clusterSortMode = data.clusterSortMode || 'span';
         currentSelectedClusterIdx = data.selectedClusterIdx || 0;
+        scanTermAlts = data.termAlts || {};
 
         // Restore discovered results
         if (data.discoveredResults) {
