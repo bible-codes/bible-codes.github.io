@@ -4702,13 +4702,83 @@
 
     // Helper: render a specific cluster's matrix to canvas and return data URL
     function renderClusterToCanvas(hits) {
-      // Temporarily render this cluster's matrix into the DOM grid
-      const savedHits = current3DHits;
-      renderScanMatrix(hits);
-      const dataURL = getMatrixPNGDataURL();
-      // Restore previous hits in DOM
-      if (savedHits) renderScanMatrix(savedHits);
-      return dataURL;
+      // Direct canvas render — no DOM manipulation, much faster for batch reports
+      if (!torahText) return null;
+      const width = Math.max(...hits.map(h => Math.abs(h.skip)), 30);
+
+      const allPositions = [];
+      for (const h of hits) {
+        for (let i = 0; i < h.term.length; i++) allPositions.push(h.pos + i * h.skip);
+      }
+      const minPos = Math.min(...allPositions);
+      const maxPos = Math.max(...allPositions);
+      const padding = 3;
+      const startRow = Math.max(0, Math.floor(minPos / width) - padding);
+      const endRow = Math.floor(maxPos / width) + padding;
+      const rows = endRow - startRow + 1;
+
+      // Build posMap
+      const posMap = new Map();
+      for (const h of hits) {
+        for (let i = 0; i < h.term.length; i++) {
+          const p = h.pos + i * h.skip;
+          if (!posMap.has(p)) posMap.set(p, new Set());
+          posMap.get(p).add(h.termIdx);
+        }
+      }
+
+      const cellSize = 22;
+      const headerHeight = 40;
+      const canvasW = Math.max(width * cellSize + 60, 400);
+      const canvasH = headerHeight + rows * cellSize + 30;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#1a1a28';
+      ctx.fillRect(0, 0, canvasW, canvasH);
+
+      const title = hits.map(h => sanitizeSacredNames(h.term)).join(' + ');
+      ctx.fillStyle = '#8bb8e8';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, canvasW / 2, 25);
+
+      const termColors = ['#ffc107','#00bcd4','#ff5722','#4caf50','#e91e63','#3f51b5','#795548','#607d8b'];
+      const darkText = new Set([0, 1]); // indices needing dark text
+      ctx.font = '14px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const matrixX = Math.floor((canvasW - width * cellSize) / 2);
+
+      for (let row = startRow; row <= endRow; row++) {
+        const rowStart = row * width;
+        if (rowStart < 0) continue;
+        for (let col = 0; col < width; col++) {
+          const pos = rowStart + col;
+          if (pos >= torahText.length) break;
+          const x = matrixX + col * cellSize;
+          const y = headerHeight + (row - startRow) * cellSize;
+          const termSet = posMap.get(pos);
+          let bg = '#2d2d44', fg = '#e0e0e0';
+          if (termSet) {
+            if (termSet.size > 1) {
+              bg = '#9c27b0'; fg = '#fff';
+            } else {
+              const idx = termSet.values().next().value;
+              bg = termColors[idx % 8];
+              fg = darkText.has(idx % 8) ? '#000' : '#fff';
+            }
+          }
+          ctx.fillStyle = bg;
+          ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
+          ctx.fillStyle = fg;
+          ctx.fillText(torahText[pos], x + cellSize / 2, y + cellSize / 2);
+        }
+      }
+
+      return canvas.toDataURL('image/png');
     }
 
     // Helper: get 3D screenshot if active
@@ -4993,16 +5063,19 @@ ${detailHTML}
         return;
       }
 
-      // Warn if p-values not computed
-      if (clusterPValues.length === 0) {
-        if (!confirm('P-values not yet computed. Generate report without them?\n\nTip: Click "Significance Test" first for a more complete report.')) return;
-      }
-
       const statusEl = document.getElementById('scanStatus');
       const progressDiv = document.getElementById('scanProgress');
       const progressBar = document.getElementById('scanProgressBar');
       const reportBtn = document.getElementById('scanReportBtn');
       if (reportBtn) { reportBtn.disabled = true; reportBtn.textContent = 'Generating...'; }
+
+      // Auto-run significance test if not yet computed
+      if (clusterPValues.length === 0 && scanTerms.length >= 2) {
+        if (statusEl) statusEl.textContent = 'Running significance test first...';
+        if (progressDiv) progressDiv.style.display = '';
+        if (progressBar) { progressBar.style.width = '0%'; progressBar.textContent = '0%'; }
+        await runClusterPermTest();
+      }
 
       // Show progress bar
       if (progressDiv) progressDiv.style.display = '';
