@@ -4850,7 +4850,7 @@
       let overallHTML = '';
 
       // Search metadata
-      overallHTML += `<h2>Search Parameters</h2>`;
+      overallHTML += `<h3>Search Parameters</h3>`;
       overallHTML += `<table class="rpt-table"><tbody>`;
       overallHTML += `<tr><td><strong>Terms</strong></td><td>${scanTerms.map(t => sanitizeForExport(t)).join(', ')}</td></tr>`;
       overallHTML += `<tr><td><strong>Skip Range</strong></td><td>${minSkip} to ${maxSkip}</td></tr>`;
@@ -5024,6 +5024,45 @@
       // Restore the original matrix display
       if (savedHits) renderScanMatrix(savedHits);
 
+      // Build Table of Contents
+      let tocHTML = '<h2>Table of Contents</h2>';
+      tocHTML += '<div class="toc">';
+      tocHTML += '<div class="toc-item"><a href="#overall">1. Overall Results Summary</a></div>';
+      tocHTML += '<div class="toc-item" style="margin-right:16px;">Search parameters, hits per term, top 20 clusters by span</div>';
+      tocHTML += '<div class="toc-item" style="margin-top:10px;"><a href="#methodology">2. Cluster Selection Methodology</a></div>';
+      tocHTML += '<div class="toc-item" style="margin-right:16px;">How the featured clusters were chosen</div>';
+
+      // Add TOC entries for each detailed cluster
+      let tocNum = 0;
+      for (const [idx, categories] of clusterCategories) {
+        tocNum++;
+        const cluster = scanClusters[idx];
+        const rankLabels = categories.map(c => `#${c.rank} ${c.category}`).join(', ');
+        const terms = cluster.hits.map(h => sanitizeForExport(h.term)).join(' + ');
+        tocHTML += `<div class="toc-item" style="margin-top:6px;"><a href="#cluster${tocNum}">3.${tocNum}. Cluster #${tocNum}</a> — ${rankLabels}</div>`;
+        tocHTML += `<div class="toc-item" style="margin-right:16px;font-size:12px;color:#666;">Span: ${cluster.span.toLocaleString()} | Terms: ${terms}</div>`;
+      }
+      tocHTML += '</div>';
+
+      // Build methodology section
+      let methHTML = '<div class="page-break"></div>';
+      methHTML += '<h2 id="methodology">Cluster Selection Methodology</h2>';
+      methHTML += `<p style="line-height:1.7;">From a total of <strong>${scanClusters.length.toLocaleString()}</strong> clusters found, `;
+      methHTML += `this report features <strong>${clusterCategories.size}</strong> unique clusters selected as the top 3 from each of 4 ranking categories, deduplicated:</p>`;
+      methHTML += '<table class="rpt-table"><thead><tr><th>Category</th><th>Criterion</th><th>Meaning</th></tr></thead><tbody>';
+      methHTML += '<tr><td><strong>Smallest Span</strong></td><td>Minimum character distance from first to last hit</td><td>The most tightly packed clusters — all search terms found within the smallest region of text</td></tr>';
+      methHTML += '<tr><td><strong>Best P-value</strong></td><td>Lowest probability under null hypothesis</td><td>Statistically least likely to occur by chance (via Monte Carlo permutation test)</td></tr>';
+      methHTML += '<tr><td><strong>Min |Skip|</strong></td><td>Smallest absolute skip value among all terms</td><td>Clusters where at least one term appears at a very short ELS interval</td></tr>';
+      methHTML += '<tr><td><strong>Most Shared Letters</strong></td><td>Most positions where 2+ terms share the same letter</td><td>Clusters with the highest degree of letter overlap between different search terms</td></tr>';
+      methHTML += '</tbody></table>';
+      methHTML += '<p style="line-height:1.7;margin-top:12px;">Top 3 from each category yields up to 12 clusters. When a cluster ranks in multiple categories, it appears once with all its rank badges. ';
+      methHTML += 'Each cluster detail section includes an ELS sequence visualization, term positions, shared letters, and the full Hebrew verse texts with English summaries.</p>';
+
+      // Update detail anchors
+      detailHTML = detailHTML.replace(/<h2>Cluster Detail #(\d+)<\/h2>/g, (m, n) =>
+        `<h2 id="cluster${n}">Cluster Detail #${n}</h2>`
+      );
+
       return `<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -5044,7 +5083,12 @@
   .rank-badges { margin: 8px 0 12px; }
   .rank-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; border-radius: 12px; padding: 3px 10px; font-size: 12px; font-weight: 600; margin-left: 6px; }
   .verse-block { padding: 6px 10px; margin: 4px 0; background: #f5f5f5; border-radius: 4px; border-right: 3px solid #1e5aa8; }
+  .toc { margin: 12px 0 20px; }
+  .toc-item { line-height: 1.8; font-size: 14px; }
+  .toc-item a { color: #1e5aa8; text-decoration: none; font-weight: 600; }
+  .toc-item a:hover { text-decoration: underline; }
   .page-break { page-break-before: always; }
+  @page { margin: 2cm; @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 10pt; color: #888; } }
   @media print {
     body { margin: 0; padding: 10px; font-size: 11pt; }
     .no-print { display: none; }
@@ -5059,7 +5103,13 @@
 <h1>ELS Full Report</h1>
 <div class="meta">Generated: ${now} &nbsp;|&nbsp; Skip range: ${minSkip} to ${maxSkip} &nbsp;|&nbsp; bible-codes.github.io</div>
 
+${tocHTML}
+
+<div class="page-break"></div>
+<h2 id="overall">1. Overall Results Summary</h2>
 ${overallHTML}
+
+${methHTML}
 
 ${detailHTML}
 
