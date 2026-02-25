@@ -3698,7 +3698,7 @@
         }
       }
 
-      resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching...</div>';
+      resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching nearby terms (this may take a moment)...</div>';
       statusSpan.textContent = 'Searching...';
 
       try {
@@ -4996,39 +4996,24 @@ ${detailHTML}
 
       // Build the set of cluster indices that will appear in the report
       const reportClusterIndices = getReportClusterIndices();
-      const total = reportClusterIndices.size;
 
-      // Auto-discover terms for each report cluster
+      // Include discovered terms only if user already ran Discover for a report cluster
       const clusterDiscoveries = new Map(); // clusterIdx → discovered[]
-      if (elsService) {
-        let done = 0;
-        for (const idx of reportClusterIndices) {
-          done++;
-          const pct = Math.round((done / (total + 1)) * 100);
-          if (progressBar) { progressBar.style.width = pct + '%'; progressBar.textContent = pct + '%'; }
-          if (statusEl) statusEl.textContent = `Discovering terms for cluster ${done}/${total}...`;
-          await new Promise(r => setTimeout(r, 20));
-
-          // Use existing results if this is the cluster that was already discovered
-          if (idx === discoveredClusterIdx && discoveredResults.length > 0) {
-            clusterDiscoveries.set(idx, discoveredResults);
-          } else {
-            try {
-              const disc = await discoverForHits(scanClusters[idx].hits);
-              if (disc.length > 0) clusterDiscoveries.set(idx, disc);
-            } catch (e) {
-              console.warn(`Discovery failed for cluster ${idx}:`, e.message);
-            }
-          }
-        }
+      try {
+      if (discoveredResults.length > 0 && discoveredClusterIdx >= 0 && reportClusterIndices.has(discoveredClusterIdx)) {
+        clusterDiscoveries.set(discoveredClusterIdx, discoveredResults);
       }
 
-      // Final step: building report
-      if (progressBar) { progressBar.style.width = '95%'; progressBar.textContent = '95%'; }
-      if (statusEl) statusEl.textContent = 'Building report...';
+      // Building report
+      if (progressBar) { progressBar.style.width = '50%'; progressBar.textContent = '50%'; }
+      if (statusEl) statusEl.textContent = 'Rendering cluster matrices...';
       await new Promise(r => setTimeout(r, 20));
 
       const html = buildFullReportHTML(clusterDiscoveries);
+
+      if (progressBar) { progressBar.style.width = '95%'; progressBar.textContent = '95%'; }
+      if (statusEl) statusEl.textContent = 'Opening report...';
+      await new Promise(r => setTimeout(r, 20));
 
       // Complete progress
       if (progressBar) { progressBar.style.width = '100%'; progressBar.textContent = '100%'; }
@@ -5036,8 +5021,6 @@ ${detailHTML}
       const win = window.open('', '_blank');
       if (!win) {
         alert('Pop-up blocked. Please allow pop-ups for this site.');
-        if (progressDiv) progressDiv.style.display = 'none';
-        if (reportBtn) { reportBtn.disabled = false; reportBtn.textContent = 'PDF Report'; }
         return;
       }
       win.document.write(html);
@@ -5045,13 +5028,16 @@ ${detailHTML}
       win.focus();
       setTimeout(() => win.print(), 600);
 
-      // Hide progress, restore button
-      if (progressDiv) setTimeout(() => { progressDiv.style.display = 'none'; }, 1000);
-      if (reportBtn) { reportBtn.disabled = false; reportBtn.textContent = 'PDF Report'; }
       if (statusEl) statusEl.textContent = `Report generated — ${clusterDiscoveries.size} clusters with discovered terms.`;
 
       // Also export session JSON
       exportFullSession();
+
+      } finally {
+        // Always restore button and hide progress
+        if (progressDiv) setTimeout(() => { progressDiv.style.display = 'none'; }, 1000);
+        if (reportBtn) { reportBtn.disabled = false; reportBtn.textContent = 'PDF Report'; }
+      }
     };
 
     // ============= FULL SESSION EXPORT =============

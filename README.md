@@ -331,7 +331,7 @@ Pre-computed semantic summaries for every Torah verse, displayed alongside ELS r
 
 **Verse Context Panel**: A collapsible panel below the matrix legend consolidates all verses in a cluster into a "spiritual fingerprint" — showing subjects, sentiment, and themes for each verse.
 
-**Data**: Pre-computed `data/verse-summaries.json.gz` (~300-500 KB). Built via `tools/build-verse-summaries.py` using Claude API, or can be regenerated with custom summaries. Graceful degradation — the app works normally without this file.
+**Data**: Pre-computed `data/verse-summaries.json.gz` (~300-500 KB). Summaries generated from JPS English translations courtesy of [Mechon Mamre](https://mechon-mamre.org/). Can be regenerated via `tools/build-verse-summaries.py`. Graceful degradation — the app works normally without this file.
 
 #### 3.1.10 URL API
 
@@ -650,9 +650,9 @@ This data is loaded lazily on first scan and covers all five Torah books (Genesi
 The Verse Semantic Context system adds a pre-computed narrative layer on top of positional ELS data. It transforms raw "position → verse reference" mappings into meaningful descriptions of what each verse is about.
 
 **Data pipeline**:
-1. All 39 `data/*-verses.json.gz` files provide the raw verse data (consonantal text, book/chapter/verse numbers)
-2. `tools/build-verse-summaries.py` sends chapter-sized batches to Claude API (Haiku for cost: ~$4 for all 23,206 Tanakh verses)
-3. Each verse gets a structured summary: `{s: "summary", who: ["subjects"], feel: "sentiment", t: ["themes"]}`
+1. JPS English translations fetched from [Mechon Mamre](https://mechon-mamre.org/p/pt/pt0.htm) (1917 Jewish Publication Society translation)
+2. Each verse gets a unique structured summary derived from its English text: `{s: "summary", who: ["subjects"], feel: "sentiment", t: ["themes"]}`
+3. `tools/build-verse-summaries.py` can also generate summaries via Claude API for full Tanakh coverage
 4. Output compressed to `data/verse-summaries.json.gz` (~300-500 KB)
 
 **Runtime loading**: The summary database is lazy-loaded alongside the character database when a scan starts. Both are fetched and decompressed in parallel using `DecompressionStream('gzip')`. If the summary file is unavailable, all UI components gracefully degrade — they simply omit the summary lines.
@@ -1542,6 +1542,7 @@ Consolidated content from all Bible-codes-related repositories into this single 
 ### Data Sources
 
 - **Torah Text**: Koren Edition (304,805 letters, verified against Rips et al.)
+- **Verse Summaries**: Per-verse semantic data (summary, subjects, sentiment, themes) generated using JPS English translations from [Mechon Mamre](https://mechon-mamre.org/p/pt/pt0.htm)
 - **BDB Dictionary**: Open Scriptures Project
 - **Hebrew Wiktionary**: Community-sourced, XML dump
 - **Strong's Concordance**: Open-source concordance data
@@ -1557,6 +1558,8 @@ All content from these repositories has been consolidated into this one:
 - [roni762583/heb_wiki_words](https://github.com/roni762583/heb_wiki_words) — Hebrew word extraction script
 
 ### Attribution
+
+**Mechon Mamre** — The verse-level semantic summaries (Verse Context Analysis panel) use English translations from [Mechon Mamre's Hebrew-English Tanakh](https://mechon-mamre.org/p/pt/pt0.htm), based on the 1917 JPS (Jewish Publication Society) translation. Mechon Mamre provides free online access to the Hebrew Bible text with vowels, cantillation marks, and parallel English translation. We gratefully acknowledge their contribution to making Torah texts accessible. Visit [mechon-mamre.org](https://mechon-mamre.org/).
 
 The `torah-codes/` directory is a fork of the **TorahBibleCodes** project by [@TorahBibleCodes](https://github.com/TorahBibleCodes). The original project provides a Python-based ELS search engine for Hebrew biblical texts. Our fork adds multi-term proximity analysis, advanced visualization, and final-form normalization. Full credit to the original author for the core ELS search framework.
 
