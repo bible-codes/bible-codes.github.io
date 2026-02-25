@@ -4,8 +4,8 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
 
 **Live Site**: [bible-codes.github.io](https://bible-codes.github.io/)
 
-**Version**: 4.8
-**Last Updated**: February 22, 2026
+**Version**: 4.9
+**Last Updated**: February 24, 2026
 **Status**: Production (11 active tools, 3 pending)
 
 ---
@@ -31,7 +31,9 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
      - 3.1.7 [Cluster Significance Test](#317-cluster-significance-test)
      - 3.1.8 [Discover Terms](#318-discover-terms)
      - 3.1.9 [Verse Semantic Context](#319-verse-semantic-context)
-     - 3.1.10 [URL API](#3110-url-api)
+     - 3.1.10 [PDF Full Report](#3110-pdf-full-report)
+     - 3.1.11 [Session Export/Import](#3111-session-exportimport)
+     - 3.1.12 [URL API](#3112-url-api)
    - 3.2 [WRR 1994 Experiment](#32-wrr-1994-experiment)
    - 3.3 [Text Search](#33-text-search)
    - 3.4 [Gematria Calculator](#34-gematria-calculator)
@@ -224,8 +226,10 @@ The main tool. It searches for Equidistant Letter Sequences in the Torah — pat
 
 **Additional features**:
 - **Session save/load**: Save your terms and results to the browser for later.
-- **JSON export**: Download all results and clusters as structured data.
+- **Full session export/import**: Export complete session state (terms, results, clusters, p-values, discoveries) as JSON. Import to fully restore any saved session.
+- **PDF Full Report**: Comprehensive printable report with overall results summary, deduped top clusters from 4 sort categories, matrix images, verse texts, and discovered terms.
 - **PNG export**: Download the matrix as an image.
+- **Selected cluster highlight**: Active cluster highlighted with black border in the cluster list.
 
 #### 3.1.2 Index Lookup Mode
 
@@ -333,7 +337,43 @@ Pre-computed semantic summaries for every Torah verse, displayed alongside ELS r
 
 **Data**: Pre-computed `data/verse-summaries.json.gz` (~300-500 KB). Summaries generated from JPS English translations courtesy of [Mechon Mamre](https://mechon-mamre.org/). Can be regenerated via `tools/build-verse-summaries.py`. Graceful degradation — the app works normally without this file.
 
-#### 3.1.10 URL API
+#### 3.1.10 PDF Full Report
+
+Generate a comprehensive printable report from scan results. Click the **PDF Report** button (blue, next to Search) after running a multi-term scan.
+
+**Report contents**:
+1. **Overall Summary**: Search parameters, date/time, hits per term, top 20 clusters table with span, p-value, min |skip|, and shared letter counts
+2. **Detailed Cluster Reports**: Top 3 clusters from each of 4 sort categories (Span, P-value, Min |Skip|, Shared Letters), deduplicated into unique reports. Each includes:
+   - **Rank badges** showing which categories the cluster ranks in (e.g., "#1 Smallest Span, #2 Best P-value")
+   - 2D matrix PNG image
+   - Terms table with positions, skips, and verse references
+   - Cluster statistics (span, p-value, significance level, min |skip|, shared letters)
+   - Shared letter positions — which terms overlap and at what letter
+   - Full Hebrew verse texts with summary, sentiment, subjects, and themes
+   - Discovered terms (if user ran Discover for that cluster before generating report)
+3. **Page breaks** between sections for clean PDF printing
+
+**Workflow**: Opens report in new window with print dialog. Also auto-exports session JSON.
+
+**Tip**: Run the **Significance Test** first for p-values, and click **Discover Terms** on important clusters before generating the report.
+
+#### 3.1.11 Session Export/Import
+
+Save and restore complete scan sessions.
+
+**Export** (via "Export JSON" button):
+- Saves everything: terms, skip range, all results (position/skip/form per hit), clusters, p-values, sort mode, selected cluster, discovered results with definitions
+- Format: versioned JSON with `format: 'els-session'`
+- Sacred names sanitized in output
+
+**Import** (via "Import" button):
+- Load any previously exported JSON file
+- Restores full session state: terms, results, clusters, p-values, discoveries
+- Restores UI: textarea, skip range inputs, cluster list, matrix display
+- Auto-loads Torah text and character database if needed
+- Supports both old format (pre-v4.9) and new versioned format
+
+#### 3.1.12 URL API
 
 Run searches via URL parameters — useful for sharing links, bookmarking searches, or external automation.
 
@@ -1402,6 +1442,16 @@ python3 p.py
 ---
 
 ## 11. Changelog
+
+### February 24, 2026 (v4.9): PDF Report, Session Export/Import, Verse Summary Regeneration
+
+- **PDF Full Report**: Comprehensive printable report with overall results summary + deduped top clusters from 4 sort categories (Span, P-value, Min |Skip|, Shared Letters). Each cluster report includes 2D matrix PNG, terms table, shared letter positions, full Hebrew verse texts with summaries/sentiment, and discovered terms. Opens in new window with print dialog.
+- **Full Session JSON Export/Import**: Export saves complete session state (terms, results, clusters, p-values, sort mode, discoveries). Import restores full session from JSON, including UI state. Replaces old partial export. Import button added next to Export.
+- **Verse Context Panel Fix**: Verse references in the Verse Context Analysis panel are now hoverable (using `makeVerseSpans()`) and show full Hebrew verse text inline below each reference.
+- **Selected Cluster Highlight**: Active cluster in the cluster list has a black border + highlighted background for clear visual feedback.
+- **Verse Summaries Regenerated from JPS**: All 5,847 Torah verse summaries regenerated from JPS English translations ([Mechon Mamre](https://mechon-mamre.org/)). Previously 3,708 verses shared duplicate paragraph-level summaries; now all are unique per-verse. "LORD spoke unto Moses" verses include passage topic context. Census, offering, and tabernacle verses describe specific details per verse.
+- **Discover Terms Auto-Loads ELS Index**: Clicking Discover Terms now auto-loads the 32MB ELS index if not already initialized, instead of showing an error.
+- **Report/Discover Button Stability**: Report button no longer auto-discovers terms (which could hang); instead uses pre-discovered results if available. Both buttons properly reset on error via `try/finally`.
 
 ### February 22, 2026 (v4.8): WRR Paper Formula Corrections, Cluster Sort Enhancements, GoatCounter Analytics
 

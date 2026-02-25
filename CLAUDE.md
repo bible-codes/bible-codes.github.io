@@ -42,8 +42,10 @@ This file tracks:
   - **3D Matrix View**: Three.js WebGL renderer with auto-rotate, raycasting tooltips
   - **WRR 1994 Experiment** (complete): Full replication with dual σ/ω formulas, c(w,w') perturbation, P₁-P₄, permutation testing. Only open-source WRR statistical implementation in existence.
   - Default skip range: ±500
-  - **PDF Full Report**: Comprehensive report with overall summary + deduped top clusters from 4 sort categories, each with matrix PNG, shared letters, verse texts with semantic context
-  - **Full Session Export/Import**: Complete session JSON (terms, results, clusters, p-values, sort mode, discovered terms) with round-trip restore
+  - **PDF Full Report**: Comprehensive printable report with overall summary + deduped top clusters from 4 sort categories, each with matrix PNG, shared letters, verse texts with semantic context, discovered terms
+  - **Full Session Export/Import**: Complete session JSON (terms, results, clusters, p-values, sort mode, discovered terms) with round-trip restore. Import button restores full session state.
+  - **Selected Cluster Highlight**: Black border + highlighted background on active cluster
+  - **Verse Context Panel**: Hoverable verse references with inline Hebrew text, summaries from JPS English translations ([Mechon Mamre](https://mechon-mamre.org/))
   - Session save/load, JSON export, PNG matrix download
   - Service worker for offline caching, PWA support
 - **Hebrew Text Search** (`text-search.html`)
@@ -395,8 +397,10 @@ All engines run **100% client-side** with **no network dependency**. Heavy opera
 - Cluster sort modes: Span (default), P-value, Min |Skip|, Shared Letters First
 - Per-cluster badges: teal |skip|≥N, purple shared-letter count
 - Click cluster for N-term matrix with 8-color palette + purple overlap
-- **PDF Full Report**: Overall summary + deduped top 3 from 4 sort categories, matrix PNGs, shared letters, verse texts with summaries
-- **Full Session Export/Import**: Round-trip JSON with terms, results, clusters, p-values, sort mode, discovered terms
+- **PDF Full Report**: Overall summary + deduped top 3 from 4 sort categories, matrix PNGs, shared letters, verse texts with summaries/sentiment, discovered terms
+- **Full Session Export/Import**: Round-trip JSON with terms, results, clusters, p-values, sort mode, discovered terms. Import restores full session.
+- **Selected Cluster Highlight**: Black border on active cluster row
+- **Verse Context Panel**: Hoverable verse refs with inline Hebrew text, JPS-based summaries (Mechon Mamre)
 - Session save/load, JSON export, PNG matrix download
 - Cancel button for aborting long scans
 
@@ -916,7 +920,7 @@ This schema is **future-proof**:
 
 ---
 
-*Last Updated: 2026-02-24 - PDF Full Report, Session Export/Import, Verse Tooltip Fix*
+*Last Updated: 2026-02-24 - PDF Full Report, Session Export/Import, Verse Tooltip Fix, JPS Verse Summaries, Mechon Mamre Attribution*
 *Phase Status: 1-4 Complete (100%), Phase 5 (90%), Phase 5.5 Complete (100%)*
 *Active Tools: 11 user-facing tools operational*
 *Key Additions: WRR dual σ/ω formulas (paper's formula gives P=1.18), cluster sort by Min |Skip| & Shared Letters, GoatCounter analytics on all pages*

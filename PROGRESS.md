@@ -58,6 +58,50 @@ Comprehensive PDF report generation with overall results summary + detailed clus
 - Full Hebrew verse text shown inline below each verse reference via `getVerseTextByKey()`
 - Sacred names sanitized in verse text display
 
+### Selected Cluster Highlight ✅ COMPLETE
+
+- Active cluster in cluster list shows black border + `#fff8e1` background
+- `.cluster-row.selected` CSS class toggled in `showClusterMatrix()`
+- `data-cluster-idx` attribute on each cluster row for DOM targeting
+
+### Verse Summaries Regenerated from JPS ✅ COMPLETE
+
+**Problem**: 3,708 of 5,847 Torah verse summaries were duplicates (paragraph-level grouping from initial Claude Haiku generation). E.g., all census verses in Numbers 1 shared the same summary.
+
+**Solution**: Regenerated all duplicate summaries from actual JPS English translations fetched from [Mechon Mamre](https://mechon-mamre.org/p/pt/pt0.htm).
+
+**Process**:
+1. Script (`/tmp/generate-summaries.js`) fetches JPS English for each chapter from mechon-mamre.org
+2. HTML parser extracts per-verse English text from `<TR><TD class=h>Hebrew</TD><TD>English</TD></TR>` structure
+3. Summary generated from first clause of English text (~10-15 words)
+4. Sentiment (`feel`), subjects (`who`), themes (`t`) auto-extracted from English text via keyword matching
+5. Remaining duplicates (e.g., "LORD spoke unto Moses, saying" × 42) disambiguated with passage topic from next verse
+
+**Results**: 5,847 verses, 5,847 unique summaries, 0 duplicates
+
+**Files**: `data/verse-summaries.json.gz` (189KB compressed)
+
+### Report/Discover Button Stability Fixes ✅ COMPLETE
+
+- **Report button**: Removed auto-discovery loop that blocked UI for minutes. Now only includes already-discovered terms. Wrapped in `try/finally` so button always resets.
+- **Discover button**: Auto-loads 32MB ELS index if not initialized (was showing error). Better UX message during search.
+
+### Mechon Mamre Attribution ✅ COMPLETE
+
+Added credit for JPS English translations in README:
+- Data Sources section: verse summaries entry
+- Attribution section: full paragraph with link
+- Algorithm section: updated data pipeline description
+
+### Commits (7 total)
+1. `6436640` — PDF report, session export/import, verse tooltip fix
+2. `1a10db7` — Selected cluster highlight + discovered terms scoped
+3. `d587283` — Auto-discover terms for all report clusters, track discovery ownership
+4. `564cf4d` — Progress bar during PDF report generation
+5. `cc47648` — Auto-load ELS index for Discover, improve verse summary prompt
+6. `a2ddf00` — Fix Report/Discover button hanging, add Mechon Mamre credit
+7. `27155e4` — Regenerate verse summaries from JPS English translations
+
 ---
 
 ## Previous Session: 2026-02-22
