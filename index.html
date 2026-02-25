@@ -3469,8 +3469,17 @@
           }
         }
       });
-      if (cluster.hits.length > 1) {
-        legendHtml += `<div class="legend-item"><div class="legend-color" style="background:#9c27b0;"></div><span>Overlap</span></div>`;
+      // Show shared/overlap letter details
+      const sharedDetails = getSharedLetterDetails(cluster);
+      if (sharedDetails.length > 0) {
+        legendHtml += `<div class="legend-item"><div class="legend-color" style="background:#9c27b0;"></div><span>Overlap (${sharedDetails.length} shared letter${sharedDetails.length > 1 ? 's' : ''})</span></div>`;
+        for (const sd of sharedDetails) {
+          const verseRef = getVerseForPosition(sd.pos) || `pos ${sd.pos}`;
+          const termNames = sd.terms.map(t => `<span style="color:${TERM_COLORS[t.termIdx % TERM_COLORS.length]};">${sanitizeSacredNames(t.term)}</span>`).join(' &amp; ');
+          legendHtml += `<div style="margin-right:26px;font-size:12px;color:#ce93d8;padding:1px 0;">` +
+            `<span style="font-family:serif;font-size:14px;font-weight:bold;">${sd.letter}</span> ` +
+            `at ${verseRef} — shared by ${termNames}</div>`;
+        }
       }
       document.getElementById('scanMatrixLegend').innerHTML = legendHtml;
       // Update verse context panel
@@ -4747,7 +4756,7 @@
     }
 
     // Build full report HTML with overall + deduped top clusters from 4 sort categories
-    function buildFullReportHTML(clusterDiscoveries) {
+    async function buildFullReportHTML(clusterDiscoveries, onProgress) {
       const minSkip = document.getElementById('minSkip')?.value || '-500';
       const maxSkip = document.getElementById('maxSkip')?.value || '500';
       const now = new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
@@ -4803,10 +4812,15 @@
       const savedHits = current3DHits;
       let clusterNum = 0;
 
+      const totalClusters = clusterCategories.size;
       for (const [idx, categories] of clusterCategories) {
         clusterNum++;
         const cluster = scanClusters[idx];
         const rankLabel = categories.map(c => `#${c.rank} ${c.category}`).join(', ');
+
+        // Report progress for each cluster
+        if (onProgress) onProgress(clusterNum, totalClusters);
+        await new Promise(r => setTimeout(r, 10));
 
         detailHTML += `<div class="page-break"></div>`;
         detailHTML += `<h2>Cluster Detail #${clusterNum}</h2>`;
@@ -5004,12 +5018,16 @@ ${detailHTML}
         clusterDiscoveries.set(discoveredClusterIdx, discoveredResults);
       }
 
-      // Building report
-      if (progressBar) { progressBar.style.width = '50%'; progressBar.textContent = '50%'; }
+      // Building report with per-cluster progress
+      if (progressBar) { progressBar.style.width = '10%'; progressBar.textContent = '10%'; }
       if (statusEl) statusEl.textContent = 'Rendering cluster matrices...';
       await new Promise(r => setTimeout(r, 20));
 
-      const html = buildFullReportHTML(clusterDiscoveries);
+      const html = await buildFullReportHTML(clusterDiscoveries, (current, total) => {
+        const pct = Math.round(10 + (current / total) * 85);
+        if (progressBar) { progressBar.style.width = pct + '%'; progressBar.textContent = pct + '%'; }
+        if (statusEl) statusEl.textContent = `Rendering cluster ${current}/${total}...`;
+      });
 
       if (progressBar) { progressBar.style.width = '95%'; progressBar.textContent = '95%'; }
       if (statusEl) statusEl.textContent = 'Opening report...';
