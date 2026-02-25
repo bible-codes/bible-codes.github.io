@@ -1253,7 +1253,6 @@
               <button class="btn-3d-ctrl" id="btn3DReset" onclick="reset3DCamera()" style="display:none;">Reset Camera</button>
               <button class="btn btn-small" onclick="downloadMatrixPNG()" style="background:#666;">PNG</button>
               <button class="btn btn-small" onclick="exportMatrixJSON()" style="background:#555;">JSON</button>
-              <button class="btn btn-small" onclick="downloadReportHTML()" style="background:#1565c0;">Report</button>
               <button class="btn btn-small" id="btnDiscoverTerms" onclick="discoverMatrixTerms()" style="background:#2e7d32;" title="Find all dictionary-validated ELS terms in this matrix region">Discover</button>
               <span style="display:inline-flex;gap:6px;align-items:center;font-size:11px;color:#ddd;">
                 <label style="cursor:pointer;color:#ddd;" title="Show all dictionary terms"><input type="checkbox" id="discFilterAll" checked onchange="applyDiscoverFilter()"> All</label>
@@ -1314,6 +1313,9 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <h4 style="margin:0;font-size:14px;color:#000;">Discovered ELS Terms in Matrix Region</h4>
               <span id="discoverTermsStatus" style="font-size:12px;color:#444;"></span>
+            </div>
+            <div class="batch-progress" id="discoverProgress" style="display:none;">
+              <div class="batch-progress-bar" id="discoverProgressBar" style="width:0%;">0%</div>
             </div>
             <div id="discoverTermsResults" style="max-height:500px;overflow-y:auto;"></div>
           </div>
@@ -2998,6 +3000,8 @@
         }
       }
 
+      // Assign stable IDs (persist across re-sorts)
+      deduped.forEach((c, i) => { c.id = i + 1; });
       return deduped;
     }
 
@@ -3181,6 +3185,7 @@
         const c = scanClusters[idx];
         html += `<div class="cluster-row${idx === currentSelectedClusterIdx ? ' selected' : ''}" data-cluster-idx="${idx}" onclick="showClusterMatrix(${idx})">`;
         html += `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">`;
+        html += `<span style="font-size:13px;font-weight:bold;color:#1565c0;margin-right:2px;">#${c.id}</span>`;
         html += `<span class="cluster-span">${c.span.toLocaleString()} chars</span>`;
         // Min |skip| badge
         const minSkip = Math.min(...c.hits.map(h => Math.abs(h.skip)));
@@ -3432,7 +3437,7 @@
       const view = document.getElementById('scanMatrixView');
       view.style.display = 'block';
       document.getElementById('scanMatrixTitle').textContent =
-        `Cluster — ${cluster.hits.map(h => `"${h.term}"`).join(' + ')}`;
+        `#${cluster.id} — ${cluster.hits.map(h => `"${h.term}"`).join(' + ')}`;
 
       // Stats
       let statsHtml = `<div class="matrix-stat"><div class="value">${cluster.span.toLocaleString()}</div><div class="label">Span</div></div>`;
@@ -3581,7 +3586,7 @@
     };
 
     // --- Core discovery logic (no UI) — returns discovered terms for given hits ---
-    async function discoverForHits(hits) {
+    async function discoverForHits(hits, onProgress) {
       if (!hits || hits.length === 0) return [];
 
       // Auto-load ELS index if needed
@@ -3610,6 +3615,7 @@
         }
       }
       if (!dictService) return [];
+      if (onProgress) onProgress(10, 'Finding nearby terms...');
 
       // Compute bounding region
       const allPositions = [];
@@ -3631,13 +3637,19 @@
         minWordLength: 2,
         maxResults: 500
       });
+      if (onProgress) onProgress(25, `Validating ${nearby.length} candidates...`);
 
       const discovered = [];
       const SHORT_SRC = {'Unified Hebrew Dictionary':'Unified','Brown-Driver-Briggs':'BDB',
         "Strong's Hebrew Concordance":"Strong's",'Hebrew Wiktionary':'Wikt','Tanakh Extracted':'Tanakh',
         'Hebrew Wikipedia':'Wiki','Wikipedia Full-Text':'Wiki-FT','Hebrew Names':'Names'};
 
-      for (const item of nearby) {
+      for (let ni = 0; ni < nearby.length; ni++) {
+        const item = nearby[ni];
+        if (ni % 20 === 0) {
+          if (onProgress) onProgress(25 + Math.round((ni / nearby.length) * 70), `Checking term ${ni + 1}/${nearby.length}...`);
+          await new Promise(r => setTimeout(r, 0));
+        }
         if (searchTermSet.has(item.word)) continue;
         item.occurrences = item.occurrences.filter(o => Math.abs(o.skip) >= 2);
         if (item.occurrences.length === 0) continue;
@@ -3676,6 +3688,7 @@
         });
       }
 
+      if (onProgress) onProgress(100, `Found ${discovered.length} terms`);
       discovered.sort((a, b) => b.zScore - a.zScore);
       return discovered;
     }
@@ -3709,11 +3722,20 @@
         }
       }
 
-      resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching nearby terms (this may take a moment)...</div>';
+      resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#333;font-weight:600;">Searching nearby terms...</div>';
       statusSpan.textContent = 'Searching...';
 
+      const btn = document.getElementById('btnDiscoverTerms');
+      const progressDiv = document.getElementById('discoverProgress');
+      const progressBar = document.getElementById('discoverProgressBar');
+      if (btn) { btn.disabled = true; btn.textContent = 'Discovering...'; }
+      if (progressDiv) { progressDiv.style.display = ''; progressBar.style.width = '0%'; progressBar.textContent = '0%'; }
+
       try {
-        const discovered = await discoverForHits(current3DHits);
+        const discovered = await discoverForHits(current3DHits, (pct, msg) => {
+          if (progressBar) { progressBar.style.width = pct + '%'; progressBar.textContent = msg || (pct + '%'); }
+          if (statusSpan) statusSpan.textContent = msg || (pct + '%');
+        });
 
         // Store for filter toggling
         discoveredResults = discovered;
@@ -3736,6 +3758,9 @@
         const ss = document.getElementById('discoverTermsStatus');
         if (rd) rd.innerHTML = `<div style="text-align:center;padding:20px;color:#c00;font-weight:600;">Error: ${err.message}</div>`;
         if (ss) ss.textContent = 'Discovery failed';
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Discover'; }
+        if (progressDiv) progressDiv.style.display = 'none';
       }
     };
 
@@ -4894,7 +4919,7 @@
       const top20 = scanClusters.slice(0, 20);
       if (top20.length > 0) {
         overallHTML += `<h3>Top ${top20.length} Clusters (by Span)</h3>`;
-        overallHTML += `<table class="rpt-table"><thead><tr><th>#</th><th>Span</th>`;
+        overallHTML += `<table class="rpt-table"><thead><tr><th>ID</th><th>Span</th>`;
         if (clusterPValues.length > 0) overallHTML += `<th>P-value</th>`;
         overallHTML += `<th>Min |Skip|</th><th>Shared</th><th>Terms</th></tr></thead><tbody>`;
         for (let i = 0; i < top20.length; i++) {
@@ -4906,7 +4931,7 @@
             const p = clusterPValues[i];
             pStr = p === 0 ? '< ' + (1 / (permSpanDistribution?.length || 1000)).toFixed(6) : p < 0.001 ? p.toExponential(2) : p.toFixed(4);
           }
-          overallHTML += `<tr><td>${i + 1}</td><td>${c.span.toLocaleString()}</td>`;
+          overallHTML += `<tr><td>#${c.id}</td><td>${c.span.toLocaleString()}</td>`;
           if (clusterPValues.length > 0) overallHTML += `<td>${pStr}</td>`;
           overallHTML += `<td>${minS}</td><td>${shared}</td>`;
           overallHTML += `<td>${c.hits.map(h => sanitizeForExport(h.term)).join(' + ')}</td></tr>`;
@@ -4933,7 +4958,7 @@
         await new Promise(r => setTimeout(r, 10));
 
         detailHTML += `<div class="page-break"></div>`;
-        detailHTML += `<h2>Cluster Detail #${clusterNum}</h2>`;
+        detailHTML += `<h2>Cluster #${cluster.id} (Detail ${clusterNum})</h2>`;
         detailHTML += `<div class="rank-badges">${categories.map(c =>
           `<span class="rank-badge">#${c.rank} ${c.category}</span>`
         ).join(' ')}</div>`;
@@ -5069,7 +5094,7 @@
         const cluster = scanClusters[idx];
         const rankLabels = categories.map(c => `#${c.rank} ${c.category}`).join(', ');
         const terms = cluster.hits.map(h => sanitizeForExport(h.term)).join(' + ');
-        tocHTML += `<div class="toc-item" style="margin-top:6px;"><a href="#cluster${tocNum}">3.${tocNum}. Cluster #${tocNum}</a> — ${rankLabels}</div>`;
+        tocHTML += `<div class="toc-item" style="margin-top:6px;"><a href="#cluster${tocNum}">3.${tocNum}. Cluster #${cluster.id}</a> — ${rankLabels}</div>`;
         tocHTML += `<div class="toc-item" style="margin-right:16px;font-size:12px;color:#666;">Span: ${cluster.span.toLocaleString()} | Terms: ${terms}</div>`;
       }
       tocHTML += '</div>';
@@ -5089,8 +5114,8 @@
       methHTML += 'Each cluster detail section includes an ELS sequence visualization, term positions, shared letters, and the full Hebrew verse texts with English summaries.</p>';
 
       // Update detail anchors
-      detailHTML = detailHTML.replace(/<h2>Cluster Detail #(\d+)<\/h2>/g, (m, n) =>
-        `<h2 id="cluster${n}">Cluster Detail #${n}</h2>`
+      detailHTML = detailHTML.replace(/<h2>Cluster #(\d+) \(Detail (\d+)\)<\/h2>/g, (m, cid, n) =>
+        `<h2 id="cluster${n}">Cluster #${cid} (Detail ${n})</h2>`
       );
 
       return `<!DOCTYPE html>
@@ -8560,8 +8585,8 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     }
 
     // ============= URL PARAMETER API =============
-    // Usage: bible-codes.html?terms=משה,אברהם אברם,ירושלים&skip=500&discover=names
-    //   terms   — comma-separated search terms; space within a term = alt spellings
+    // Usage: bible-codes.html?terms=משה,אברהם|אברם,ירושלים&skip=500&discover=names
+    //   terms   — comma-separated search terms; pipe (|) or space within a term = alt spellings
     //   skip    — max skip range (default ±500)
     //   discover — auto-run Discover Terms: 'all', 'names', or 'dates'
     //   tab     — which tab to open: 'scan' (default), 'index', 'dict', 'wrr'
@@ -8581,11 +8606,11 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
       if (minSkipEl) minSkipEl.value = -Math.abs(skipVal);
       if (maxSkipEl) maxSkipEl.value = Math.abs(skipVal);
 
-      // Fill textarea with terms (comma → newline)
+      // Fill textarea with terms (comma → newline, pipe → space for alt spellings)
       const termsStr = decodeURIComponent(params.get('terms'));
       const textarea = document.getElementById('batchTextarea');
       if (textarea) {
-        textarea.value = termsStr.split(',').map(t => t.trim()).filter(Boolean).join('\n');
+        textarea.value = termsStr.split(',').map(t => t.trim().replace(/\|/g, ' ')).filter(Boolean).join('\n');
       }
 
       // Wait for init to complete (Torah text + ELS index loaded)

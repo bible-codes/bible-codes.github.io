@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-24 (PDF Report, Session Export/Import, Verse Tooltip Fix)
+**Last Updated**: 2026-02-24 (v4.10: PDF Report Improvements, Alt Spellings, URL API)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,58 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-24
+## Current Session: 2026-02-24 (v4.10)
+
+### PDF Report Improvements ✅ COMPLETE
+
+Extensive improvements to the PDF Full Report:
+
+- **Table of Contents**: Linked entries for every section with clickable navigation
+- **Cluster Selection Methodology**: Section explaining the 4 ranking categories (Span, P-value, Min |Skip|, Shared Letters) and deduplication algorithm
+- **Page numbers**: "Page N of M" via CSS `@page` counters
+- **Alternate spellings display**: Search params, hits per term, and cluster detail tables all show which alternate forms were searched and matched
+- **Proper grid matrix**: Width = median |skip| across terms (clamped 20-80 cols), replacing the per-term-row layout
+- **Per-cluster progress bar**: Shows "Rendering cluster N/M..." during generation
+- **Auto significance test**: Runs silently before report if p-values not computed (removed confirm prompt)
+- **Fast canvas rendering**: Direct canvas drawing, ~20x faster than previous DOM-based approach
+
+### Shared Letter Details in Matrix Legend ✅ COMPLETE
+
+Matrix legend overlap section now shows each shared letter with its Hebrew character, verse reference, and color-coded term names — replacing the generic "Overlap" label.
+
+### Alternate Spellings Tracking ✅ COMPLETE
+
+- New `scanTermAlts` global persists alternate spelling mappings (primary → all forms)
+- Included in session JSON export/import (`termAlts` field)
+- Report displays all alternate forms searched with clear labeling
+
+### URL API — Pipe Separator ✅ COMPLETE
+
+- Added `|` (pipe) as alternate separator for alt spellings in URL `terms` parameter
+- More URL-friendly than space (pipes don't require encoding)
+- Example: `?terms=טרמפ|טראמפ,ארהב,אירן`
+- Both `|` and space supported; `|` converted to space when filling textarea
+
+### Hebrew Date Converter Fix ✅ COMPLETE
+
+- 4 verification test data entries corrected (algorithm was already correct)
+- Verified against Node.js `Intl.DateTimeFormat('en-u-ca-hebrew')` as authoritative source
+- All 18 tests + 10,000 random round-trips pass
+- Fixed: Jerusalem Day (5727 is leap year), Jan 1 1900, Jan 1 2100, US Independence 1776
+
+### Commits (8 total)
+1. `b05d274` — Show shared letter details in matrix legend, add per-cluster report progress
+2. `0518f9a` — Auto-run significance test before report, fast direct canvas rendering
+3. `cf3f572` — Fix Hebrew Date verification test data — algorithm was correct
+4. `e8b24ba` — Fix PDF report matrices: use optimal grid width capped at 80 columns
+5. `b05ccd2` — Redesign PDF report matrices: per-term ELS sequence rows
+6. `568c70a` — Add page numbers, TOC, and methodology section to PDF report
+7. `303fbf3` — Show alternate spellings in report, proper grid matrix with median skip
+8. *(pending)* — URL API pipe separator, README/PROGRESS updates
+
+---
+
+## Previous Session: 2026-02-24 (v4.9)
 
 ### PDF Full Report ✅ COMPLETE
 

@@ -342,35 +342,38 @@ Pre-computed semantic summaries for every Torah verse, displayed alongside ELS r
 Generate a comprehensive printable report from scan results. Click the **PDF Report** button (blue, next to Search) after running a multi-term scan.
 
 **Report contents**:
-1. **Overall Summary**: Search parameters, date/time, hits per term, top 20 clusters table with span, p-value, min |skip|, and shared letter counts
-2. **Detailed Cluster Reports**: Top 3 clusters from each of 4 sort categories (Span, P-value, Min |Skip|, Shared Letters), deduplicated into unique reports. Each includes:
+1. **Table of Contents**: Linked entries for each section with clickable navigation
+2. **Cluster Selection Methodology**: Explains the 4 ranking categories (Span, P-value, Min |Skip|, Shared Letters) and how clusters were selected/deduplicated
+3. **Overall Summary**: Search parameters (with alternate spellings shown), date/time, hits per term, top 20 clusters table with span, p-value, min |skip|, and shared letter counts
+4. **Detailed Cluster Reports**: Top 3 clusters from each of 4 sort categories, deduplicated into unique reports. Each includes:
    - **Rank badges** showing which categories the cluster ranks in (e.g., "#1 Smallest Span, #2 Best P-value")
-   - 2D matrix PNG image
-   - Terms table with positions, skips, and verse references
+   - 2D matrix grid (width = median |skip| across terms, clamped 20-80 columns)
+   - Terms table with positions, skips, verse references, and alternate spelling indicators
    - Cluster statistics (span, p-value, significance level, min |skip|, shared letters)
-   - Shared letter positions — which terms overlap and at what letter
+   - Shared letter positions — which terms overlap, at what letter, with verse reference
    - Full Hebrew verse texts with summary, sentiment, subjects, and themes
    - Discovered terms (if user ran Discover for that cluster before generating report)
-3. **Page breaks** between sections for clean PDF printing
+5. **Page numbers** ("Page N of M") and **page breaks** between sections for clean PDF printing
 
-**Workflow**: Opens report in new window with print dialog. Also auto-exports session JSON.
+**Workflow**: Opens report in new window with print dialog. Significance test auto-runs if p-values haven't been computed yet. Also auto-exports session JSON. Progress bar shows per-cluster rendering status.
 
-**Tip**: Run the **Significance Test** first for p-values, and click **Discover Terms** on important clusters before generating the report.
+**Tip**: Click **Discover Terms** on important clusters before generating the report to include discovered terms in the output.
 
 #### 3.1.11 Session Export/Import
 
 Save and restore complete scan sessions.
 
 **Export** (via "Export JSON" button):
-- Saves everything: terms, skip range, all results (position/skip/form per hit), clusters, p-values, sort mode, selected cluster, discovered results with definitions
+- Saves everything: terms, skip range, all results (position/skip/form per hit), clusters, p-values, sort mode, selected cluster, discovered results with definitions, alternate spellings
 - Format: versioned JSON with `format: 'els-session'`
 - Sacred names sanitized in output
 
 **Import** (via "Import" button):
 - Load any previously exported JSON file
-- Restores full session state: terms, results, clusters, p-values, discoveries
+- Restores full session state: terms, results, clusters, p-values, discoveries, alternate spellings
 - Restores UI: textarea, skip range inputs, cluster list, matrix display
 - Auto-loads Torah text and character database if needed
+- Auto-runs significance test if multi-term search and p-values not present in file
 - Supports both old format (pre-v4.9) and new versioned format
 
 #### 3.1.12 URL API
@@ -379,22 +382,27 @@ Run searches via URL parameters — useful for sharing links, bookmarking search
 
 **Format**:
 ```
-bible-codes.html?terms=TERM1,TERM2 ALT,TERM3&skip=500&discover=names
+bible-codes.html?terms=TERM1,TERM2|ALT,TERM3&skip=500&discover=names
 ```
+
+**Alternate spellings**: Use pipe (`|`) or space to separate alternate spellings within a single term slot. All alternates are searched and merged under the primary form.
 
 **Parameters**:
 
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
-| `terms` | Comma-separated search terms. Space within a term = alt spellings. | *(required)* | `משה,אברהם אברם` |
+| `terms` | Comma-separated search terms. Pipe (`\|`) or space within a term = alt spellings. | *(required)* | `טרמפ\|טראמפ,ארהב` |
 | `skip` | Max skip range (± value) | 500 | `1000` |
 | `discover` | Auto-run Discover Terms with filter | *(off)* | `all`, `names`, `dates` |
 | `tab` | Which tab to open | `scan` | `scan`, `index`, `dict`, `wrr` |
 
 **Examples**:
 ```
-# Search for Moses and Abraham (with alt spelling) in Genesis
-bible-codes.html?terms=משה,אברהם אברם
+# Search for Moses and Abraham (with alt spelling via pipe)
+bible-codes.html?terms=משה,אברהם|אברם
+
+# Multiple terms with alternates
+bible-codes.html?terms=טרמפ|טראמפ,ארהב,אירן
 
 # Search and auto-discover names
 bible-codes.html?terms=משה,אהרן&discover=names
@@ -1442,6 +1450,19 @@ python3 p.py
 ---
 
 ## 11. Changelog
+
+### February 24, 2026 (v4.10): PDF Report Improvements, Alt Spellings, URL API, Hebrew Date Fix
+
+- **PDF Report — Table of Contents & Page Numbers**: Report now includes a linked Table of Contents, a Cluster Selection Methodology section explaining the 4 ranking categories, and page numbers ("Page N of M") via CSS `@page` counters.
+- **PDF Report — Alternate Spellings Display**: Search parameters show all alternate spellings searched (e.g., "טרמפ / טראמפ"). Hits per Term table includes an Alternates column. Cluster detail tables flag hits from alternate forms with "(alt of PRIMARY)" labels.
+- **PDF Report — Proper Grid Matrix**: Matrix rendering redesigned as a proper 2D grid using the median |skip| across all terms as grid width (clamped 20-80 columns). Replaces earlier per-term-row layout.
+- **PDF Report — Per-Cluster Progress**: Progress bar shows "Rendering cluster N/M..." during report generation with proportional advancement.
+- **PDF Report — Auto Significance Test**: Significance test auto-runs silently before report generation if p-values haven't been computed. Removed the `confirm()` prompt.
+- **PDF Report — Fast Canvas Rendering**: Matrix rendering uses direct canvas drawing (no DOM manipulation), ~20x faster than previous DOM-based approach.
+- **Shared Letter Details in Matrix Legend**: Overlap section in matrix legend now shows each shared letter with its Hebrew character, verse reference, and color-coded term names — instead of a generic "Overlap" label.
+- **Alternate Spellings Tracking**: New `scanTermAlts` global persists alternate spelling mappings. Included in session JSON export/import for full round-trip fidelity.
+- **URL API — Pipe Separator for Alt Spellings**: Alt spellings can now use pipe (`|`) in addition to space in the `terms` URL parameter. E.g., `?terms=טרמפ|טראמפ,ארהב`. More URL-friendly since pipes don't require encoding.
+- **Hebrew Date Converter Fix**: 4 verification test data entries corrected — the algorithm was already correct (verified against Node.js `Intl.DateTimeFormat` with hebrew calendar). Fixed: Jerusalem Day (5727 is leap year → Iyar = month 9), Jan 1 1900, Jan 1 2100, and US Independence Day 1776.
 
 ### February 24, 2026 (v4.9): PDF Report, Session Export/Import, Verse Summary Regeneration
 
