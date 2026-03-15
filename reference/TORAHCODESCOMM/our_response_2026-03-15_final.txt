@@ -1,0 +1,24 @@
+From: Aharon Zbaida
+Date: 2026-03-15
+Subject: RE: (copyright dispute)
+
+Shalom Daniel,
+
+This will be my final communication on this matter.
+
+You are demanding attribution for code that does not exist in my project. My application contains zero lines from TorahBibleCodes — not adapted, not ported, not derived. Removing references to your project was the correct action because there is nothing to attribute.
+
+To be clear:
+
+1. I never agreed to your demands. Removing your Python files was a courtesy, not a concession.
+2. There is no "commercial use" to remove. The project is a free, open-source GitHub Pages site with no revenue.
+3. Your claim that Claude "ported" your program is false. The git history at https://github.com/bible-codes/bible-codes.github.io documents every line written independently — different language, different algorithms, different architecture.
+4. Attorney review is welcome. The evidence is public.
+
+I will not be responding to further communications on this topic.
+
+Aharon
+
+Aharon Zbaida
+T +1 (302) 648 - 2641 (voice, txt)
+Notice.
