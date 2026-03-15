@@ -1260,10 +1260,6 @@
                 <label style="cursor:pointer;color:#ddd;" title="Show only dates/numbers"><input type="checkbox" id="discFilterDates" onchange="applyDiscoverFilter()"> Dates</label>
               </span>
             </div>
-            <!-- Cross-promo: JerusalemHills personalized prints -->
-            <div id="jh-cross-promo" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:6px; font-size:13px; color:#c9a84c;">
-              Want this as a framed print? <a id="jh-promo-link" href="https://jerusalemhills.com/personalized/bible-code.html" target="_blank" style="color:#ffc107; text-decoration:underline; font-weight:600;">Get it on Jerusalem Hills &rarr;</a>
-            </div>
           </div>
           <div id="scanMatrixStats" class="matrix-stats"></div>
           <div id="videoControlPanel" style="display:none;">
@@ -4045,16 +4041,6 @@
       grid.style.gridTemplateColumns = `repeat(${width}, 26px)`;
       grid.innerHTML = html;
 
-      // Show cross-promo for JerusalemHills personalized prints
-      const promo = document.getElementById('jh-cross-promo');
-      if (promo) {
-        promo.style.display = 'block';
-        const term = batchTerms.length > 0 ? batchTerms[0].cleaned : '';
-        if (term) {
-          document.getElementById('jh-promo-link').href =
-            'https://jerusalemhills.com/personalized/bible-code.html?term=' + encodeURIComponent(term);
-        }
-      }
     }
 
     // ============= BATCH TERM LOADER =============

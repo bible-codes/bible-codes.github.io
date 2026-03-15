@@ -1612,12 +1612,25 @@ All content from these repositories has been consolidated into this one:
 
 **Mechon Mamre** — The verse-level semantic summaries (Verse Context Analysis panel) use English translations from [Mechon Mamre's Hebrew-English Tanakh](https://mechon-mamre.org/p/pt/pt0.htm), based on the 1917 JPS (Jewish Publication Society) translation. Mechon Mamre provides free online access to the Hebrew Bible text with vowels, cantillation marks, and parallel English translation. We gratefully acknowledge their contribution to making Torah texts accessible. Visit [mechon-mamre.org](https://mechon-mamre.org/).
 
+### Dictionary & Lexicon Sources
+
+- **OpenScriptures BDB** — Brown-Driver-Briggs Hebrew-English Lexicon ([OpenScriptures/HebrewLexicon](https://github.com/openscriptures/HebrewLexicon)). Used for biblical Hebrew definitions in the dictionary service.
+- **Strong's Concordance** — Strong's Hebrew numbering system and definitions. Used for cross-referencing Hebrew words.
+- **Hebrew Wiktionary** — Community-maintained Hebrew word definitions ([he.wiktionary.org](https://he.wiktionary.org/)). Used for modern Hebrew coverage in the unified dictionary.
+- **Hebrew Wikipedia** — Hebrew-language Wikipedia ([he.wikipedia.org](https://he.wikipedia.org/)). Used for word extraction (fulltext dictionary) and live term definition lookups via the REST API.
+
 ### Libraries Used
 
 - **D3.js**: Data visualization (tsirufim semantic space)
-- **Three.js**: 3D matrix rendering (lazy-loaded from CDN)
+- **Three.js**: 3D matrix rendering (lazy-loaded from local `lib/`)
 - **Tesseract.js**: Hebrew OCR (loaded from CDN)
 - **PDF.js**: PDF rendering for OCR (loaded from CDN)
+- **Font Awesome** 4.7.0: Icon library (loaded from cdnjs)
+- **Google Fonts**: David Libre Hebrew typeface
+
+### Services
+
+- **GoatCounter**: Privacy-friendly web analytics ([goatcounter.com](https://www.goatcounter.com/))
 
 ---
 
