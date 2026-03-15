@@ -1,6 +1,6 @@
 # Hebrew Bible Analysis Suite - Implementation Progress
 
-**Last Updated**: 2026-02-24 (v4.10: PDF Report Improvements, Alt Spellings, URL API)
+**Last Updated**: 2026-03-15 (v4.11: Repository cleanup, attribution, provenance documentation)
 
 This document tracks the implementation progress of all features in the Hebrew Bible Analysis Suite.
 
@@ -9,7 +9,26 @@ This document tracks the implementation progress of all features in the Hebrew B
 
 ---
 
-## Current Session: 2026-02-24 (v4.10)
+## Current Session: 2026-03-15 (v4.11)
+
+### Repository Cleanup & Attribution ✅ COMPLETE
+
+In response to a copyright inquiry from Daniel Azariah (TorahBibleCodes.com), conducted a thorough code review confirming that our browser-based JavaScript application is 100% independently written. Actions taken:
+
+- **Removed `torah-codes/` directory** (1,693 files, 312K lines) — a Python fork of TorahBibleCodes that was included as a reference but never used by the web app
+- **Removed Jerusalem Hills cross-promotion link** from matrix display
+- **Documented Torah text provenance**: Koren Edition sourced from [McKay's Torah Codes Archive at ANU](https://users.cecs.anu.edu.au/~bdm/dilugim/StatSci/data.html), converted from Michigan-Claremont ASCII to Hebrew Unicode by our own `tools/build-koren-database.py`
+- **Added comprehensive attribution** in README.md for all data sources (McKay/ANU, OpenScriptures BDB, Strong's, Wiktionary, Wikipedia), libraries (Font Awesome, Google Fonts), and services (GoatCounter)
+- **Updated all documentation** (CLAUDE.md, PROGRESS.md, README.md, other-resources.html) to remove torah-codes/ references
+
+### TODO
+
+- [ ] Revisit marketing strategy: evaluate adding a donation link (e.g., Buy Me a Coffee, GitHub Sponsors, or similar) to sustain development while keeping the tool free
+- [ ] Explore options for offering premium products/prints as an independent service (not derived from third-party code)
+
+---
+
+## Previous Session: 2026-02-24 (v4.10)
 
 ### PDF Report Improvements ✅ COMPLETE
 
