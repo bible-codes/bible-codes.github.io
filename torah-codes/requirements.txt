@@ -1,5 +1,0 @@
-numpy>=1.25.0
-pandas>=2.0.0
-ipython>=8.0.0
-tqdm
-matplotlib>=3.5.0

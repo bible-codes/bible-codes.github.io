@@ -67,8 +67,6 @@ This file tracks:
 ### Repositories
 - **bible-codes.github.io**: Pure client-side JS app for ELS searches ([GitHub](https://github.com/bible-codes/bible-codes.github.io))
 - **bible-data-science.github.io**: Multi-file repo with Jupyter notebooks, HTML utilities (BCApp.html, heb-ocr.html, igeret.html, qa.html) ([GitHub](https://github.com/roni762583/bible-data-science.github.io))
-- **torah-codes/**: Python-based ELS search engine (copied into this repo)
-
 ---
 
 ## Unified Site Requirements
@@ -552,8 +550,6 @@ This architecture ensures:
 │   ├── test.js               # Existing ELS utilities
 │   ├── load-torah.js         # Torah text loader
 │   └── search-algorithms.js   # Search algorithms
-│
-└── torah-codes/              # Python ELS engine (reference)
 ```
 
 ### Page Mapping

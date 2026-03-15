@@ -85,8 +85,7 @@ A browser-based platform for exploring the Hebrew Bible (Tanakh) through computa
    - 9.1 [Local Development](#91-local-development)
    - 9.2 [Building Data Files](#92-building-data-files)
    - 9.3 [Testing](#93-testing)
-   - 9.4 [Python Torah Codes Engine](#94-python-torah-codes-engine)
-   - 9.5 [Contributing](#95-contributing)
+   - 9.4 [Contributing](#94-contributing)
 10. [Implementation Status](#10-implementation-status)
 11. [Changelog](#11-changelog)
 12. [References and Related Projects](#12-references-and-related-projects)
@@ -1158,13 +1157,6 @@ The `data/manuscripts/` directory contains Genesis text from multiple historical
 │   │   ├── CleanBible.ipynb
 │   │   └── 3d.ipynb
 │
-├── torah-codes/                # Python ELS engine (1,693 files)
-│   ├── p.py                    # Main entry point
-│   ├── els_proximity_analyzer.py
-│   ├── matrix_visualization.py
-│   ├── texts/                  # Torah text sources
-│   └── CHATUFIM.txt            # 182 hostage names for batch testing
-│
 ├── docs/                       # Technical specifications
 │   ├── ELS-INDEX-SYSTEM.md
 │   ├── UNIFIED-DICTIONARY-PLAN.md
@@ -1360,23 +1352,7 @@ python3 tools/validate-text.py data/
 - Test offline mode (disconnect network after initial load).
 - Test PWA installation and launch.
 
-### 9.4 Python Torah Codes Engine
-
-The `torah-codes/` directory contains a comprehensive Python-based ELS search engine (a fork of TorahBibleCodes with enhancements). It includes:
-
-- **Multi-term proximity analysis**: `els_proximity_analyzer.py`
-- **Visualization tools**: `els_proximity_visualizer.py`, `matrix_visualization.py`
-- **Multiple codices**: Koren, Leningrad, MAM (Miqra According to Masorah)
-- **Docker support**: `Dockerfile`, `docker-compose.yml`
-- **Pre-configured searches**: Input files for various terms
-
-Run the main ELS search:
-```bash
-cd torah-codes
-python3 p.py
-```
-
-### 9.5 Contributing
+### 9.4 Contributing
 
 1. Fork the repository.
 2. Create a feature branch (`git checkout -b feature/your-feature`).
@@ -1551,7 +1527,6 @@ python3 p.py
 Consolidated content from all Bible-codes-related repositories into this single superset repo:
 
 - **bible-data-science.github.io**: Copied HTML tools (Hebrew OCR, Igeret HaRamban, Q&A, BCApp), manuscript variant data (14 codex files), full Tanakh text data, Targum Onkelos, audio files, Jupyter notebooks.
-- **torahcodes_fork**: Already fully integrated in `torah-codes/` directory (1,693 files).
 - **heb_wiki_words**: Copied `extract_heb.py` word extraction script to `tools/`.
 - Created `other-resources.html` page linking all imported content.
 - Added "Other Resources" link to `bible-codes.html` footer.
@@ -1625,19 +1600,11 @@ All content from these repositories has been consolidated into this one:
 
 - [bible-codes/bible-codes.github.io](https://github.com/bible-codes/bible-codes.github.io) — This repository
 - [roni762583/bible-data-science.github.io](https://github.com/roni762583/bible-data-science.github.io) — Legacy site (HTML tools, manuscript data, notebooks)
-- [roni762583/torahcodes_fork](https://github.com/roni762583/torahcodes_fork) — Python ELS engine (integrated in `torah-codes/`)
 - [roni762583/heb_wiki_words](https://github.com/roni762583/heb_wiki_words) — Hebrew word extraction script
 
 ### Attribution
 
 **Mechon Mamre** — The verse-level semantic summaries (Verse Context Analysis panel) use English translations from [Mechon Mamre's Hebrew-English Tanakh](https://mechon-mamre.org/p/pt/pt0.htm), based on the 1917 JPS (Jewish Publication Society) translation. Mechon Mamre provides free online access to the Hebrew Bible text with vowels, cantillation marks, and parallel English translation. We gratefully acknowledge their contribution to making Torah texts accessible. Visit [mechon-mamre.org](https://mechon-mamre.org/).
-
-The `torah-codes/` directory is a fork of the **TorahBibleCodes** project by [@TorahBibleCodes](https://github.com/TorahBibleCodes). The original project provides a Python-based ELS search engine for Hebrew biblical texts. Our fork adds multi-term proximity analysis, advanced visualization, and final-form normalization. Full credit to the original author for the core ELS search framework.
-
-- **Original repository**: [TorahBibleCodes/TorahBibleCodes](https://github.com/TorahBibleCodes/TorahBibleCodes)
-- **Website**: [TorahBibleCodes.com](https://TorahBibleCodes.com)
-- **Documentation**: [torahbiblecodes-sphinx.readthedocs.io](https://torahbiblecodes-sphinx.readthedocs.io/)
-- **Support the original developer**: [GiveSendGo](https://www.givesendgo.com/TorahBibleCodes)
 
 ### Libraries Used
 

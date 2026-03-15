@@ -622,7 +622,7 @@ Bulk ELS scanning of term lists (e.g., 182 hostage names from CHATUFIM.txt).
 
 **Functions Added**: `toggleBatchPanel()`, `loadBatchFile()`, `clearBatchInput()`, `cleanHebrewName()`, `parseBatchInput()`, `renderBatchTable()`, `updateBatchRow()`, `exportBatchResults()`, `sortBatchTable()`
 
-**Data**: `torah-codes/CHATUFIM.txt` — 182 hostage names added to repo
+**Data**: 182 hostage names (batch testing reference)
 
 ### Unified Search Flow ✅ COMPLETE
 
@@ -650,7 +650,7 @@ Single Search button now handles both manual terms and batch terms together.
 
 **Modified Files**:
 - `bible-codes.html` — All changes in single file (HTML, CSS, JS)
-- `torah-codes/CHATUFIM.txt` — Added hostage names file
+- Hostage names file (removed with torah-codes/ directory)
 
 ---
 
