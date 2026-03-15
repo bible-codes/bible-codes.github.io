@@ -1608,6 +1608,8 @@ All content from these repositories has been consolidated into this one:
 
 ### Attribution
 
+**Professor Brendan McKay, Australian National University** — The Torah text used for all ELS analysis (Koren Edition, 304,805 letters) is sourced from [McKay's Torah Codes Archive](https://users.cecs.anu.edu.au/~bdm/dilugim/StatSci/data.html). The archive provides the five Torah books in Michigan-Claremont ASCII transliteration format, along with manuscript variants (Sassoon, BHS, Hilleli, Jerusalem, Venice, Yemenite traditions) and the WRR rabbi appellation data (List 2, 174 appellations). We gratefully acknowledge Professor McKay's contribution in making these scholarly resources publicly available for research. The WRR replication in this project also draws on the analysis in McKay, Bar-Natan, Bar-Hillel & Kalai, ["Solving the Bible Code Puzzle"](https://www.math.toronto.edu/~drorbn/Codes/StatSci.pdf), *Statistical Science* 14(2), 1999.
+
 **Mechon Mamre** — The verse-level semantic summaries (Verse Context Analysis panel) use English translations from [Mechon Mamre's Hebrew-English Tanakh](https://mechon-mamre.org/p/pt/pt0.htm), based on the 1917 JPS (Jewish Publication Society) translation. Mechon Mamre provides free online access to the Hebrew Bible text with vowels, cantillation marks, and parallel English translation. We gratefully acknowledge their contribution to making Torah texts accessible. Visit [mechon-mamre.org](https://mechon-mamre.org/).
 
 ### Libraries Used
