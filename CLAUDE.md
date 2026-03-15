@@ -377,6 +377,7 @@ All engines run **100% client-side** with **no network dependency**. Heavy opera
 **Implementation Status**: Functional in `js/search-algorithms.js` (currently runs on main thread, Web Worker version planned)
 
 **Text Source**: Koren Edition (exact text used by Rips et al., 1994)
+- **Provenance**: Downloaded from [McKay's Torah Codes Archive at ANU](https://users.cecs.anu.edu.au/~bdm/dilugim/StatSci/data.html) in Michigan-Claremont ASCII transliteration; converted to Hebrew Unicode by `tools/build-koren-database.py`
 - **Total Letters**: 304,805
 - **Final Letters**: 20,106 (ך ם ן ף ץ)
 - **SHA-256**: `b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226`

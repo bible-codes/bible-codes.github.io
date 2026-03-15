@@ -150,6 +150,8 @@ The search algorithms used are based on:
 | Form | Ketiv (written form) |
 | SHA-256 | `b65394d28c85ce76dca0d15af08810deebb2e85032d6575a9ae764643a193226` |
 
+**Provenance**: The source data is the Koren Edition Torah text from [Professor Brendan McKay's Torah Codes Archive](https://users.cecs.anu.edu.au/~bdm/dilugim/StatSci/data.html) at the Australian National University (ANU). McKay's archive provides the five Torah books in Michigan-Claremont ASCII transliteration format (`genesis.koren.gz` through `deuteronomy.koren.gz`). We converted these files to Hebrew Unicode using `tools/build-koren-database.py`, which maps the transliteration to Hebrew characters, applies final letter forms (sofit), and strips spaces/verse numbers to produce `data/torahNoSpaces.txt`. This is the same standard scholarly text used by Witztum, Rips & Rosenberg in their 1994 *Statistical Science* paper. The Koren text is a public academic resource, not proprietary to any software project.
+
 The text can be validated by running `python3 tools/validate-text.py data/`.
 
 ---
@@ -1033,6 +1035,8 @@ A Progressive Web App (PWA) is a website enhanced with a service worker and a ma
 ### 6.1 Koren Torah Text
 
 The primary text used for all ELS analysis is the Koren Edition — the same text used in the 1994 Witztum-Rips-Rosenberg study. It consists of 304,805 consonantal Hebrew letters in the written (ketiv) form. The file `data/torahNoSpaces.txt` contains this text as a single unbroken string.
+
+**Source**: [McKay's Torah Codes Archive at ANU](https://users.cecs.anu.edu.au/~bdm/dilugim/StatSci/data.html) — Koren Edition files in Michigan-Claremont ASCII transliteration, converted to Hebrew Unicode by `tools/build-koren-database.py`.
 
 ### 6.2 Manuscript Variants
 
