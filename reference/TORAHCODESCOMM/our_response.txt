@@ -1,0 +1,112 @@
+Shalom Daniel,
+
+Thank you for reaching out and for your dedication to Torah Bible Codes
+research. I want to address your concerns directly and transparently.
+
+First, I want to assure you that we have never sold anything — no prints,
+no digital products, no monetization of any kind. This project has always
+been a free educational tool, and it will remain so.
+
+I conducted a thorough code review of our entire repository to understand
+the exact relationship between our project and yours. Here is what I found:
+
+
+THE WEB APPLICATION (bible-codes.github.io) IS INDEPENDENTLY WRITTEN
+=====================================================================
+
+Our browser-based ELS search tool — the website that users actually visit
+and interact with — contains zero code from TorahBibleCodes. Specifically:
+
+  - Our ELS search engine is written entirely in JavaScript (not Python),
+    using standard Knuth-Morris-Pratt (KMP) and Boyer-Moore string search
+    algorithms — these are textbook computer science algorithms that we
+    implemented independently.
+
+  - Our search code lives in these original files:
+      * index.html (~8,400 lines of original JavaScript/HTML/CSS)
+      * engines/scan.worker.js (Web Worker for parallel scanning)
+      * engines/wrr.worker.js (WRR 1994 statistical replication)
+      * engines/els-index.js (precomputed index service)
+      * js/search-algorithms.js (KMP + Boyer-Moore implementations)
+
+  - None of these files import, reference, or derive from your Python code.
+
+  - Our architecture is fundamentally different from yours: ours is a
+    client-side Progressive Web App running in the browser with Web Workers
+    and IndexedDB; yours is a Python command-line application.
+
+  - The Torah text we use (torahNoSpaces.txt) is derived from the publicly
+    available Koren Edition hosted at Professor Brendan McKay's Torah Codes
+    Archive at the Australian National University:
+    https://users.cecs.anu.edu.au/~bdm/dilugim/StatSci/data.html
+
+    McKay's archive provides the five Torah books in Michigan-Claremont
+    ASCII transliteration format (genesis.koren.gz through
+    deuteronomy.koren.gz). We downloaded these files and wrote our own
+    conversion script (tools/build-koren-database.py) to translate the
+    ASCII transliteration into Hebrew Unicode, apply final letter forms
+    (sofit), and strip spaces and verse numbers — producing the 304,805-
+    letter torahNoSpaces.txt file.
+
+    This is the same standard scholarly text used by Witztum, Rips &
+    Rosenberg in their 1994 Statistical Science paper. It is a public
+    academic resource, not proprietary to any software project.
+
+
+WHAT WE HAVE DONE IN RESPONSE TO YOUR CONCERNS
+===============================================
+
+Although our web application does not use your code, our repository did
+contain a copy of your Python project in a subdirectory called torah-codes/.
+This was included as a reference/learning resource but was never integrated
+into or called by our web application.
+
+To fully address your concerns and in the spirit of good faith, we have
+now removed all 1,693 files of your TorahBibleCodes project from our
+repository. This removal is documented in the following public commit:
+
+  Commit: 849a0e0
+  URL: https://github.com/bible-codes/bible-codes.github.io/commit/849a0e0
+  Summary: "Remove TorahBibleCodes fork from repository"
+  Files removed: 1,695 files changed, 312,193 lines deleted
+
+This commit removes the entire torah-codes/ directory and all references
+to it from our README.md, CLAUDE.md, PROGRESS.md, and other documentation.
+
+Additionally, we have removed the Jerusalem Hills cross-promotion link
+that appeared in our matrix display. This is documented in commit:
+
+  Commit: af76791
+  URL: https://github.com/bible-codes/bible-codes.github.io/commit/af76791
+  Summary: "Remove Jerusalem Hills cross-promo, add full attribution
+            for all dependencies"
+
+
+REGARDING THE LICENSE
+=====================
+
+Our Apache 2.0 license applies to our own original JavaScript code — not
+to your work. Now that your files have been removed from the repository,
+there is no ambiguity.
+
+
+SUMMARY
+=======
+
+  - We have never sold anything or made any money from this project.
+  - Our web application is an independent JavaScript implementation.
+  - The only part of your work that was in our repo (the Python files)
+    has now been fully removed.
+  - The Torah text is from McKay's public academic archive at ANU
+    (https://users.cecs.anu.edu.au/~bdm/dilugim/StatSci/data.html),
+    converted to Hebrew Unicode by our own script.
+
+I am sorry that this situation caused you distress. That was never our
+intention. I have great respect for your work and the contribution you
+have made to making Torah codes research accessible.
+
+We look forward to future collaboration and to advancing this sacred
+work together, B"H.
+
+Kol Tuv,
+Aharon Zbaida
