@@ -31,5 +31,4 @@ Thumbs.db
 
 # Wikipedia dump and intermediate data (1GB+, can be regenerated)
 tools/wiki-data/
-reference/TORAHCODESCOMM/*.eml
-reference/TORAHCODESCOMM/*.zip
+reference/TORAHCODESCOMM/
