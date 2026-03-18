@@ -1,0 +1,41 @@
+https://www.linkedin.com/posts/activity-7431478758575976448-OUBt?utm_source=share&utm_medium=member_desktop&rcm=ACoAADUy1ooB-ZUsrFfyk2BxGqD0824z32fPDrk
+
+ERRATA: WRR (1994) "Bible Codes" Replication — Critical Update
+
+In an earlier post, I shared results from my open-source replication of the Statistical Science paper by Rips, Witztum & Rosenberg (1994), which reported P = 1/62,500 for ELS pairings of 32 rabbis' names and dates in Genesis.
+
+A line-by-line audit against the published formulas revealed three discrepancies:
+
+1) Distance formula (major)
+Paper: delta = f^2 + f'^2 + t^2
+Our code used: delta = t
+We omitted the f^2 and f'^2 terms.
+
+2) Aggregation (major)
+Paper: sigma = SUM(1/delta) across up to 20 row lengths
+Our code used: omega = MAX(1/delta)
+
+3) Threshold (minor)
+Paper: c(w,w') <= 0.2 | Ours: c(w,w') < 0.2
+Negligible impact.
+
+After correction (both formulas implemented side-by-side):
+
+- Prior (omega/max): P = 0.017 (~1 in 60)
+- Paper's exact (sigma/sum, full delta): P = 1.18 (non-significant)
+- Claimed in paper: P = 0.000016 (1 in 62,500)
+
+The paper's own formula eliminates the signal. The f^2 terms dominate delta, making the proximity statistic insensitive to actual inter-word distance; the perturbation measure cannot distinguish the reported configuration from random ones.
+
+No independent group — including the Hebrew University committee chaired by Robert Aumann or McKay et al. (1999) — has reproduced P = 1/62,500. The original WRR code was never released; later versions reportedly produced inconsistent distances.
+
+Our implementation (c(w,w'), P1-P4, permutation testing) is the only open-source WRR statistical code in existence (confirmed by exhaustive GitHub survey). Fully open:
+
+https://lnkd.in/deBscTYh
+Correction report: https://lnkd.in/e8uS5q9M
+
+This does not address broader textual questions. It shows only that the 1994 statistical claim cannot be independently verified from the published formulas.
+
+hashtag#biblecodes hashtag#statistics hashtag#replication hashtag#openscience hashtag#hebrewbible hashtag#torah hashtag#WRR hashtag#opensource
+bible-codes.github.io/WRR-CORRECTION-REPORT.md at main · bible-codes/bible-codes.github.io
+github.com

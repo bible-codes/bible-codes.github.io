@@ -1,0 +1,56 @@
+https://www.linkedin.com/posts/activity-7430689868160073728-vmsk?utm_source=share&utm_medium=member_desktop&rcm=ACoAADUy1ooB-ZUsrFfyk2BxGqD0824z32fPDrk
+
+ Aharon ZbaidaAharon Zbaida   
+ •Data Analyst  3 weeks ago • Edited • Visible to anyone on or off LinkedIn
+ 
+**I Built the First Open-Source JavaScript Replication of the 1994 WRR Bible Codes Experiment — Running Entirely in Your Browser**
+
+In 1994, three mathematicians published a paper in *Statistical Science* claiming statistically significant letter-pattern encodings in the Book of Genesis — names and death dates of 32 famous Rabbis, hidden at equidistant letter intervals. P < 0.00002.
+
+The paper ignited decades of debate. But the original software was proprietary, and no open-source replication existed. I grew up fascinated by the intersection of scripture and mathematics. A rigorous statistical claim about the Torah that anyone could test — transparently — felt like something that should exist. So I built it.
+
+---
+
+**What the tool does:**
+
+11 interactive browser-based research tools for computational analysis of the Torah and Tanakh:
+
+- ELS search across 304,805 Hebrew letters
+- Full WRR 1994 replication with permutation testing
+- 3D WebGL matrix visualization (Three.js)
+- Hebrew calendar date heatmap from 1.74M pre-computed ELS hits
+
+No server. No account. Works offline (PWA).
+
+---
+
+**Engineering:**
+
+- Web Workers for off-thread computation across hundreds of thousands of skip values
+- 39 compressed databases (630 MB raw → 21 MB gzip) with per-letter metadata
+- KMP + Boyer-Moore pattern matching with Hebrew final-form normalization
+- Custom GIF89a encoder with LZW compression
+- Zero npm packages. Zero build steps.
+
+---
+
+**The honest part:**
+
+My implementation achieves P = 0.0012 (1 in 840). The published result is P = 0.00002 (1 in 62,500) — a 75x gap.
+
+I systematically tested every plausible source: cylindrical wrapping, distance corrections, alternative statistics, domain-of-minimality weighting. Nothing closed the gap.
+
+Then I found the real story: **nobody has independently reproduced WRR's P-value in 30+ years.** The MBBK critique (*Statistical Science*, 1999) couldn't match WRR's distances. When they asked for the original code, WRR "were unable to provide their original computer programs" — the specific program was described by Witztum as "presumably lost." The Hebrew University Aumann Committee ran two formal replications — both non-significant. When Dr. Simcha Emanuel independently prepared appellations for the same 32 rabbis, the effect vanished. MBBK then produced a comparable effect in *War and Peace* through appellation selection alone.
+
+My ~75x gap isn't a bug — it's consistent with an unreproducible result. Every formula and decision is open source. Replication should be transparent, not proprietary.
+
+---
+
+**Try it:** https://lnkd.in/deBscTYh
+**Source:** https://lnkd.in/eMQNq2Xe
+
+Built with vanilla JS, Three.js, Web Workers, and AI-assisted development (Claude Code, Anthropic).
+
+Dedicated in loving memory of my Dad and teacher, Shmuel Zbaida z"l.
+
+hashtag#JavaScript hashtag#OpenSource hashtag#DataScience hashtag#Statistics hashtag#WebGL hashtag#PWA hashtag#ScientificReplication

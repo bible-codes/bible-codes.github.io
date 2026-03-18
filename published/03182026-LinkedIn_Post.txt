@@ -1,0 +1,21 @@
+https://www.linkedin.com/posts/activity-7440062761377746945-iiRL?utm_source=share&utm_medium=member_desktop&rcm=ACoAADUy1ooB-ZUsrFfyk2BxGqD0824z32fPDrk
+
+Aharon Zbaida
+ • Data Analyst 
+
+  
+Love + One — אחד + אהבה 
+
+ Bible code exploration report
+
+ I built an open-source Hebrew Bible analysis tool that runs entirely in the browser — no server, no API calls. 
+
+ Here's a sample report: searching for אהבה (love) and אחד (one) as equidistant letter sequences across the Torah's 304,805 letters. 
+
+ The tool finds clusters where both terms appear in close proximity, ranks them by 4 statistical criteria, and generates full reports with matrix visualizations and verse context.
+
+ Tech: vanilla JS, Web Workers, IndexedDB, canvas rendering, Monte Carlo permutation testing. 100% client-side PWA. 
+
+ Try it free: bible-codes.github.io 
+
+ hashtag#OpenSource hashtag#HebrewBible hashtag#Torah hashtag#JavaScript hashtag#PWA hashtag#WebDev hashtag#BibleCodes
