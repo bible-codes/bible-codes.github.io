@@ -46,12 +46,16 @@
       --blue: #1e5aa8;
       --blue-light: #e8f0f8;
       --blue-dark: #174a8a;
-      --gray: #555;
+      --gray: #4a4a4a;
       --gray-light: #f5f5f5;
       --border: #ccc;
       --green: #2e7d32;
       --red: #c62828;
       --orange: #e65100;
+      /* Dark theme vars (date map, matrix views) */
+      --white: #e0e0e0;
+      --card: #2a2a3d;
+      --bg: #1a1a2e;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -183,6 +187,13 @@
       min-width: 120px;
     }
     input:focus { border-color: var(--blue); outline: none; }
+    /* Keyboard focus indicator (accessibility) */
+    :focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+    }
+    .btn:focus-visible { outline-color: var(--blue-dark); }
+    .mode-tab:focus-visible { outline-color: #fff; }
     .btn {
       padding: 10px 20px;
       font-size: 15px;
@@ -340,10 +351,10 @@
       border: 1px solid var(--border);
     }
     .saved-item .name { font-weight: bold; color: var(--blue); }
-    .saved-item .meta { font-size: 11px; color: #666; }
+    .saved-item .meta { font-size: 11px; color: var(--gray); }
 
     /* Loading */
-    .loading { text-align: center; padding: 40px; color: #666; }
+    .loading { text-align: center; padding: 40px; color: var(--gray); }
     .spinner {
       width: 40px;
       height: 40px;
@@ -362,6 +373,7 @@
       background: white; padding: 10px 20px;
       border-bottom: 1px solid var(--border);
       margin-left: -20px; margin-right: -20px;
+      align-items: center;
     }
     .scan-results-container {
       max-height: 60vh;
@@ -439,7 +451,7 @@
     .cluster-span { font-weight: bold; color: var(--green); font-size: 16px; }
     .cluster-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .cluster-term-tag { padding: 4px 10px; border-radius: 4px; font-size: 13px; border: 1px solid; }
-    .cluster-verses { font-size: 12px; color: #666; margin-top: 6px; }
+    .cluster-verses { font-size: 12px; color: var(--gray); margin-top: 6px; }
     .matrix-legend {
       display: flex;
       gap: 15px;
@@ -454,6 +466,18 @@
     .legend-color.t2 { background: #00bcd4; }
     .legend-color.both { background: #9c27b0; }
 
+    /* Sacred names notice */
+    .sacred-names-notice {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 8px 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
     /* Info text */
     .info-text {
       background: #e8f5e9;
@@ -463,6 +487,26 @@
       font-size: 13px;
       color: var(--green);
       margin-bottom: 15px;
+    }
+
+    /* Batch header row */
+    .batch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .batch-header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #batchFileInput {
+      font-size: 13px;
+      max-width: 180px;
     }
 
     /* Batch loader */
@@ -577,7 +621,7 @@
     .batch-status-cell { font-size: 11px; }
     .batch-status-done { color: var(--green); font-weight: bold; }
     .batch-status-active { color: var(--orange); }
-    .batch-status-pending { color: #999; }
+    .batch-status-pending { color: #777; }
     .batch-actions {
       display: flex;
       gap: 10px;
@@ -596,6 +640,7 @@
       box-shadow: 0 0 0 2px #fff, 0 0 8px 3px rgba(255,255,255,0.7);
       z-index: 2;
       position: relative;
+      transition: box-shadow 0.15s ease-out;
     }
     #verseContextPanel.collapsed #verseContextBody { display: none; }
     .verse-ref-hover {
@@ -801,7 +846,7 @@
     }
     .blurb-content a { color: var(--blue); }
 
-    /* Site footer */
+    /* Site footer — shown when page scrolls (mobile), hidden in fixed-height desktop */
     .site-footer {
       display: none;
       text-align: center;
@@ -810,6 +855,7 @@
       border-top: 1px solid var(--border);
       font-size: 13px;
       color: var(--gray);
+      flex-shrink: 0;
     }
     .footer-links {
       display: flex;
@@ -890,61 +936,258 @@
     .matrix-placeholder h3 { color: #8bb8e8; margin-bottom: 12px; font-size: 18px; }
     .matrix-placeholder p { color: #999; font-size: 14px; line-height: 1.7; margin: 0; }
 
-    @media (max-width: 767px) {
-      .scan-col-controls { order: 1; }
-      .scan-col-matrix { order: 2; }
-      #scanMatrixPlaceholder { max-height: 40vh; }
-      .header { padding: 6px 10px; }
-      .header h1 { font-size: 14px; }
-      main.container { padding: 2px 6px; }
-      .section { padding: 12px 10px; }
-      .mode-tab { padding: 8px 6px; font-size: 12px; }
-      .btn { padding: 10px 14px; font-size: 14px; }
-      .btn-small { padding: 6px 8px; font-size: 12px; }
-      .batch-textarea { height: 80px; }
-      .matrix-container { max-height: none !important; }
-      .intro-blurb { margin-bottom: 6px; }
-      .intro-blurb summary { padding: 6px 10px; font-size: 13px; }
-      #verseTooltip { max-width: 90vw; font-size: 14px; }
-    }
-
+    /* ===== TABLET (768–1023px) ===== */
     @media (min-width: 768px) and (max-width: 1023px) {
       .scan-col-matrix { order: 1; }
       .scan-col-controls { order: 2; }
       .scan-col-controls #clusterListContainer { max-height: 300px; }
     }
 
-    @media (max-width: 600px) {
-      .mode-tab .mode-desc { display: none; }
-      .matrix-cell { width: 20px; height: 20px; font-size: 13px; }
-      .matrix-3d-container { height: min(60vh, 350px); min-height: 200px; }
-      input[type="text"], input[type="number"] { min-width: 80px; font-size: 15px; padding: 8px; }
-      .range-row input[type="number"] { width: 65px; }
-    }
-
-    @media (max-width: 420px) {
-      .matrix-cell { width: 18px; height: 18px; font-size: 12px; }
-      .mode-tab { padding: 8px 4px; font-size: 11px; }
-      .header h1 { font-size: 13px; }
-      .section { padding: 10px 8px; }
-      .btn { padding: 8px 10px; font-size: 13px; }
-    }
-
-    /* Mobile: video controls & toolbar */
+    /* ===== MOBILE (<768px) — comprehensive responsive overhaul ===== */
     @media (max-width: 767px) {
-      #videoControlPanel { padding: 6px 8px; }
+      /* --- Layout & scrolling --- */
+      .scan-col-controls { order: 1; }
+      .scan-col-matrix { order: 2; }
+      #scanMatrixPlaceholder { max-height: 40vh; }
+      main.container { padding: 4px 8px; }
+      .section { padding: 14px 12px; }
+      .matrix-container { max-height: none !important; }
+
+      /* --- Header --- */
+      .header { padding: 8px 12px; }
+      .header h1 { font-size: 15px; }
+
+      /* --- Mode tabs: horizontal scroll instead of crushing --- */
+      .mode-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
+      }
+      .mode-tabs::-webkit-scrollbar { display: none; }
+      .mode-tab {
+        padding: 10px 14px;
+        font-size: 13px;
+        flex: 0 0 auto;
+        white-space: nowrap;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .mode-tab .mode-desc { display: none; }
+
+      /* --- Buttons: proper touch targets (44px minimum) --- */
+      .btn { padding: 12px 16px; font-size: 14px; min-height: 44px; }
+      .btn-small { padding: 10px 12px; font-size: 13px; min-height: 40px; }
+
+      /* --- Action row: wrap gracefully, no negative margins on mobile --- */
+      .action-row {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 12px;
+        margin-left: 0;
+        margin-right: 0;
+      }
+      .action-row .btn { flex: 1 1 auto; min-width: 0; text-align: center; }
+      .action-row #scanStatus { width: 100%; text-align: center; font-size: 13px; }
+
+      /* --- Save panel: stack buttons vertically --- */
+      .save-panel { padding: 10px; }
+      .save-panel > div {
+        gap: 6px !important;
+        flex-wrap: wrap !important;
+        justify-content: center;
+      }
+      .save-panel .btn-small { flex: 1 1 auto; text-align: center; min-width: 70px; }
+      #autoSaveStatus { width: 100%; text-align: center; margin-bottom: 2px; font-size: 12px !important; }
+
+      /* --- Range row: full-width label --- */
+      .range-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .range-row label {
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+      .range-row input[type="number"] {
+        width: 80px;
+        min-height: 40px;
+        font-size: 15px;
+        text-align: center;
+      }
+
+      /* --- Batch panel: stack toolbar --- */
+      .batch-panel { padding: 12px; }
+      .batch-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .batch-header h3 { text-align: center; }
+      .batch-header-actions {
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .batch-panel input[type="file"] { max-width: 100% !important; font-size: 14px; }
+      .batch-textarea { height: 100px; font-size: 15px; }
+
+      /* --- Matrix toolbar: 2-row grid --- */
+      #matrixToolbar {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px !important;
+      }
+      #matrixToolbar .btn-small,
+      #matrixToolbar .btn-3d-ctrl {
+        padding: 10px 8px;
+        font-size: 12px;
+        min-height: 40px;
+        text-align: center;
+        width: 100%;
+      }
+      #matrixToolbar > span {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      /* --- Hebrew keyboard: bigger keys for touch --- */
+      .heb-kb-key { min-width: 30px; height: 40px; font-size: 18px; }
+      .heb-kb-key.wide { min-width: 52px; font-size: 12px; min-height: 40px; }
+
+      /* --- Cluster rows: better tap area --- */
+      .cluster-row { padding: 16px 12px; }
+      .cluster-term-tag { padding: 6px 12px; font-size: 14px; }
+
+      /* --- Intro blurb: compact --- */
+      .intro-blurb { margin-bottom: 6px; }
+      .intro-blurb summary { padding: 8px 12px; font-size: 13px; }
+
+      /* --- Sacred names notice: collapsible on mobile --- */
+      .sacred-names-notice { font-size: 12px; padding: 8px 12px; }
+
+      /* --- Tooltips --- */
+      #verseTooltip { max-width: 90vw; font-size: 14px; }
+
+      /* --- Video controls --- */
+      #videoControlPanel { padding: 8px 10px; }
       #videoControlPanel .vid-row { gap: 6px; }
-      .vid-btn { padding: 8px 10px; font-size: 11px; min-height: 36px; }
+      .vid-btn { padding: 10px 12px; font-size: 12px; min-height: 40px; }
       .vid-label { font-size: 11px; }
       #vidTimeline { min-width: 80px; }
-      #matrixToolbar { gap: 4px; }
-      #matrixToolbar .btn-small { padding: 6px 8px; font-size: 11px; }
-      .heb-kb-key { min-width: 28px; height: 34px; font-size: 17px; }
-      .heb-kb-key.wide { min-width: 44px; font-size: 11px; }
+
+      /* --- Footer: show on mobile --- */
+      .site-footer { display: block; padding: 16px 12px; }
+
+      /* --- Matrix legend: wrap better --- */
+      .matrix-legend { gap: 10px; font-size: 12px; }
+
+      /* --- Results table: allow horizontal scroll --- */
+      .results-scrollable { -webkit-overflow-scrolling: touch; }
+      .batch-table { font-size: 12px; }
+      .batch-table th, .batch-table td { padding: 6px 8px; }
+
+      /* --- Discover panel --- */
+      #discoverTermsPanel { padding: 10px; }
+
+      /* --- Verse context panel --- */
+      #verseContextPanel { font-size: 12px; padding: 8px !important; }
     }
+
+    /* ===== SMALL PHONES (<600px) ===== */
+    @media (max-width: 600px) {
+      .matrix-cell { width: 20px; height: 20px; font-size: 13px; }
+      .matrix-3d-container { height: min(60vh, 350px); min-height: 200px; }
+      input[type="text"], input[type="number"] { min-width: 80px; font-size: 15px; padding: 10px; }
+
+      /* Action row: stack fully */
+      .action-row { flex-direction: column; }
+      .action-row .btn { width: 100%; }
+    }
+
+    /* ===== VERY SMALL PHONES (<420px) ===== */
     @media (max-width: 420px) {
+      .matrix-cell { width: 18px; height: 18px; font-size: 12px; }
+      .header h1 { font-size: 13px; }
+      .section { padding: 10px 8px; }
+      main.container { padding: 2px 4px; }
+
+      /* Mode tabs: smaller but still scrollable */
+      .mode-tab { padding: 10px 10px; font-size: 12px; }
+
+      /* Video controls */
       #videoControlPanel .vid-label { display: none; }
       #vidSpeedSlider { width: 60px; }
+
+      /* Matrix toolbar: 2 columns on tiny screens */
+      #matrixToolbar { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+
+    /* WRR controls */
+    .wrr-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .wrr-btn-run {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-size: 15px;
+      padding: 10px 24px;
+    }
+    .wrr-btn-full {
+      background: linear-gradient(135deg, #1b5e20, #388e3c);
+      font-size: 15px;
+      padding: 10px 24px;
+    }
+    .wrr-skip-label {
+      font-size: 13px;
+      color: var(--gray);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .wrr-skip-label input {
+      width: 80px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    @media (max-width: 600px) {
+      .wrr-controls { flex-direction: column; align-items: stretch; }
+      .wrr-controls .btn { width: 100%; text-align: center; min-height: 44px; }
+      .wrr-skip-label { justify-content: center; }
+      .wrr-skip-label input { min-height: 40px; width: 90px; }
+    }
+
+    /* WRR stats grid */
+    .wrr-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .wrr-stat-card {
+      background: linear-gradient(135deg, #667eea22, #764ba222);
+      padding: 14px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .wrr-stat-val { font-size: 28px; font-weight: bold; color: var(--blue); }
+    .wrr-stat-label { font-size: 12px; color: var(--gray); }
+    @media (max-width: 600px) {
+      .wrr-stats-grid { grid-template-columns: 1fr; gap: 8px; }
+      .wrr-stat-card { padding: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+      .wrr-stat-val { font-size: 22px; }
+      .wrr-stat-label { font-size: 12px; }
     }
 
     /* ===== DATE MAP HEATMAP ===== */
@@ -975,7 +1218,7 @@
     #dmDetail .dm-hit-row:hover { color: var(--white); }
     .dm-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--gray); margin-bottom: 8px; }
     .dm-legend-bar { width: 120px; height: 10px; border-radius: 3px; }
-    .dm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .dm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
     .dm-stat-card { background: linear-gradient(135deg,#667eea22,#764ba222); padding: 12px; border-radius: 8px; text-align: center; }
     .dm-stat-val { font-size: 22px; font-weight: bold; color: var(--blue); }
     .dm-stat-label { font-size: 11px; color: var(--gray); }
@@ -1013,7 +1256,7 @@
       </div>
     </details>
 
-    <div class="sacred-names-notice" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin:8px 0;font-size:13px;line-height:1.5;">
+    <div class="sacred-names-notice">
       <strong>Notice:</strong> This site displays Torah text containing Sacred Names of God.
       Sacred Names are redacted with <code>*</code> in display and exports to avoid <em>genizah</em> obligations.
       Please use electronic viewing when possible. If you print any output, treat the materials with appropriate reverence.
@@ -1021,7 +1264,7 @@
 
     <!-- Mode Tabs -->
     <div class="mode-tabs">
-      <button class="mode-tab" data-mode="index" style="opacity:0.5;">
+      <button class="mode-tab" data-mode="index">
         Index Lookup
         <span class="mode-desc">Instant search (110K words)</span>
       </button>
@@ -1029,7 +1272,7 @@
         Full Scan
         <span class="mode-desc">Search any term</span>
       </button>
-      <button class="mode-tab" data-mode="dict" style="opacity:0.5;">
+      <button class="mode-tab" data-mode="dict">
         References
         <span class="mode-desc">Dictionary & Texts</span>
       </button>
@@ -1109,7 +1352,7 @@
 
         <div class="save-panel">
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <span id="autoSaveStatus" style="font-size:11px;color:#666;">Not saved yet</span>
+            <span id="autoSaveStatus" style="font-size:11px;color:var(--gray);">Not saved yet</span>
             <button class="btn btn-secondary btn-small" onclick="exportFullSession()">Export JSON</button>
             <button class="btn btn-secondary btn-small" onclick="document.getElementById('importSessionFile').click()">Import</button>
             <input type="file" id="importSessionFile" accept=".json" onchange="importSessionFromFile(this)" style="display:none;">
@@ -1125,7 +1368,7 @@
           <button class="btn" id="scanBtn" onclick="startScan()">Search</button>
           <button class="btn" id="scanReportBtn" onclick="generateFullReport()" style="background:linear-gradient(135deg,#1565c0,#0d47a1);" title="Generate PDF report of all results">PDF Report</button>
           <button class="btn btn-danger" id="scanCancelBtn" onclick="cancelScan()" style="display:none;">Cancel</button>
-          <span id="scanStatus" style="font-size: 12px; color: #666;"></span>
+          <span id="scanStatus" style="font-size: 12px; color: var(--gray);"></span>
         </div>
 
         <div class="batch-progress" id="scanProgress" style="display:none;">
@@ -1137,11 +1380,11 @@
 
         <!-- Search terms input -->
         <div class="batch-panel">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <div class="batch-header">
             <h3 style="margin:0;">Search Terms</h3>
-            <div style="display:flex;gap:8px;align-items:center;">
+            <div class="batch-header-actions">
               <button class="heb-kb-toggle" id="hebKbToggle" onclick="toggleHebrewKeyboard()" title="Hebrew Keyboard">⌨ אב</button>
-              <input type="file" id="batchFileInput" accept=".txt" onchange="loadBatchFile(this)" style="font-size:13px;max-width:180px;">
+              <input type="file" id="batchFileInput" accept=".txt" onchange="loadBatchFile(this)">
               <button class="btn btn-small btn-secondary" onclick="clearBatchInput()">Clear</button>
             </div>
           </div>
@@ -1379,18 +1622,18 @@
           statistically significant at <strong>p = 0.000016</strong> (1 in 62,500).
         </p>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
-          <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
-            <div style="font-size:28px;font-weight:bold;color:var(--blue);" id="wrrStatRabbis">32</div>
-            <div style="font-size:12px;color:var(--gray);" id="wrrStatRabbisLabel">Rabbis (List 2)</div>
+        <div class="wrr-stats-grid">
+          <div class="wrr-stat-card">
+            <div class="wrr-stat-val" id="wrrStatRabbis">32</div>
+            <div class="wrr-stat-label" id="wrrStatRabbisLabel">Rabbis (List 2)</div>
           </div>
-          <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
-            <div style="font-size:28px;font-weight:bold;color:var(--blue);">78,064</div>
-            <div style="font-size:12px;color:var(--gray);" id="wrrStatTextLabel">Letters in Genesis</div>
+          <div class="wrr-stat-card">
+            <div class="wrr-stat-val">78,064</div>
+            <div class="wrr-stat-label" id="wrrStatTextLabel">Letters in Genesis</div>
           </div>
-          <div style="background:linear-gradient(135deg,#667eea22,#764ba222);padding:14px;border-radius:8px;text-align:center;">
-            <div style="font-size:28px;font-weight:bold;color:var(--blue);" id="wrrStatPValue">p &lt; 1/62,500</div>
-            <div style="font-size:12px;color:var(--gray);" id="wrrStatPLabel">Published P-value (List 2)</div>
+          <div class="wrr-stat-card">
+            <div class="wrr-stat-val" id="wrrStatPValue">p &lt; 1/62,500</div>
+            <div class="wrr-stat-label" id="wrrStatPLabel">Published P-value (List 2)</div>
           </div>
         </div>
 
@@ -1415,18 +1658,17 @@
         </div>
 
         <!-- Controls -->
-        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
-          <button class="btn" id="wrrRunBtn" onclick="runWRRExperiment()" style="background:linear-gradient(135deg,#667eea,#764ba2);font-size:15px;padding:10px 24px;">
+        <div class="wrr-controls">
+          <button class="btn wrr-btn-run" id="wrrRunBtn" onclick="runWRRExperiment()">
             Quick Run
           </button>
-          <button class="btn" id="wrrFullBtn" onclick="wrrRunFullExperiment()" style="background:linear-gradient(135deg,#1b5e20,#388e3c);font-size:15px;padding:10px 24px;color:#fff;border:none;border-radius:6px;cursor:pointer;" title="Full WRR replication with c(w,w') perturbation statistic, P&#8321;-P&#8324;">
+          <button class="btn wrr-btn-full" id="wrrFullBtn" onclick="wrrRunFullExperiment()" title="Full WRR replication with c(w,w') perturbation statistic, P&#8321;-P&#8324;">
             Run Full WRR (c statistic)
           </button>
           <button class="btn btn-secondary" id="wrrCancelBtn" onclick="cancelWRR()" style="display:none;">Cancel</button>
-          <label style="font-size:13px;color:var(--gray);display:flex;align-items:center;gap:4px;" title="Maximum |skip| searched per term. Higher = more thorough but slower.">
+          <label class="wrr-skip-label" title="Maximum |skip| searched per term. Higher = more thorough but slower.">
             Skip cap:
-            <input type="number" id="wrrSkipCap" value="1000" min="100" max="10000" step="100"
-              style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
+            <input type="number" id="wrrSkipCap" value="1000" min="100" max="10000" step="100">
           </label>
           <span id="wrrProgress" style="font-size:13px;color:var(--gray);"></span>
         </div>
@@ -8678,6 +8920,6 @@ ${discHTML ? '<h2>Discovered Terms</h2>' + discHTML : ''}
     <p style="margin-top:0.5em;font-size:11px;opacity:0.7;">Sacred Names are redacted in output. Please treat printed materials with reverence.</p>
   </footer>
 <script data-goatcounter="https://bible-codes.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
+        async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>

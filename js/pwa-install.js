@@ -162,17 +162,31 @@ function createInstallButton() {
 
     @media (max-width: 600px) {
       .pwa-install-btn {
-        bottom: 80px; /* Above mobile nav if present */
-        right: 10px;
-        left: 10px;
-        justify-content: center;
+        bottom: 12px;
+        right: 12px;
+        left: auto;
+        padding: 8px 14px;
+        font-size: 12px;
+        border-radius: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      }
+
+      .pwa-install-btn .install-text {
+        display: none;
+      }
+
+      .pwa-install-btn svg {
+        width: 18px;
+        height: 18px;
       }
 
       .pwa-install-success {
-        bottom: 80px;
-        right: 10px;
-        left: 10px;
+        bottom: 12px;
+        right: 12px;
+        left: auto;
         text-align: center;
+        padding: 8px 14px;
+        font-size: 13px;
       }
     }
   `;
