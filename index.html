@@ -94,8 +94,9 @@
     .header-menu-btn { display: none; }
     @media (max-width: 767px) {
       .header-nav { display: none; }
-      .header-menu-btn { display: inline-block; background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 2px 6px; }
-      .header-nav.open { display: flex; width: 100%; order: 3; padding: 4px 0; }
+      .header-menu-btn { display: inline-flex; align-items: center; justify-content: center; background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; -webkit-tap-highlight-color: rgba(255,255,255,0.2); }
+      .header-nav.open { display: flex; width: 100%; order: 3; padding: 8px 0; }
+      .header-nav.open a { padding: 10px 12px; font-size: 14px; opacity: 1; }
     }
     main.container {
       flex: 1;
@@ -1233,7 +1234,7 @@
   <header class="header">
     <a href="./"><img src="img/favicon.png" alt=""></a>
     <h1>Bible Codes</h1>
-    <button class="header-menu-btn" onclick="document.querySelector('.header-nav').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+    <button class="header-menu-btn" aria-label="Menu">&#9776;</button>
     <nav class="header-nav">
       <a href="text-search.html">Text Search</a>
       <a href="gematria.html">Gematria</a>
@@ -1838,6 +1839,11 @@
   <div id="verseTooltip"></div>
 
   <script type="module">
+    // Hamburger menu — JS listener as fallback for inline onclick (iOS WebKit compat)
+    document.querySelector('.header-menu-btn')?.addEventListener('click', function() {
+      document.querySelector('.header-nav')?.classList.toggle('open');
+    });
+
     // Dynamic imports — if these fail, the rest of the module still executes
     let getElsIndexService, initElsIndex, getDictionaryService, initDictionaries;
     try {
