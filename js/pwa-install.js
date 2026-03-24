@@ -306,7 +306,7 @@ function createInstallBanner() {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       padding: 16px;
-      z-index: 10000;
+      z-index: 9999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       animation: slideDown 0.4s ease-out;
     }
